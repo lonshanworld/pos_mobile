@@ -2,10 +2,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import "package:flutter/material.dart";
 import 'package:pos_mobile/controller/DB_helper.dart';
-import 'package:pos_mobile/features/code_generator_feature.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 
+import '../../feature/code_generator_feature.dart';
 import '../../models/junction_models_folder/promotion_junctions/item_promotion_model.dart';
 import '../../models/junction_models_folder/promotion_junctions/stockout_promotion_model.dart';
 import '../../models/promotion_model_folder/promotion_model.dart';

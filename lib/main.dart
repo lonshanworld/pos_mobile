@@ -29,20 +29,6 @@ void main() async{
   // configLoading();
 }
 
-// void configLoading() {
-//   EasyLoading.instance
-//     ..displayDuration = const Duration(milliseconds: 2000)
-//     ..indicatorType = EasyLoadingIndicatorType.fadingCircle
-//     ..loadingStyle = EasyLoadingStyle.custom
-//     ..indicatorSize = 45.0
-//     ..radius = 10.0
-//     ..progressColor = Colors.orange
-//     ..backgroundColor = Colors.black45
-//     ..indicatorColor = Colors.orange
-//     ..textColor = Colors.orange
-//     ..userInteractions = false
-//     ..dismissOnTap = false;
-// }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

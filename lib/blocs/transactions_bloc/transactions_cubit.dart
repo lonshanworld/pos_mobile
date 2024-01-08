@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import "package:collection/collection.dart";
-import 'package:pos_mobile/features/historyFilter.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stockin_history_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stockout_history_model.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 
 import '../../constants/enums.dart';
+import '../../feature/historyFilter.dart';
 import '../../models/customer_model.dart';
 import '../../models/deliver_model_folder/delivery_model.dart';
 import '../../models/deliver_model_folder/delivery_person_model.dart';

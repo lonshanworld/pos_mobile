@@ -11,7 +11,7 @@ import '../../../blocs/theme_bloc/theme_cubit.dart';
 import '../../../constants/enums.dart';
 import '../../../constants/uiConstants.dart';
 import '../../../controller/ui_controller.dart';
-import '../../../features/cus_showmodelbottomsheet.dart';
+import '../../../feature/cus_showmodelbottomsheet.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../widgets/loading_widget.dart';
 import 'add_more_info_stockOut_screen.dart';

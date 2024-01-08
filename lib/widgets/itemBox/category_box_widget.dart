@@ -14,7 +14,8 @@ import "package:pos_mobile/screens/transaction/stockIn/category/edit_category_sc
 import "package:pos_mobile/widgets/cusPopMenuItem_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 
-import "../../features/cus_showmodelbottomsheet.dart";
+import "../../feature/cus_showmodelbottomsheet.dart";
+
 
 class CategoryBoxWidget extends StatelessWidget {
 

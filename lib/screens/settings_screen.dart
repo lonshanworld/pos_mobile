@@ -5,13 +5,13 @@ import 'package:numberpicker/numberpicker.dart';
 import 'package:pos_mobile/blocs/bluetooth_printer_bloc/bluetooth_printer_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/features/printer_font_changer.dart';
 import 'package:pos_mobile/models/papersize_model.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/dividers/cus_divider_widget.dart';
 
 import '../blocs/theme_bloc/theme_cubit.dart';
 import '../controller/ui_controller.dart';
+import '../feature/printer_font_changer.dart';
 import '../widgets/cusTxt_widget.dart';
 
 class SettingScreen extends StatefulWidget {

@@ -13,7 +13,7 @@ import '../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../constants/uiConstants.dart';
 import '../../../controller/ui_controller.dart';
 import '../../../error_handlers/error_handler.dart';
-import '../../../features/code_generator_feature.dart';
+import '../../../feature/code_generator_feature.dart';
 import '../../../models/item_model_folder/item_model.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../models/promotion_model_folder/promotion_model.dart';

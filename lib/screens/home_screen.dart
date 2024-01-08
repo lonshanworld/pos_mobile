@@ -16,7 +16,7 @@ import "package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart";
 import "package:pos_mobile/widgets/cusAppbar_widget.dart";
 import "package:pos_mobile/widgets/loading_widget.dart";
 
-import "../features/logout_feature.dart";
+import "../feature/logout_feature.dart";
 
 
 class HomeScreen extends StatefulWidget {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
-import 'package:pos_mobile/features/historyFilter.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stock_in_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stockin_history_model.dart';
 import 'package:pos_mobile/widgets/transaction_history_widgets_folder/stockin_history_widget.dart';
 
 import '../../../constants/uiConstants.dart';
+import '../../../feature/historyFilter.dart';
 
 class StockInHistoryScreen extends StatelessWidget {
   const StockInHistoryScreen({super.key});

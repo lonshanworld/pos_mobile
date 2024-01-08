@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
-import "package:pos_mobile/features/printer_font_changer.dart";
 import "package:pos_mobile/models/promotion_model_folder/promotion_model.dart";
 import "package:pos_mobile/widgets/tables_folder/voucherTable.dart";
 import "package:qr_flutter/qr_flutter.dart";
@@ -10,6 +9,7 @@ import "../constants/enums.dart";
 import "../constants/txtconstants.dart";
 import "../constants/uiConstants.dart";
 import "../controller/ui_controller.dart";
+import "../feature/printer_font_changer.dart";
 import "../models/item_model_folder/item_model.dart";
 import "../models/item_model_folder/uniqueItem_model.dart";
 import "../utils/formula.dart";

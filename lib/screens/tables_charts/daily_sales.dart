@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/features/historyFilter.dart';
 import 'package:pos_mobile/models/deliver_model_folder/delivery_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
@@ -9,6 +8,8 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../feature/historyFilter.dart';
 
 class DailySales extends StatelessWidget {
 

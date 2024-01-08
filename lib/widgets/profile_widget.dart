@@ -5,14 +5,14 @@ import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/features/cus_showmodelbottomsheet.dart";
-import "package:pos_mobile/features/logout_feature.dart";
 import "package:pos_mobile/screens/authenticaton/check_user_screen.dart";
 import "package:pos_mobile/utils/txt_formatters.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:pos_mobile/widgets/logo_folder/logo_image_widget.dart";
 
 import "../blocs/userData_bloc/user_data_cubit.dart";
+import "../feature/cus_showmodelbottomsheet.dart";
+import "../feature/logout_feature.dart";
 import "../models/user_model_folder/user_model.dart";
 import '../screens/confirm_screens_folder/comfirm_screen.dart';
 
