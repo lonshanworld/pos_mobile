@@ -23,7 +23,7 @@ class UserDBStorage{
           userName TEXT NOT NULL,
           password TEXT NOT NULL,
           userLevel TEXT NOT NULL,
-          userCreateTime TEXT NOT NULL,
+          userCreatedTime TEXT NOT NULL,
           userLoginTime TEXT,
           userLogoutTime TEXT,
           activeStatus INTEGER NOT NULL DEFAULT 1,
@@ -67,7 +67,7 @@ class UserDBStorage{
   })async{
     // NOTE : if there is error ,the response will be -1
     return await db.rawInsert(
-      "INSERT INTO ${TxtConstants.userTableName}(userName, password, userLevel,userCreateTime) VALUES(?,?,?,?)",
+      "INSERT INTO ${TxtConstants.userTableName}(userName, password, userLevel,userCreatedTime) VALUES(?,?,?,?)",
       [userName, password, userLevel.name, DateTime.now().toString()],
     );
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
-import 'package:pos_mobile/screens/accounts/account_screen.dart';
+import 'package:pos_mobile/features/accounts/presentation/views/pages/account_screen.dart';
 
-import 'package:pos_mobile/screens/authenticaton/check_user_screen.dart';
-import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
+import 'package:pos_mobile/features/auth/presentation/pages/check_user_screen.dart';
+import 'package:pos_mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:pos_mobile/screens/home_screen.dart';
 import 'package:pos_mobile/screens/transaction/stockIn/uniqueItem/uniqueitem_screen.dart';
 

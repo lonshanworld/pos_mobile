@@ -13,6 +13,7 @@ import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
+import 'package:pos_mobile/features/auth/domain/entities/user_form_entity/user_form_entity.dart';
 import 'package:pos_mobile/globalkeys.dart';
 import 'package:pos_mobile/routes/router.dart';
 
@@ -20,7 +21,7 @@ import 'package:pos_mobile/routes/router.dart';
 void main() async{
 
   WidgetsFlutterBinding.ensureInitialized();
-  await DBHelper.initiateAllDB();
+  // await DBHelper.initiateAllDB();
   await GetStorage.init();
 
   runApp(const MyApp());

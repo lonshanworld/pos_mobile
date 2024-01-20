@@ -1,3 +1,5 @@
+import 'package:pos_mobile/features/accounts/data/models/user_model/user_model.dart';
+
 class CustomerModel{
   final int id;
   final String? name;

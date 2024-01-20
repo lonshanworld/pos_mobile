@@ -1,5 +1,5 @@
 import '../constants/enums.dart';
-import '../screens/accounts/account_screen.dart';
+import '../features/accounts/presentation/views/pages/account_screen.dart';
 import '../screens/promotion/main_promotion_screen.dart';
 
 
