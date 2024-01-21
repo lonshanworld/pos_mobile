@@ -83,7 +83,7 @@ class UniqueItemBoxWidget extends StatelessWidget {
     }
 
     return SizedBox(
-      width: UIConstants.uniqueItemBoxWidth,
+      width: UIConstants.uniqueItemBoxWidth + 10,
       child: Slidable(
         endActionPane: ActionPane(
           extentRatio: 0.3,

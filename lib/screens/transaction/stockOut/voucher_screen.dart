@@ -68,7 +68,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
     final GlobalKey printKey = GlobalKey();
     final UIutils uIutils = UIutils();
     final UIController uiController = UIController.instance;
-    final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+    final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final BluetoothConnection? bluetoothConnection = context.watch<BluetoothPrinterCubit>().state.bluetoothConnection;
     final String barCode = CodeGenerator.getUniqueCodeForStockOut();
@@ -237,7 +237,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                                 activePromotionList: activePromotionList,
                                 itemPromotionList: itemPromotionList,
                               ),
-                              userModel: userModel,
+                              userModel: userModel!,
                               deliveryCharges: widget.deliCharges,
                               taxPercentage: widget.taxPercentage,
                               additionalPromotionAmount: widget.additionalPromotionAmount,
@@ -259,9 +259,10 @@ class _VoucherScreenState extends State<VoucherScreen> {
                             ).then((value){
                               if(value){
                                 context.read<ItemCubit>().reloadAllItem().then((_){
-                                  widget.clearDataFunc();
-                                  Navigator.of(context).pop();
+
                                   context.read<LoadingCubit>().setSuccess("Success !");
+                                  widget.clearDataFunc();
+                                  // Navigator.of(context).pop();
                                 });
                               }else{
                                 context.read<LoadingCubit>().setFail("Fail !");
@@ -301,7 +302,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                                   activePromotionList: activePromotionList,
                                   itemPromotionList: itemPromotionList,
                                 ),
-                                userModel: userModel,
+                                userModel: userModel!,
                                 deliveryCharges: widget.deliCharges,
                                 taxPercentage: widget.taxPercentage,
                                 additionalPromotionAmount: widget.additionalPromotionAmount,

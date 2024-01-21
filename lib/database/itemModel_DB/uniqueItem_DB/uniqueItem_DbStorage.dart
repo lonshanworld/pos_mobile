@@ -246,6 +246,7 @@ class UniqueItemDbStorage{
       required double profitPrice,
       required double taxPercentage,
       required DateTime dateTime,
+
     }
   )async{
     return db.rawUpdate(

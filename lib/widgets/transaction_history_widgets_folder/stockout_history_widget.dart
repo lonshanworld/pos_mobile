@@ -26,7 +26,7 @@ import '../../models/deliver_model_folder/delivery_model.dart';
 import '../../models/item_model_folder/item_model.dart';
 import '../../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 
-class StockOutHistoryWidget extends StatelessWidget {
+class StockOutHistoryWidget extends StatefulWidget {
 
   final StockOutHistoryModel historyModel;
   final double totalProfit;
@@ -42,7 +42,11 @@ class StockOutHistoryWidget extends StatelessWidget {
 
   });
 
+  @override
+  State<StockOutHistoryWidget> createState() => _StockOutHistoryWidgetState();
+}
 
+class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
@@ -90,6 +94,22 @@ class StockOutHistoryWidget extends StatelessWidget {
     //   return value;
     // }
 
+    Future<void> orderCancelFunc(int id, List<ItemModel> itemModelList)async{
+
+      context.read<LoadingCubit>().setLoading("Order Cancel ...");
+      await context.read<TransactionsCubit>().stockOutOrderCancel(
+        stockOutId: id,
+        userModel: userModel!,
+        itemModelList: itemModelList,
+      ).then((value)async{
+        Navigator.of(context).pop();
+        if(value){
+          context.read<LoadingCubit>().setSuccess("Success !");
+        }else{
+          context.read<LoadingCubit>().setFail("Fail !");
+        }
+      });
+    }
 
 
     return Container(
@@ -109,7 +129,7 @@ class StockOutHistoryWidget extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: CusTxtWidget(
-              txt: historyModel.dateTimeTxt,
+              txt: widget.historyModel.dateTimeTxt,
               txtStyle: Theme.of(context).textTheme.bodyLarge!,
             ),
           ),
@@ -123,12 +143,12 @@ class StockOutHistoryWidget extends StatelessWidget {
               ),
               CusTxtWidget(
                 txtStyle: Theme.of(context).textTheme.titleMedium!,
-                txt: totalProfit.toString(),
+                txt: widget.totalProfit.toString(),
               ),
             ],
           ),
           const CusDividerWidget(clr: Colors.grey),
-          ...historyModel.stockOutList.reversed.toList().asMap().entries.map((e){
+          ...widget.historyModel.stockOutList.reversed.toList().asMap().entries.map((e){
             final UserModel? seller = context.read<UserDataCubit>().getSingleUser(e.value.createPersonId);
             final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(e.value.id);
             // final CustomerModel? customerModel = e.customerId == null ? null : context.read<TransactionsCubit>().getCustomerModel(e.customerId!);
@@ -153,27 +173,14 @@ class StockOutHistoryWidget extends StatelessWidget {
                         acceptBtnTxt: "Yes, cancel the order",
                         cancelBtnTxt: "No",
                         acceptFunc: ()async{
-                          context.read<LoadingCubit>().setLoading("Order Cancel ...");
-                          await context.read<TransactionsCubit>().stockOutOrderCancel(
-                            stockOutId: e.value.id,
-                            userModel: userModel!,
-                            itemModelList: selectedItemModelList,
-                          ).then((value)async{
-
-                            if(value){
-                              await context.read<ItemCubit>().reloadAllItem().then((_){
-                                Navigator.of(context).pop();
-                                context.read<LoadingCubit>().setSuccess("Success !");
-                              });
-
-                            }else{
-                              Navigator.of(context).pop();
-                              context.read<LoadingCubit>().setFail("Fail !");
-                            }
+                          // Navigator.of(ctx).pop();
+                          // Navigator.of(ctx).pop();
+                          await orderCancelFunc(e.value.id, selectedItemModelList).then((_){
+                            context.read<ItemCubit>().reloadAllItem();
                           });
                         },
                         cancelFunc: (){
-                          Navigator.of(context).pop();
+                          Navigator.of(ctx).pop();
                         },
                       ));
                     },
@@ -194,11 +201,10 @@ class StockOutHistoryWidget extends StatelessWidget {
                             stockOutId: e.value.id,
                             userModel: userModel!,
                           ).then((value) {
+                            Navigator.of(context).pop();
                             if(value){
-                              Navigator.of(context).pop();
                               context.read<LoadingCubit>().setSuccess("Success !");
                             }else{
-                              Navigator.of(context).pop();
                               context.read<LoadingCubit>().setFail("Fail !");
                             }
                           });
@@ -210,7 +216,7 @@ class StockOutHistoryWidget extends StatelessWidget {
                     },
                     txt: "Delete stock-out",
                     isImportant: true,
-                    context: ctx,
+                    context: context,
                   ),
                   cusPopUpMenuItem(
                     func: (){
@@ -220,7 +226,7 @@ class StockOutHistoryWidget extends StatelessWidget {
                     },
                     txt: "Get voucher",
                     isImportant: false,
-                    context: ctx,
+                    context: context
                   ),
                 ];
               },

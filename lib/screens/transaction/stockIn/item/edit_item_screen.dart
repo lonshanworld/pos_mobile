@@ -56,6 +56,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     originalPriceController.addListener(() {
       setState(() {
         originalPrice = originalPriceController.text.trim() == "" ? 0 : double.parse(originalPriceController.text.trim());
+        profitPrice = double.parse(sellPriceController.text.trim()) - double.parse(originalPriceController.text.trim());
       });
     });
     sellPriceController.addListener(() {
