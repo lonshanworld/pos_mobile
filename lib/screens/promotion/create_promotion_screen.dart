@@ -14,7 +14,6 @@ import '../../blocs/theme_bloc/theme_cubit.dart';
 import '../../constants/enums.dart';
 import '../../constants/uiConstants.dart';
 import '../../controller/ui_controller.dart';
-import '../../error_handlers/error_handler.dart';
 import '../../utils/ui_responsive_calculation.dart';
 import '../../widgets/btns_folder/cusIconBtn_widget.dart';
 
@@ -63,9 +62,17 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
   Widget build(BuildContext context) {
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     final UIController uiController = UIController.instance;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UIutils uIutils = UIutils();
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     void clearAllPromotionData(){
       promotionPercentage = null;
@@ -195,7 +202,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                           return "$data %";
                         },
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.4),
+                          color: Colors.grey.withValues(alpha: 0.4),
                         ),
                         selectedTextStyle: Theme.of(context).textTheme.titleMedium!,
                         textStyle: Theme.of(context).textTheme.bodyMedium,
@@ -225,32 +232,31 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                   bgClr: Colors.pinkAccent,
                   func: ()async{
                     if(promotionNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(
-                        title: null,
-                        txt: "Promotion title should not be empty",
-                      );
+                      showValidationMessage("Promotion title should not be empty");
                     }else if(promotionPrice == null && promotionPercentage == null){
-                      errorHandlers.showErrorWithBtn(
-                        title: "Empty promotion",
-                        txt: setPromotion == SetPromotion.mmk ? "Promotion Price should not be empty" : "Promotion Percentage should not be empty",
+                      showValidationMessage(
+                        setPromotion == SetPromotion.mmk
+                            ? "Promotion price should not be empty"
+                            : "Promotion percentage should not be empty",
                       );
                     }else{
 
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      await context.read<PromotionCubit>().addNewPromotion(
+                      final value = await context.read<PromotionCubit>().addNewPromotion(
                         promotionName: promotionNameController.text.trim(),
                         promotionDescription: promotionDescriptionController.text.trim(),
                         promotionPercentage: promotionPercentage == 0 ? null : promotionPercentage?.toDouble(),
                         promotionPrice: promotionPrice == 0 ? null : promotionPrice,
                         userModel: userModel!,
-                      ).then((value){
-                        if(value){
-                          context.read<LoadingCubit>().setSuccess("Success !");
-                          widget.goBackToListScreen();
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      );
+
+                      if (!mounted) return;
+                      if(value){
+                        context.read<LoadingCubit>().setSuccess("Success !");
+                        widget.goBackToListScreen();
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
 
                   },

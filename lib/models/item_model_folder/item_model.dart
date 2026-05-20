@@ -48,7 +48,7 @@ class ItemModel extends ItemInfoSkeletalModel{
   });
 
   @override
-  ItemModel.fromJson(Map<String, dynamic> jsonData) :
+  ItemModel.fromJson(super.jsonData) :
     // id = jsonData["id"],
     typeId = jsonData["typeId"],
     name = jsonData["name"],
@@ -70,7 +70,7 @@ class ItemModel extends ItemInfoSkeletalModel{
     // createPersonId = jsonData["createPersonId"],
     imageId = jsonData["imageId"],
     taxPercentage = jsonData["taxPercentage"],
-    super.fromJson(jsonData);
+    super.fromJson();
 
 
   @override

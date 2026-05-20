@@ -88,12 +88,6 @@ class TransactionDBService{
         return false;
       }else{
         int stockOutId = await TransactionStockOutDbStorage.insertNewData(db, userModel: userModel, dateTime: dateTime, taxPercentage: taxPercentage, additionalPromotionAmount: additionalPromotionAmount, description: description, shoppingType: shoppingType, paymentMethod: paymentMethod, barcode: barcode, customerId: customerId, deliveryPersonId: deliveryPersonId, deliveryModelId: deliveryModelId, finalTotalPrice: finalTotalPrice);
-        // if(stockOutId == -1){
-        //   return false;
-        // }else{
-        //   await TransactionStockOutItemDbStorage.insertNewDataList(db: db, dataList: dataList, stockOutId: stockOutId);
-        //   return await stockOutUniqueItemList(db, uniqueItemList: uniqueItemList, userModel: userModel, dateTime: dateTime, stockOutId: stockOutId);
-        // }
         if(stockOutId == -1) return false;
         List<int> valueList = await TransactionStockOutItemDbStorage.insertNewDataList(db: db, dataList: dataList, stockOutId: stockOutId);
         if(valueList.contains(-1)) return false;
@@ -111,18 +105,18 @@ class TransactionDBService{
     }
   }
   
-  static Future<List<StockOutModel>> getAllStockOutData(Database db)async{
-    List<dynamic> dataList = await TransactionStockOutDbStorage.getAllData(db);
+  static Future<List<StockOutModel>> getAllStockOutData(Database db, {int limit = 2000, int offset = 0})async{
+    List<dynamic> dataList = await TransactionStockOutDbStorage.getAllData(db, limit: limit, offset: offset);
     return dataList.map((e) => StockOutModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockInModel>> getAllStockInData(Database db)async{
-    List<dynamic> dataList = await TransactionStockInDbStorage.getAllStockInList(db);
+  static Future<List<StockInModel>> getAllStockInData(Database db, {int limit = 2000, int offset = 0})async{
+    List<dynamic> dataList = await TransactionStockInDbStorage.getAllStockInList(db, limit: limit, offset: offset);
     return dataList.map((e) => StockInModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockOutItemModel>> getAllStockOutItemData(Database db)async{
-    List<dynamic> dataList = await TransactionStockOutItemDbStorage.getAllData(db);
+  static Future<List<StockOutItemModel>> getAllStockOutItemData(Database db, {int limit = 5000, int offset = 0})async{
+    List<dynamic> dataList = await TransactionStockOutItemDbStorage.getAllData(db, limit: limit, offset: offset);
     return dataList.map((e) => StockOutItemModel.fromJson(e)).toList();
   }
 

@@ -22,10 +22,10 @@ class ReportModel extends ReportAndAlertSkeletalModel{
   });
 
   @override
-  ReportModel.fromJson(Map<String, dynamic> jsonData) :
+  ReportModel.fromJson(super.jsonData) :
       alertStartTime = DateTime.parse(jsonData["alertStartTime"]),
       alertEndTime = DateTime.parse(jsonData["alertEndTime"]),
-      super.fromJson(jsonData);
+      super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

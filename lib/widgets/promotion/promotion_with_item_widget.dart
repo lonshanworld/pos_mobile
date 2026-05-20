@@ -17,7 +17,7 @@ class PromotionWithItemWidget extends StatelessWidget {
       children: [
         CusTxtWidget(
           txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            color: Colors.pinkAccent.withOpacity(0.6),
+            color: Colors.pinkAccent.withValues(alpha: 0.6),
           ),
           txt: "Promotion : ",
         ),
@@ -25,7 +25,7 @@ class PromotionWithItemWidget extends StatelessWidget {
           children: [
             CusTxtWidget(
               txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: Colors.pinkAccent.withOpacity(0.6),
+                color: Colors.pinkAccent.withValues(alpha: 0.6),
               ),
               txt: promotion.promotionName,
             ),

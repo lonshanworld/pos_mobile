@@ -38,7 +38,7 @@ class PromotionWidget extends StatelessWidget {
     final CusShowSheet showSheet = CusShowSheet();
 
     return PopupMenuButton(
-      enabled: userModel?.userLevel == UserLevel.admin,
+      enabled: userModel?.userLevel == UserLevel.merchant,
       tooltip: "Create by : ${context.read<UserDataCubit>().getSingleUser(promotionModel.createPersonId) == null ? "User not found" : context.read<UserDataCubit>().getSingleUser(promotionModel.createPersonId)!.userName}",
       itemBuilder: (BuildContext context) {
         final List<ItemPromotionModel> itemPromotionModelList = context.read<PromotionCubit>().getAllItemPromotionListFromPromotionId(promotionModel.id);
@@ -46,35 +46,6 @@ class PromotionWidget extends StatelessWidget {
 
           cusPopUpMenuItem(
             func: (){
-              // showDialog(
-              //   context: context,
-              //   barrierDismissible: false,
-              //   builder: (ctx){
-              //     return ConfirmScreen(
-              //       txt: "Are you sure want to delete this promotion ? ${itemPromotionModelList.isEmpty ? "" : "There are still ${itemPromotionModelList.length} items that use this promotion."}",
-              //       title: "Delete",
-              //       acceptBtnTxt: "Yes, delete",
-              //       cancelBtnTxt: "Cancel",
-              //       acceptFunc: ()async{
-              //         context.read<LoadingCubit>().setLoading("Deleting ...");
-              //         await context.read<PromotionCubit>().deletePromotion(
-              //           userModel: userModel!,
-              //           promotionId: promotionModel.id
-              //         ).then((value){
-              //           Navigator.of(ctx).pop();
-              //           if(value){
-              //             context.read<LoadingCubit>().setSuccess("Success !");
-              //           }else{
-              //             context.read<LoadingCubit>().setFail("Cannot delete");
-              //           }
-              //         });
-              //       },
-              //       cancelFunc: (){
-              //         Navigator.of(ctx).pop();
-              //       },
-              //     );
-              //   },
-              // );
               showSheet.showCusDialogScreen(ConfirmScreen(
                 txt: "Are you sure want to delete this promotion ? ${itemPromotionModelList.isEmpty ? "" : "There are still ${itemPromotionModelList.length} items that use this promotion."}",
                 title: "Delete",
@@ -82,17 +53,18 @@ class PromotionWidget extends StatelessWidget {
                 cancelBtnTxt: "Cancel",
                 acceptFunc: ()async{
                   context.read<LoadingCubit>().setLoading("Deleting ...");
-                  await context.read<PromotionCubit>().deletePromotion(
-                      userModel: userModel!,
-                      promotionId: promotionModel.id
-                  ).then((value){
-                    Navigator.of(context).pop();
-                    if(value){
-                      context.read<LoadingCubit>().setSuccess("Success !");
-                    }else{
-                      context.read<LoadingCubit>().setFail("Cannot delete");
-                    }
-                  });
+                  final value = await context.read<PromotionCubit>().deletePromotion(
+                    userModel: userModel!,
+                    promotionId: promotionModel.id,
+                  );
+
+                  if (!context.mounted) return;
+                  Navigator.of(context).pop();
+                  if(value){
+                    context.read<LoadingCubit>().setSuccess("Success !");
+                  }else{
+                    context.read<LoadingCubit>().setFail("Cannot delete");
+                  }
                 },
                 cancelFunc: (){
                   Navigator.of(context).pop();
@@ -112,7 +84,7 @@ class PromotionWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: uiController.getpureDirectClr(themeModeType),
           border: Border.all(
-            color: Colors.pinkAccent.withOpacity(0.5),
+            color: Colors.pinkAccent.withValues(alpha: 0.5),
             width: 0.5,
           ),
           borderRadius:UIConstants.mediumBorderRadius,

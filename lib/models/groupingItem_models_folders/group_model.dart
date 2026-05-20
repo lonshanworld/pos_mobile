@@ -38,7 +38,7 @@ class GroupModel extends ItemInfoSkeletalModel{
   });
 
   @override
-  GroupModel.fromJson(Map<String, dynamic> jsonData):
+  GroupModel.fromJson(super.jsonData):
     // id = jsonData["id"],
     categoryId = jsonData["categoryId"],
     name = jsonData["name"],
@@ -53,7 +53,7 @@ class GroupModel extends ItemInfoSkeletalModel{
     // updateIdList = json.decode(jsonData["updateIdList"]);
     description = jsonData["description"],
     colorCode = jsonData["colorCode"],
-    super.fromJson(jsonData);
+    super.fromJson();
 
 
 

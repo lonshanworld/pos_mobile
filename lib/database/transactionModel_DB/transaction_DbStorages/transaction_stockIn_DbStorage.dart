@@ -16,6 +16,9 @@ class TransactionStockInDbStorage{
         )
       """
     );
+    // OPTIMIZATION: Add indexes for StockIn table
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_stockIn_createTime ON ${TxtConstants.stockInTableName}(createTime);");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_stockIn_activeStatus ON ${TxtConstants.stockInTableName}(activeStatus);");
   }
 
   static Future<void>onDelete(Database db)async{
@@ -31,8 +34,13 @@ class TransactionStockInDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>> getAllStockInList(Database db)async{
-    return await db.query(TxtConstants.stockInTableName);
+  static Future<List<dynamic>>getAllStockInList(Database db, {int limit = 2000, int offset = 0})async{
+    return await db.query(
+      TxtConstants.stockInTableName,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
   }
 
   static Future<int>insertStockIn({

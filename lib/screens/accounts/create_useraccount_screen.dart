@@ -6,7 +6,6 @@ import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/error_handlers/error_handler.dart";
 
 import "package:pos_mobile/utils/ui_responsive_calculation.dart";
 import "package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart";
@@ -45,13 +44,21 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     final UIController uiController = UIController.instance;
     // final double deviceWidth = uiController.getDeviceWidth;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UIutils uIutils = UIutils();
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
 
     List<UserLevel> cusUserLevel = [
       UserLevel.staff,
-      UserLevel.admin,
+      UserLevel.merchant,
     ];
 
     return Scaffold(
@@ -134,34 +141,32 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   func: ()async{
                     if(userNameController.text.trim().isEmpty || passwordController.text.trim().isEmpty || selectedUserLevel == null){
                       if(userNameController.text.trim().isEmpty && passwordController.text.trim().isEmpty){
-                        errorHandlers.showErrorWithBtn(title: null, txt: "All forms must be filled");
+                        showValidationMessage("All forms must be filled");
                       }else if(userNameController.text.trim().isEmpty){
-                        errorHandlers.showErrorWithBtn(title: null, txt: "Username cannot be empty");
+                        showValidationMessage("Username cannot be empty");
                       }else if(passwordController.text.trim().isEmpty){
-                        errorHandlers.showErrorWithBtn(title: null, txt: "Password cannot be empty");
+                        showValidationMessage("Password cannot be empty");
                       }else if(selectedUserLevel == null){
-                        errorHandlers.showErrorWithBtn(title: null, txt: "User Role need to be chosen");
+                        showValidationMessage("User role must be chosen");
                       }else{
-                        errorHandlers.showErrorWithBtn(title: null, txt: "All forms must be filled");
+                        showValidationMessage("All forms must be filled");
                       }
                     }else{
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      // Future.delayed(Duration(seconds: 5),(){
-                      //   context.read<LoadingCubit>().setSuccess("Success !");
-                      // });
 
-                      await context.read<UserDataCubit>().createNewUser(
-                          userName: userNameController.text.trim(),
-                          password: passwordController.text.trim(),
-                          userLevel: selectedUserLevel!
-                      ).then((value){
-                        if(value){
-                          context.read<LoadingCubit>().setSuccess("Success !");
-                          widget.goBack();
-                        }else{
-                          context.read<LoadingCubit>().setFail("Failed !");
-                        }
-                      });
+                      final value = await context.read<UserDataCubit>().createNewUser(
+                        userName: userNameController.text.trim(),
+                        password: passwordController.text.trim(),
+                        userLevel: selectedUserLevel!,
+                      );
+
+                      if (!mounted) return;
+                      if(value){
+                        context.read<LoadingCubit>().setSuccess("Success !");
+                        widget.goBack();
+                      }else{
+                        context.read<LoadingCubit>().setFail("Failed !");
+                      }
                     }
 
                   },

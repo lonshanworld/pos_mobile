@@ -18,19 +18,10 @@ import '../../models/groupingItem_models_folders/category_model.dart';
 import '../../models/groupingItem_models_folders/group_model.dart';
 
 class HistoryDBService{
-  // final Database? database;
-  //
-  // HistoryDBService({
-  //   required this.database,
-  // });
-
   static Future<void>initHistoryDb(Database db)async{
     await HistoryDbStorage.onCreate(db);
   }
 
-  // static Future<void>updateHistoryDb(Database db)async{
-  //   await HistoryDbStorage.onUpgrade(db);
-  // }
   static Future<void>deleteHistoryDb(Database db)async{
     await HistoryDbStorage.onDelete(db);
   }

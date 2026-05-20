@@ -62,33 +62,6 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
                   txt: "There are ${itemList.length} items in this type. You can delete only if there is no item left.",
                 );
               }else{
-                // showDialog(
-                //   context: btnCtx,
-                //   barrierDismissible: false,
-                //   builder: (ctx){
-                //     return ConfirmScreen(
-                //       txt: "Are you sure want to delete this type?",
-                //       title: "Delete",
-                //       acceptBtnTxt: "Yes, delete",
-                //       cancelBtnTxt: "Cancel",
-                //       acceptFunc: ()async{
-                //         context.read<LoadingCubit>().setLoading("Deleting ...");
-                //         await context.read<ItemCubit>().deleteType(userModel!, typeModel).then((value){
-                //           Navigator.of(ctx).pop();
-                //           if(value){
-                //             afterDeleteFunc();
-                //             context.read<LoadingCubit>().setSuccess("Success !");
-                //           }else{
-                //             context.read<LoadingCubit>().setFail("Cannot delete");
-                //           }
-                //         });
-                //       },
-                //       cancelFunc: (){
-                //         Navigator.of(ctx).pop();
-                //       },
-                //     );
-                //   },
-                // );
                 showSheet.showCusDialogScreen(ConfirmScreen(
                   txt: "Are you sure want to delete this type?",
                   title: "Delete",
@@ -96,15 +69,15 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
                   cancelBtnTxt: "Cancel",
                   acceptFunc: ()async{
                     context.read<LoadingCubit>().setLoading("Deleting ...");
-                    await context.read<ItemCubit>().deleteType(userModel!, typeModel).then((value){
-                      Navigator.of(context).pop();
-                      if(value){
-                        afterDeleteFunc();
-                        context.read<LoadingCubit>().setSuccess("Success !");
-                      }else{
-                        context.read<LoadingCubit>().setFail("Cannot delete");
-                      }
-                    });
+                    final value = await context.read<ItemCubit>().deleteType(userModel!, typeModel);
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                    if(value){
+                      afterDeleteFunc();
+                      context.read<LoadingCubit>().setSuccess("Success !");
+                    }else{
+                      context.read<LoadingCubit>().setFail("Cannot delete");
+                    }
                   },
                   cancelFunc: (){
                     Navigator.of(context).pop();
@@ -122,7 +95,7 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 0),
           foregroundColor: Colors.transparent,
-          backgroundColor: isSelected ? Colors.lightGreenAccent.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+          backgroundColor: isSelected ? Colors.lightGreenAccent.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
           surfaceTintColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(
             vertical: UIConstants.smallSpace,
@@ -136,7 +109,7 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
           )
         ),
         onLongPress: (){
-          if(userModel != null && userModel.userLevel == UserLevel.admin && isStorage == true){
+          if(userModel != null && userModel.userLevel == UserLevel.merchant && isStorage == true){
             popupMenu.currentState?.showButtonMenu();
           }
         },

@@ -2,82 +2,195 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/features/historyFilter.dart';
+import 'package:pos_mobile/models/deliver_model_folder/delivery_model.dart';
+import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
+import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
+import 'package:pos_mobile/utils/formula.dart';
+import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
 
-import '../../blocs/transactions_bloc/transactions_cubit.dart';
-import '../../constants/uiConstants.dart';
-import '../../models/deliver_model_folder/delivery_model.dart';
-import '../../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
-import '../../models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
-import '../../utils/formula.dart';
-import '../../widgets/tables_folder/tables_charts_widget.dart';
+class WeeklySales extends StatefulWidget {
+  const WeeklySales({super.key});
 
-class WeeklySales extends StatelessWidget {
+  @override
+  State<WeeklySales> createState() => _WeeklySalesState();
+}
 
-  final bool showCharts;
-  const WeeklySales({
-    super.key,
-    required this.showCharts,
-  });
+class _WeeklySalesState extends State<WeeklySales> {
+  int _currentPage = 0;
+  static const int _pageSize = 15;
 
   @override
   Widget build(BuildContext context) {
-    final TablesAndCharts tablesAndCharts = TablesAndCharts(context: context);
-    final List<StockOutModel> stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
-    final LinkedHashMap<String, List<StockOutModel>> stockOutWeeklyList = HistoryFilter.filterWeeklyStockOut(stockOutList);
-    List<String> keysReversed = stockOutWeeklyList.keys.toList();
+    final tablesAndCharts = TablesAndCharts(context: context);
+    final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
+    final LinkedHashMap<String, List<StockOutModel>> weeklyMap =
+        HistoryFilter.filterWeeklyStockOut(stockOutList);
+    final List<String> allKeys = weeklyMap.keys.toList().reversed.toList();
+    final int totalCount = allKeys.length;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.resolveWith((states) {
-            return UIConstants.redVioletClr.withOpacity(0.4);
-          }),
-          columns: [
-            tablesAndCharts.tableTitle("No."),
-            tablesAndCharts.tableTitle("Date"),
-            tablesAndCharts.tableTitle("Original Price"),
-            tablesAndCharts.tableTitle("Sell Price"),
-            tablesAndCharts.tableTitle("Stock-out Price"),
-            tablesAndCharts.tableTitle("Profit"),
-          ],
-          rows: keysReversed.reversed.map((e){
-            List<StockOutModel> selectedStockOutList = stockOutWeeklyList[e] ?? [];
-            double totalOrgPrice = 0;
-            double totalSellPrice = 0;
-            double totalFinalSellPrice = 0;
+    if (totalCount == 0) return _emptyState(context);
 
-            for(int a = 0; a < selectedStockOutList.length; a++){
-              final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(selectedStockOutList[a].id);
+    final int totalPages = ((totalCount - 1) ~/ _pageSize) + 1;
+    final int safePage = _currentPage.clamp(0, totalPages - 1);
+    final int start = safePage * _pageSize;
+    final int end = (start + _pageSize).clamp(0, totalCount);
+    final List<String> pageKeys = allKeys.sublist(start, end);
 
-              final double orgPrice = CalculationFormula.getItemTotalOriginalPriceForStockOut(selectedStockOutItemList);
-              totalOrgPrice = totalOrgPrice + orgPrice;
+    return Column(
+      children: [
+        _recordsHeader(context, totalCount, safePage, totalPages, start, end),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.resolveWith(
+                    (_) => UIConstants.redVioletClr.withValues(alpha: 0.4)),
+                dataRowMinHeight: 48,
+                dataRowMaxHeight: 56,
+                columns: [
+                  tablesAndCharts.tableTitle("No."),
+                  tablesAndCharts.tableTitle("Week"),
+                  tablesAndCharts.tableTitle("Original Price"),
+                  tablesAndCharts.tableTitle("Sell Price"),
+                  tablesAndCharts.tableTitle("Stock-out Price"),
+                  tablesAndCharts.tableTitle("Profit"),
+                ],
+                rows: List.generate(pageKeys.length, (i) {
+                  final key = pageKeys[i];
+                  final List<StockOutModel> selectedList = weeklyMap[key] ?? [];
+                  double totalOrgPrice = 0;
+                  double totalSellPrice = 0;
+                  double totalFinalSellPrice = 0;
 
-              final double itemFinalSellPrice = CalculationFormula.getItemTotalFinalSellPriceForStockOut(selectedStockOutItemList);
-              totalSellPrice = totalSellPrice + itemFinalSellPrice;
+                  for (final stockOut in selectedList) {
+                    final List<StockOutItemModel> items = context
+                        .read<TransactionsCubit>()
+                        .getSelectedStockOutItemList(stockOut.id);
+                    totalOrgPrice +=
+                        CalculationFormula.getItemTotalOriginalPriceForStockOut(items);
+                    totalSellPrice +=
+                        CalculationFormula.getItemTotalFinalSellPriceForStockOut(items);
+                    double finalPrice = stockOut.finalTotalPrice;
+                    final DeliveryModel? delivery = stockOut.deliveryModelId == null
+                        ? null
+                        : context
+                            .read<TransactionsCubit>()
+                            .getDeliveryModel(stockOut.deliveryModelId!);
+                    if (delivery?.deliveryCharges != null) {
+                      finalPrice -= delivery!.deliveryCharges!;
+                    }
+                    totalFinalSellPrice += finalPrice;
+                  }
 
-              double finalprice = selectedStockOutList[a].finalTotalPrice;
-              final DeliveryModel? deliveryModel = selectedStockOutList[a].deliveryModelId == null ? null : context.read<TransactionsCubit>().getDeliveryModel(selectedStockOutList[a].deliveryModelId!);
-              if(deliveryModel != null && deliveryModel.deliveryCharges != null){
-                finalprice = finalprice - deliveryModel.deliveryCharges!;
-              }
-              totalFinalSellPrice = totalFinalSellPrice + finalprice;
-            }
-
-
-            return tablesAndCharts.dataRow(
-              index: keysReversed.indexOf(e) + 1,
-              txt: e,
-              originalPrice: totalOrgPrice,
-              sellPrice: totalSellPrice,
-              finalSellPrice: totalFinalSellPrice,
-              profit: totalFinalSellPrice - totalOrgPrice,
-            );
-          }).toList(),
+                  return tablesAndCharts.dataRow(
+                    index: start + i + 1,
+                    txt: key,
+                    originalPrice: totalOrgPrice,
+                    sellPrice: totalSellPrice,
+                    finalSellPrice: totalFinalSellPrice,
+                    profit: totalFinalSellPrice - totalOrgPrice,
+                    isEven: i.isEven,
+                  );
+                }),
+              ),
+            ),
+          ),
         ),
+        if (totalPages > 1) _paginationRow(safePage, totalPages),
+      ],
+    );
+  }
+
+  Widget _recordsHeader(BuildContext context, int totalCount, int page,
+      int totalPages, int start, int end) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(UIConstants.bigSpace, UIConstants.smallSpace,
+          UIConstants.bigSpace, UIConstants.smallSpace),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: UIConstants.mediumSpace, vertical: 3),
+            decoration: BoxDecoration(
+              color: UIConstants.redVioletClr.withValues(alpha: 0.1),
+              borderRadius: UIConstants.smallBorderRadius,
+            ),
+            child: Text(
+              "$totalCount week${totalCount == 1 ? '' : 's'}",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: UIConstants.redVioletClr, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            "Showing ${start + 1}–$end",
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paginationRow(int page, int totalPages) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          vertical: UIConstants.mediumSpace, horizontal: UIConstants.bigSpace),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed:
+                page > 0 ? () => setState(() => _currentPage = page - 1) : null,
+            color: UIConstants.redVioletClr,
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: UIConstants.mediumSpace, vertical: UIConstants.smallSpace),
+            decoration: BoxDecoration(
+              border: Border.all(
+                  color: UIConstants.redVioletClr.withValues(alpha: 0.3)),
+              borderRadius: UIConstants.smallBorderRadius,
+            ),
+            child: Text("${page + 1} / $totalPages",
+                style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded),
+            onPressed: page < totalPages - 1
+                ? () => setState(() => _currentPage = page + 1)
+                : null,
+            color: UIConstants.redVioletClr,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bar_chart_outlined,
+              size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+          const SizedBox(height: UIConstants.mediumSpace),
+          Text("No weekly sales data yet",
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.grey)),
+        ],
       ),
     );
   }
 }
+

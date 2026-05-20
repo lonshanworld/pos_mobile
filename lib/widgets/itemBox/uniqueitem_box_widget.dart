@@ -14,20 +14,18 @@ import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 import 'package:pos_mobile/widgets/index_box_widget.dart';
 
-/**
- * TODO : show
- * index No.
- *  itemId
- *  createTime
- *  itemExpireDate
- *  itemManufactureDate
- *  code
- *  createPersonId
- *  lastupdateTime
- *  original Price
- *  profit price
- *  taxpercentage
- */
+/// TODO : show
+/// index No.
+///  itemId
+///  createTime
+///  itemExpireDate
+///  itemManufactureDate
+///  code
+///  createPersonId
+///  lastupdateTime
+///  original Price
+///  profit price
+///  taxpercentage
 
 class UniqueItemBoxWidget extends StatelessWidget {
 
@@ -90,15 +88,15 @@ class UniqueItemBoxWidget extends StatelessWidget {
           motion: const ScrollMotion(),
           children: [
             SlidableAction(
-              onPressed: (ctx){
+              onPressed: (ctx) async {
                 context.read<LoadingCubit>().setLoading("Deleting ...");
-                context.read<ItemCubit>().deleteUniqueItem(uniqueItemModel, userModel!).then((value){
-                  if(value){
-                    context.read<LoadingCubit>().setSuccess("Success !");
-                  }else{
-                    context.read<LoadingCubit>().setFail("Fail !");
-                  }
-                });
+                final value = await context.read<ItemCubit>().deleteUniqueItem(uniqueItemModel, userModel!);
+                if (!context.mounted) return;
+                if(value){
+                  context.read<LoadingCubit>().setSuccess("Success !");
+                }else{
+                  context.read<LoadingCubit>().setFail("Fail !");
+                }
               },
               backgroundColor: UIConstants.deepBlueClr,
               label: "Delete",

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:pos_mobile/blocs/bluetooth_printer_bloc/bluetooth_printer_cubit.dart';
+import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/confirm_by_password_bloc/confirm_by_password_cubit.dart';
 import 'package:pos_mobile/blocs/history_bloc/history_cubit.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
@@ -15,6 +16,8 @@ import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/globalkeys.dart';
 import 'package:pos_mobile/routes/router.dart';
+import 'package:pos_mobile/services/crash_report_sync_manager.dart';
+import 'package:pos_mobile/utils/crash_reporter.dart';
 
 
 void main() async{
@@ -23,7 +26,11 @@ void main() async{
   await DBHelper.initiateAllDB();
   await GetStorage.init();
 
-  runApp(const MyApp());
+  await CrashReporter.initialize(
+    appRunner: () async {
+      runApp(const MyApp());
+    },
+  );
 
   // NOTE : don't put this at the top of runapp
   // configLoading();
@@ -92,6 +99,10 @@ class MyApp extends StatelessWidget {
           create: (ctx) => PromotionCubit(),
           lazy: false,
         ),
+        BlocProvider<ShopInfoCubit>(
+          create: (ctx) => ShopInfoCubit(),
+          lazy: false,
+        ),
         BlocProvider<ConfirmByPasswordCubit>(
           create: (ctx) {
             return ConfirmByPasswordCubit(userModel: ctx.watch<UserDataCubit>().state.userModel);
@@ -101,21 +112,64 @@ class MyApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (ctx) {
-          return MaterialApp(
-            key: mainGlobalKeys.cusGlobalKey,
-            scaffoldMessengerKey: mainGlobalKeys.cusGlobalScaffoldKey,
-            navigatorKey: mainGlobalKeys.cusGlobalNavigatorKey,
-            title: 'POS Mobile',
-            debugShowCheckedModeBanner: false,
-            theme: uiController.cusThemeData(ThemeModeType.light),
-            darkTheme: uiController.cusThemeData(ThemeModeType.dark),
-            themeMode: ctx.watch<ThemeCubit>().getThemeMode(),
-            onGenerateRoute: appRouter.onGenerateRoute,
-
+          return _LifecycleAwareApp(
+            child: MaterialApp(
+              key: mainGlobalKeys.cusGlobalKey,
+              scaffoldMessengerKey: mainGlobalKeys.cusGlobalScaffoldKey,
+              navigatorKey: mainGlobalKeys.cusGlobalNavigatorKey,
+              title: 'POS Mobile',
+              debugShowCheckedModeBanner: false,
+              theme: uiController.cusThemeData(ThemeModeType.light),
+              darkTheme: uiController.cusThemeData(ThemeModeType.dark),
+              themeMode: ctx.watch<ThemeCubit>().getThemeMode(),
+              onGenerateRoute: appRouter.onGenerateRoute,
+            ),
           );
         }
       ),
     );
+  }
+}
+
+class _LifecycleAwareApp extends StatefulWidget {
+  final Widget child;
+  const _LifecycleAwareApp({required this.child});
+
+  @override
+  State<_LifecycleAwareApp> createState() => _LifecycleAwareAppState();
+}
+
+class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Initialize crash report sync manager
+    CrashReportSyncManager.instance.initialize();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    CrashReportSyncManager.instance.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      context.read<UserDataCubit>().onAppDetached();
+    } else if (state == AppLifecycleState.resumed) {
+      // Trigger crash report sync when app comes to foreground
+      CrashReportSyncManager.instance.manualSync();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 

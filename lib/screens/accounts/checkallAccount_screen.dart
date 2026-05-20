@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
@@ -22,7 +23,105 @@ class CheckAllAccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<UserModel> userList = context.watch<UserDataCubit>().state.allUserModelList;
+    final UserModel? owner = context.watch<UserDataCubit>().state.userModel;
+    final bool isOwner = owner?.userLevel == UserLevel.merchant || owner?.userLevel == UserLevel.superAdmin;
     final UIController uiController = UIController.instance;
+
+    Future<void> showResetPasswordDialog() async {
+      final eligibleUsers = userList
+          .where((e) => e.userLevel != UserLevel.superAdmin)
+          .toList();
+
+      if (eligibleUsers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("No eligible account available for password reset."),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final passController = TextEditingController();
+      final confirmController = TextEditingController();
+      UserModel selectedUser = eligibleUsers.first;
+
+      await showDialog(
+        context: context,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setLocalState) {
+              return AlertDialog(
+                title: const Text("Reset User Password"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<UserModel>(
+                      value: selectedUser,
+                      isExpanded: true,
+                      items: eligibleUsers
+                          .map(
+                            (e) => DropdownMenuItem<UserModel>(
+                              value: e,
+                              child: Text("${e.userName} (${e.userLevel.name})"),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setLocalState(() {
+                            selectedUser = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: UIConstants.mediumSpace),
+                    TextField(
+                      controller: passController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: "New password"),
+                    ),
+                    const SizedBox(height: UIConstants.mediumSpace),
+                    TextField(
+                      controller: confirmController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: "Confirm password"),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text("Cancel"),
+                  ),
+                  FilledButton(
+                    onPressed: () async {
+                      final msg = await context.read<UserDataCubit>().resetUserPasswordByOwner(
+                        targetUserId: selectedUser.id,
+                        newPassword: passController.text.trim(),
+                        confirmPassword: confirmController.text.trim(),
+                      );
+                      if (!context.mounted) return;
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(msg ?? "Password reset successfully."),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: const Text("Reset"),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      passController.dispose();
+      confirmController.dispose();
+    }
 
     // DataColumn dataColumn(String txt){
     //   return DataColumn(
@@ -83,6 +182,20 @@ class CheckAllAccountScreen extends StatelessWidget {
                         txtStyle: Theme.of(context).textTheme.titleSmall!,
                         txt: "Total Accounts ( ${userList.length} )",
                       ),
+                      const Spacer(),
+                      if (isOwner)
+                        CusTxtIconElevatedBtn(
+                          txt: "Reset Password",
+                          verticalpadding: UIConstants.smallSpace,
+                          horizontalpadding: UIConstants.mediumSpace,
+                          bdrRadius: UIConstants.smallRadius,
+                          bgClr: Colors.orange,
+                          func: showResetPasswordDialog,
+                          txtStyle: Theme.of(context).textTheme.bodySmall!,
+                          txtClr: Colors.white,
+                          icon: Icons.lock_reset,
+                          iconSize: UIConstants.normalNormalIconSize,
+                        ),
                     ],
                   ),
                 ),
@@ -113,7 +226,6 @@ class CheckAllAccountScreen extends StatelessWidget {
               bgClr: Colors.teal,
               func: ()async{
                 goToCreateScreen();
-                // context.read<UserDataCubit>().initData();
               },
               txtStyle: Theme.of(context).textTheme.titleSmall!,
               txtClr: Colors.white,

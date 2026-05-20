@@ -22,10 +22,10 @@ class AlertModel extends ReportAndAlertSkeletalModel{
   });
 
   @override
-  AlertModel.fromJson(Map<String, dynamic> jsonData) :
+  AlertModel.fromJson(super.jsonData) :
       completeStatus = jsonData["completeStatus"] == 1 ? true : false,
       completePersonId = jsonData["completePersonId"],
-      super.fromJson(jsonData);
+      super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

@@ -23,9 +23,17 @@ class StockInItemAppBar extends StatelessWidget {
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     final UIController uiController = UIController.instance;
 
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: UIConstants.mediumSpace,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: UIConstants.mediumSpace,
+        vertical: UIConstants.smallSpace,
+      ),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: uiController.getpureOppositeClr(themeModeType).withValues(alpha: 0.1),
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -36,9 +44,13 @@ class StockInItemAppBar extends StatelessWidget {
             icon: Icons.arrow_back,
           ),
           uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.mediumSpace),
-          CusTxtWidget(
-            txtStyle: Theme.of(context).textTheme.titleSmall!,
-            txt: txt,
+          Flexible(
+            child: CusTxtWidget(
+              txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                color: uiController.getpureOppositeClr(themeModeType),
+              ),
+              txt: txt,
+            ),
           ),
         ],
       ),

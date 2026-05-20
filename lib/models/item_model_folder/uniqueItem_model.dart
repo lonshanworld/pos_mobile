@@ -46,7 +46,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
   });
   
   @override
-  UniqueItemModel.fromJson(Map<String, dynamic> jsonData) :
+  UniqueItemModel.fromJson(super.jsonData) :
     // id = jsonData["id"],
     itemId = jsonData["itemId"],
     stockInId = jsonData["stockInId"],
@@ -65,7 +65,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     // lastUpdateTime = jsonData["lastUpdateTime"] == null ? null : DateTime.parse(jsonData["lastUpdateTime"]),
     // activeStatus = jsonData["activeState"] == 1 ? true : false,
     moduleCount = jsonData["moduleCount"],
-    super.fromJson(jsonData);
+    super.fromJson();
   
   @override
   Map<String ,dynamic> toJson(){

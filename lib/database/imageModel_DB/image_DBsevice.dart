@@ -6,9 +6,6 @@ class ImageDbService{
     await ImageDbStorage.onCreate(db);
   }
 
-  // static Future<void>updateImageDb(Database db)async{
-  //   await ImageDbStorage.onUpgrade(db);
-  // }
   static Future<void>deleteImageDb(Database db)async{
     await ImageDbStorage.onDelete(db);
   }

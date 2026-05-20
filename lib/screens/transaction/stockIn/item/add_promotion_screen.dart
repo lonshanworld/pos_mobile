@@ -4,7 +4,6 @@ import 'package:pos_mobile/blocs/loading_bloc/loading_cubit.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/error_handlers/error_handler.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtIconBtn_widget.dart';
@@ -35,7 +34,15 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
   Widget build(BuildContext context) {
     final List<PromotionModel> promotionList = context.watch<PromotionCubit>().state.activePromotionList;
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -71,7 +78,7 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
                   child: Container(
                     width: double.maxFinite,
                     height: 150,
-                    color: selectedIndex == promotionList.indexOf(e) ? Colors.green.withOpacity(0.4) : Colors.transparent,
+                    color: selectedIndex == promotionList.indexOf(e) ? Colors.green.withValues(alpha: 0.4) : Colors.transparent,
                     padding: const EdgeInsets.symmetric(
                       horizontal: UIConstants.bigSpace,
                       vertical: UIConstants.mediumSpace,
@@ -121,21 +128,22 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
               txtClr: Colors.black,
               func: ()async{
                 if(selectedPromotion == null){
-                  errorHandlers.showErrorWithBtn(title: "Promotion not found !", txt: "Promotion item is not selected. Please select one item and click add button");
+                  showValidationMessage("Please select a promotion before adding");
                 }else{
                   context.read<LoadingCubit>().setLoading("Adding ...");
-                  await context.read<PromotionCubit>().attachItemWithPromotion(
+                  final value = await context.read<PromotionCubit>().attachItemWithPromotion(
                     userModel: userModel!,
                     promotionId: selectedPromotion!.id,
                     itemId: widget.itemModel.id,
-                  ).then((value){
-                    if(value){
-                      Navigator.of(context).pop();
-                      context.read<LoadingCubit>().setSuccess("Success !");
-                    }else{
-                      context.read<LoadingCubit>().setFail("Failed !");
-                    }
-                  });
+                  );
+
+                  if (!mounted) return;
+                  if(value){
+                    Navigator.of(context).pop();
+                    context.read<LoadingCubit>().setSuccess("Success !");
+                  }else{
+                    context.read<LoadingCubit>().setFail("Failed !");
+                  }
 
                 }
               },

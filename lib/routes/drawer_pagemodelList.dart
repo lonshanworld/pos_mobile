@@ -45,7 +45,7 @@ class PageList{
           pages[7],
           pages[8],
         ];
-      case UserLevel.admin:
+      case UserLevel.merchant:
         return pages;
 
       case UserLevel.superAdmin :
@@ -53,8 +53,7 @@ class PageList{
           pages.last,
         ];
 
-      default :
-        return pages;
+
     }
   }
 }

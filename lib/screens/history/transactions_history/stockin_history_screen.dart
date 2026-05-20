@@ -27,26 +27,24 @@ class StockInHistoryScreen extends StatelessWidget {
 
     final List<StockInHistoryModel> stockInHistoryList = HistoryFilter.filterStockInHistory(stockInList);
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: UIConstants.bigSpace,
-        ),
-        child: Wrap(
-          spacing: UIConstants.bigSpace,
-          runSpacing: UIConstants.bigSpace,
-          alignment: WrapAlignment.center,
-          children: stockInHistoryList.reversed.toList().map((e){
-
-            return StockInHistoryWidget(
-                stockInHistoryModel: e,
-                showDate: true,
-                // itemList: itemList,
-                // uniqueItemList: uniqueItemList
-            );
-          }).toList(),
-        ),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(
+        vertical: UIConstants.bigSpace,
+        horizontal: UIConstants.mediumSpace,
       ),
+      itemCount: stockInHistoryList.length,
+      itemBuilder: (context, index) {
+        final reversedIndex = stockInHistoryList.length - 1 - index;
+        final e = stockInHistoryList[reversedIndex];
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: UIConstants.bigSpace),
+          child: StockInHistoryWidget(
+            stockInHistoryModel: e,
+            showDate: true,
+          ),
+        );
+      },
     );
   }
 }

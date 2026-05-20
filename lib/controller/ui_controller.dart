@@ -67,9 +67,9 @@ class UIController{
         headerForegroundColor: getpureOppositeClr(themeModeType),
         weekdayStyle: cusTitleMedium(themeModeType),
         dayStyle: cusBodyMedium(themeModeType),
-        dayForegroundColor: MaterialStateProperty.all(getpureOppositeClr(themeModeType)),
-        todayForegroundColor: MaterialStateProperty.all(getpureDirectClr(themeModeType)),
-        todayBackgroundColor: MaterialStateProperty.all(Colors.indigoAccent),
+        dayForegroundColor: WidgetStateProperty.all(getpureOppositeClr(themeModeType)),
+        todayForegroundColor: WidgetStateProperty.all(getpureDirectClr(themeModeType)),
+        todayBackgroundColor: WidgetStateProperty.all(Colors.indigoAccent),
       ),
       popupMenuTheme: const PopupMenuThemeData(
         surfaceTintColor: Colors.transparent,
@@ -84,14 +84,14 @@ class UIController{
         ),
         position: PopupMenuPosition.over,
       ),
-      tabBarTheme: TabBarTheme(
-        dividerColor: Colors.grey.withOpacity(0.5),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: Colors.grey.withValues(alpha: 0.5),
         labelStyle: cusTitleSmall(themeModeType),
         labelColor: Colors.deepOrange,
         unselectedLabelStyle: cusTitleSmall(themeModeType),
         unselectedLabelColor: getpureOppositeClr(themeModeType),
         indicatorSize: TabBarIndicatorSize.label,
-        overlayColor: MaterialStateProperty.all(Colors.deepOrange.withOpacity(0.1)),
+        overlayColor: WidgetStateProperty.all(Colors.deepOrange.withValues(alpha: 0.1)),
         indicator: const UnderlineTabIndicator(
           borderRadius: UIConstants.smallBorderRadius,
           borderSide: BorderSide(
@@ -180,7 +180,7 @@ class UIController{
   }
 
   BoxShadow boxShadow(ThemeModeType themeModeType) =>BoxShadow(
-    color: themeModeType == ThemeModeType.dark ? Colors.transparent : Colors.black.withOpacity(0.4),
+    color: themeModeType == ThemeModeType.dark ? Colors.transparent : Colors.black.withValues(alpha: 0.4),
     blurRadius: 4,
     spreadRadius: 0.5,
     offset: const Offset(0, 2),

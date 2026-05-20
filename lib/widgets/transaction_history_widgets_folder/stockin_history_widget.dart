@@ -8,13 +8,13 @@ import '../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../constants/enums.dart';
 import '../../constants/uiConstants.dart';
 import '../../controller/ui_controller.dart';
-import '../../models/item_model_folder/item_model.dart';
+
 import '../../models/item_model_folder/uniqueItem_model.dart';
 import '../../models/user_model_folder/user_model.dart';
-import '../../utils/ui_responsive_calculation.dart';
+
 import '../cusTxt_widget.dart';
-import '../index_box_widget.dart';
-import '../tables_folder/cusTableRow.dart';
+
+
 
 class StockInHistoryWidget extends StatelessWidget {
 
@@ -34,109 +34,89 @@ class StockInHistoryWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final UIutils uIutils = UIutils();
 
-    return Container(
-      width: showDate ? uIutils.stockInHistoryWidgetWidth() : double.maxFinite,
-      decoration: BoxDecoration(
-        borderRadius: UIConstants.bigBorderRadius,
-        border: Border.all(
-          color: showDate ? Colors.grey : Colors.transparent,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(
-        vertical: UIConstants.mediumSpace,
-        horizontal: UIConstants.mediumSpace,
-      ),
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
+      clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if(showDate)Align(
-            alignment: Alignment.centerLeft,
-            child: CusTxtWidget(
-              txt: stockInHistoryModel.dateTxt,
-              txtStyle: Theme.of(context).textTheme.bodyLarge!,
-            ),
-          ),
-          ...stockInHistoryModel.stockInList.reversed.toList().asMap().entries.map((e){
-            // cusDebugPrint(e.value.id);
-            final UserModel? stockInPerson = context.read<UserDataCubit>().getSingleUser(e.value.createPersonId);
-            final List<UniqueItemModel> activeUniqueItemList = context.watch<ItemCubit>().state.activeUniqueItemList;
-            final List<UniqueItemModel> filteredInActiveUniqueItemList = context.read<ItemCubit>().filterInActiveUniqueItemList();
-            final List<UniqueItemModel> combineUniqueItemList = [...activeUniqueItemList, ...filteredInActiveUniqueItemList];
-            final List<UniqueItemModel> selectedUniqueItemList = [];
-            // cusDebugPrint("---------start--------------");
-            for(int a = 0; a< combineUniqueItemList.length; a++){
-              if(combineUniqueItemList[a].stockInId == e.value.id ){
-                selectedUniqueItemList.add(combineUniqueItemList[a]);
-              }
-
-              // cusDebugPrint(combineUniqueItemList[a].itemId);
-
-            }
-            // selectedUniqueItemList.forEach((element) {
-            //   cusDebugPrint(element.itemId);
-            // });
-            // cusDebugPrint("---------end--------------");
-            // cusDebugPrint(activeUniqueItemList.length);
-            // cusDebugPrint(filteredInActiveUniqueItemList.length);
-            // cusDebugPrint(combineUniqueItemList.length);
-            // cusDebugPrint(selectedUniqueItemList.length);
-            final List<int> itemIdList = [];
-            for(int b = 0; b < selectedUniqueItemList.length; b++){
-              if(!itemIdList.contains(selectedUniqueItemList[b].itemId)){
-                itemIdList.add(selectedUniqueItemList[b].itemId);
-              }
-            }
-
-            return Container(
-
-              decoration: BoxDecoration(
-                borderRadius: UIConstants.mediumBorderRadius,
-                color: uiController.getpureDirectClr(themeModeType),
+          if (showDate)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: UIConstants.mediumSpace,
+                horizontal: UIConstants.bigSpace,
               ),
-              padding: const EdgeInsets.all(UIConstants.smallSpace),
-              margin: const EdgeInsets.all(UIConstants.smallSpace),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(UIConstants.mediumSpace),
-                    child: Row(
-                      children: [
-                        IndexBoxWidget(index: (e.key + 1).toString()),
-                        uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.bigSpace),
-                        CusTxtWidget(
-                          txtStyle: Theme.of(context).textTheme.titleSmall!,
-                          txt: stockInPerson == null ? "Person not found" : "Name :  ${stockInPerson.userName}",
-                        ),
-                      ],
+              decoration: BoxDecoration(
+                color: uiController.getpureOppositeClr(themeModeType),
+              ),
+              child: CusTxtWidget(
+                txt: stockInHistoryModel.dateTxt,
+                txtStyle: Theme.of(context).textTheme.titleLarge!.copyWith(
+                  color: uiController.getpureDirectClr(themeModeType),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          
+          Container(
+            color: uiController.getpureDirectClr(themeModeType),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: stockInHistoryModel.stockInList.length,
+              separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16),
+              itemBuilder: (context, index) {
+                final reversedIndex = stockInHistoryModel.stockInList.length - 1 - index;
+                final e = stockInHistoryModel.stockInList[reversedIndex];
+
+                final UserModel? stockInPerson = context.read<UserDataCubit>().getSingleUser(e.createPersonId);
+                final List<UniqueItemModel> activeUniqueItemList = context.watch<ItemCubit>().state.activeUniqueItemList;
+                final List<UniqueItemModel> filteredInActiveUniqueItemList = context.read<ItemCubit>().filterInActiveUniqueItemList();
+                final List<UniqueItemModel> combineUniqueItemList = [...activeUniqueItemList, ...filteredInActiveUniqueItemList];
+                final List<UniqueItemModel> selectedUniqueItemList = [];
+                
+                for(int a = 0; a < combineUniqueItemList.length; a++){
+                  if(combineUniqueItemList[a].stockInId == e.id ){
+                    selectedUniqueItemList.add(combineUniqueItemList[a]);
+                  }
+                }
+
+                // Group by Item ID to show clean subtitle
+                Map<int, int> itemCounts = {};
+                for(var unique in selectedUniqueItemList) {
+                  itemCounts[unique.itemId] = (itemCounts[unique.itemId] ?? 0) + 1;
+                }
+
+                int totalItems = selectedUniqueItemList.length;
+                int uniqueTypes = itemCounts.keys.length;
+
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace, vertical: 8),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                    child: Icon(Icons.add_box, color: uiController.getpureOppositeClr(themeModeType)),
+                  ),
+                  title: CusTxtWidget(
+                    txt: stockInPerson?.userName ?? "Unknown User",
+                    txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: CusTxtWidget(
+                    txt: "Added $totalItems items across $uniqueTypes types",
+                    txtStyle: Theme.of(context).textTheme.bodySmall!,
+                  ),
+                  trailing: CusTxtWidget(
+                    txt: "+$totalItems",
+                    txtStyle: Theme.of(context).textTheme.titleLarge!.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Table(
-                    columnWidths: const {
-                      0 : FlexColumnWidth(8),
-                      1 : FlexColumnWidth(1),
-                      2 : FlexColumnWidth(3),
-                    },
-                    children: itemIdList.map((id){
-                      ItemModel? item = context.read<ItemCubit>().getItem(id);
-                      List<UniqueItemModel> selectedList = [];
-                      for(int a = 0; a < selectedUniqueItemList.length; a++){
-                        if(selectedUniqueItemList[a].itemId == id){
-                          selectedList.add(selectedUniqueItemList[a]);
-                        }
-                      }
-                      return CusTableRow.tableRowWithThreeStringsForStockOutHistory(
-                          item == null ? "Item not found" : item.name,
-                          "x",
-                          selectedList.length.toString(),
-                          context
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            );
-          }),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

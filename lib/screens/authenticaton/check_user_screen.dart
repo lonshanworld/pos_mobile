@@ -9,6 +9,7 @@ import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 
 import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
+import 'package:pos_mobile/screens/authenticaton/merchant_setup_screen.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 
@@ -36,15 +37,15 @@ class CheckUserScreen extends StatelessWidget {
             alignment: Alignment.center,
             child: GestureDetector(
               onLongPressStart: (_){
-                timer = Timer(duration, () {
-                  context.read<UserDataCubit>().initData().then((_) {
-                    Navigator.of(context).pushNamed(
-                        LoginScreen.routeName,
-                        arguments:  {
-                          "userLevel" : UserLevel.superAdmin,
-                        }
-                    );
-                  });
+                timer = Timer(duration, () async {
+                  await context.read<UserDataCubit>().initData();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushNamed(
+                    LoginScreen.routeName,
+                    arguments: {
+                      "userLevel": UserLevel.superAdmin,
+                    },
+                  );
                 });
               },
               onLongPressEnd: (_){
@@ -52,16 +53,6 @@ class CheckUserScreen extends StatelessWidget {
                   timer!.cancel();
                 }
               },
-              // onTap: (){
-              //   context.read<UserDataCubit>().initData().then((_) {
-              //     Navigator.of(context).pushNamed(
-              //         LoginScreen.routeName,
-              //         arguments:  {
-              //           "userLevel" : UserLevel.superAdmin,
-              //         }
-              //     );
-              //   });
-              // },
               child: const LogoImageWidget(widthandheight: 200),
             ),
           ),
@@ -71,23 +62,30 @@ class CheckUserScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CusTxtElevatedBtn(
-                txt: "Admin",
+                txt: "Merchant",
                 verticalpadding: 10,
                 horizontalpadding: 30,
                 bdrRadius: UIConstants.mediumRadius,
                 bgClr: uiController.getpureOppositeClr(themeModeType),
                 txtClr: uiController.getpureDirectClr(themeModeType),
                 txtStyle: Theme.of(context).textTheme.titleLarge!,
-                func: () {
-                  context.read<UserDataCubit>().initData().then((_) {
+                func: () async {
+                  await context.read<UserDataCubit>().initData();
+                  if (!context.mounted) return;
+                  final hasMerchant = context
+                      .read<UserDataCubit>()
+                      .state
+                      .allUserModelList
+                      .any((u) => u.userLevel == UserLevel.merchant);
+                  if (!context.mounted) return;
+                  if (hasMerchant) {
                     Navigator.of(context).pushNamed(
-                        LoginScreen.routeName,
-                        arguments:  {
-                          "userLevel" : UserLevel.admin,
-                        }
+                      LoginScreen.routeName,
+                      arguments: {"userLevel": UserLevel.merchant},
                     );
-                  });
-
+                  } else {
+                    Navigator.of(context).pushNamed(MerchantSetupScreen.routeName);
+                  }
                 },
               ),
               uiController.sizedBox(cusHeight: null, cusWidth:  UIConstants.bigSpace),
@@ -99,15 +97,15 @@ class CheckUserScreen extends StatelessWidget {
                 bgClr: uiController.getpureOppositeClr(themeModeType),
                 txtClr: uiController.getpureDirectClr(themeModeType),
                 txtStyle: Theme.of(context).textTheme.titleLarge!,
-                func: () {
-                  context.read<UserDataCubit>().initData().then((_) {
-                    Navigator.of(context).pushNamed(
-                        LoginScreen.routeName,
-                        arguments:  {
-                          "userLevel" : UserLevel.staff,
-                        }
-                    );
-                  });
+                func: () async {
+                  await context.read<UserDataCubit>().initData();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushNamed(
+                    LoginScreen.routeName,
+                    arguments: {
+                      "userLevel": UserLevel.staff,
+                    },
+                  );
                 },
               ),
             ],

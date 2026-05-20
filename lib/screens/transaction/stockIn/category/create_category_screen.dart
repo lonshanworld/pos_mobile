@@ -5,7 +5,6 @@ import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/error_handlers/error_handler.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import "package:pos_mobile/widgets/btns_folder/cusTextOnlyBtn_widget.dart";
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
@@ -32,8 +31,16 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
 
     return Scaffold(
@@ -67,18 +74,22 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                   txt: "Create",
                   func: ()async{
                     if(categoryNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Text cannot be empty");
+                      showValidationMessage("Category name cannot be empty");
                     }else{
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      await context.read<ItemCubit>().createNewCategory(userModel, categoryNameController.text.trim()).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      final value = await context.read<ItemCubit>().createNewCategory(
+                        userModel,
+                        categoryNameController.text.trim(),
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

@@ -4,7 +4,6 @@ import "package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart";
 import "package:pos_mobile/features/printer_font_changer.dart";
 import "package:pos_mobile/utils/formula.dart";
 
-import "../../constants/uiConstants.dart";
 import "../../models/item_model_folder/item_model.dart";
 import "../../models/item_model_folder/uniqueItem_model.dart";
 import "../../models/promotion_model_folder/promotion_model.dart";

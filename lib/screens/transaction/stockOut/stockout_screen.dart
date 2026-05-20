@@ -52,10 +52,10 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     List<ItemModel> activeItemList = context.watch<ItemCubit>().state.activeItemList;
     final CusShowSheet cusShowModelBottomSheet = CusShowSheet();
+    final UIController uiController = UIController.instance;
+    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
 
 
     OutlineInputBorder outlineInputBorder = OutlineInputBorder(
@@ -137,12 +137,17 @@ class _StockOutScreenState extends State<StockOutScreen> {
           dataSelection.add(sellUniqueItemModelList[i]);
         }
       }
-      if(mounted){
-        setState(() {
-
-        });
-      }
       return dataSelection.length;
+    }
+
+    void showInfoSnack(String txt) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(txt),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
 
     void clearAllData(){
@@ -165,6 +170,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
         });
       }
       Future.delayed(const Duration(seconds: 3),(){
+        if (!mounted) return;
         setState(() {
           showLoading = false;
         });
@@ -240,37 +246,52 @@ class _StockOutScreenState extends State<StockOutScreen> {
                     ),
                   ),
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: UIConstants.bigSpace * 4
-                        ),
-                        child: Wrap(
-                          spacing: UIConstants.bigSpace,
-                          runSpacing: UIConstants.bigSpace,
-                          alignment: WrapAlignment.center,
-                          children: searchController.text.trim().toString().isEmpty || searchController.text.trim() == ""
-                              ?
-                          activeItemList.map((e){
-                            return StockOutItemBoxWidget(
-                              itemModel: e,
-                              reduceFunc: removeSellUniqueItemList,
-                              addFunc: addSellUniqueItemList,
-                              selectedUniqueItemList: sellUniqueItemModelList,
-                              startIndex: getSearchIndex(e.id),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: UIConstants.bigSpace * 4
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final isSearching = searchController.text.trim().isNotEmpty;
+                          final itemsToShow = isSearching ? searchResultItemList : activeItemList;
+                          
+                          if (itemsToShow.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    isSearching ? "No items found matching '${searchController.text}'" : "No items available",
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
                             );
-                          }).toList()
-                              :
-                          searchResultItemList.map((e){
-                            return StockOutItemBoxWidget(
-                              itemModel: e,
-                              reduceFunc: removeSellUniqueItemList,
-                              addFunc: addSellUniqueItemList,
-                              selectedUniqueItemList: sellUniqueItemModelList,
-                              startIndex: getSearchIndex(e.id),
-                            );
-                          }).toList(),
-                        ),
+                          }
+                          
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(UIConstants.smallSpace),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 300,
+                              childAspectRatio: 0.85,
+                              crossAxisSpacing: UIConstants.mediumSpace,
+                              mainAxisSpacing: UIConstants.mediumSpace,
+                            ),
+                            itemCount: itemsToShow.length,
+                            itemBuilder: (context, index) {
+                              final item = itemsToShow[index];
+                              return StockOutItemBoxWidget(
+                                itemModel: item,
+                                reduceFunc: removeSellUniqueItemList,
+                                addFunc: addSellUniqueItemList,
+                                selectedUniqueItemList: sellUniqueItemModelList,
+                                startIndex: getSearchIndex(item.id),
+                              );
+                            },
+                          );
+                        }
                       ),
                     ),
                   ),
@@ -279,87 +300,114 @@ class _StockOutScreenState extends State<StockOutScreen> {
             ),
           ),
           Positioned(
-            top: 70,
-            right: -10,
-            child: RotatedBox(
-              quarterTurns: 3,
-              child: Builder(
-                  builder: (ctx) {
-                    return CusTxtIconElevatedBtn(
-                      txt: "Check Voucher",
-                      verticalpadding: UIConstants.smallSpace,
-                      horizontalpadding: UIConstants.mediumSpace,
-                      bdrRadius: UIConstants.smallRadius,
-                      bgClr: uiController.getpureOppositeClr(themeModeType),
-                      txtStyle: Theme.of(ctx).textTheme.titleSmall!,
-                      txtClr: uiController.getpureDirectClr(themeModeType),
-                      func: (){
-                        Scaffold.of(ctx).openEndDrawer();
-                      },
-                      icon: Icons.arrow_drop_down,
-                      iconSize: UIConstants.normalNormalIconSize,
-                    );
-                  }
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                left: UIConstants.bigSpace,
+                right: UIConstants.bigSpace,
+                top: UIConstants.mediumSpace,
+                bottom: MediaQuery.of(context).padding.bottom > 0
+                    ? MediaQuery.of(context).padding.bottom
+                    : UIConstants.mediumSpace,
               ),
-            ),
-          ),
-          Positioned(
-            bottom: 30,
-            right: 30,
-            child: Builder(
-                builder: (ctx) {
-                  return CusTxtIconElevatedBtn(
-                    txt: "Stock-out detail",
-                    verticalpadding: UIConstants.smallSpace,
-                    horizontalpadding: UIConstants.mediumSpace,
-                    bdrRadius: UIConstants.smallRadius,
-                    bgClr: Colors.amber,
-                    txtStyle: Theme.of(ctx).textTheme.titleSmall!,
-                    txtClr: Colors.purple,
-                    func: (){
-                      cusShowModelBottomSheet.showCusBottomSheet(AddMoreInfoStockOutScreen(
-                        func: ({
-                          required double? additionalPromotionAmountInfo,
-                          required String? customerNameInfo,
-                          required double? deliveryChargesInfo,
-                          required String? deliveryNameInfo,
-                          required String? descriptionInfo,
-                          required PaymentMethod paymentMethodInfo,
-                          required ShoppingType shoppingTypeInfo,
-                          required double taxPercentageInfo,
-                          required PromotionModel? promotionModel,
-                        }) {
-                          if(mounted){
-                            setState(() {
-                              additionalPromotionAmount = additionalPromotionAmountInfo;
-                              customerName = customerNameInfo;
-                              deliveryCharges = deliveryChargesInfo;
-                              deliveryName = deliveryNameInfo;
-                              description = descriptionInfo;
-                              paymentMethod = paymentMethodInfo;
-                              shoppingType = shoppingTypeInfo;
-                              taxPercentage = taxPercentageInfo;
-                              promotion = promotionModel;
-                            });
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: CusTxtIconElevatedBtn(
+                      txt: "Add Details",
+                      verticalpadding: 14,
+                      horizontalpadding: UIConstants.smallSpace,
+                      bdrRadius: UIConstants.smallRadius,
+                      txtClr: Colors.white,
+                      bgClr: Colors.amber,
+                      txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                      func: () {
+                        cusShowModelBottomSheet.showCusBottomSheet(AddMoreInfoStockOutScreen(
+                          func: ({
+                            required double? additionalPromotionAmountInfo,
+                            required String? customerNameInfo,
+                            required double? deliveryChargesInfo,
+                            required String? deliveryNameInfo,
+                            required String? descriptionInfo,
+                            required PaymentMethod paymentMethodInfo,
+                            required ShoppingType shoppingTypeInfo,
+                            required double taxPercentageInfo,
+                            required PromotionModel? promotionModel,
+                          }) {
+                            if (mounted) {
+                              setState(() {
+                                additionalPromotionAmount = additionalPromotionAmountInfo;
+                                customerName = customerNameInfo;
+                                deliveryCharges = deliveryChargesInfo;
+                                deliveryName = deliveryNameInfo;
+                                description = descriptionInfo;
+                                paymentMethod = paymentMethodInfo;
+                                shoppingType = shoppingTypeInfo;
+                                taxPercentage = taxPercentageInfo;
+                                promotion = promotionModel;
+                              });
+                            }
+                          },
+                          selectedItemModelList: sellItemModelList,
+                          selectedUniqueItemList: sellUniqueItemModelList,
+                          deliveryChargesInfo: deliveryCharges,
+                          taxPercentageInfo: taxPercentage,
+                          additionalPromotionAmountInfo: additionalPromotionAmount,
+                          descriptionInfo: description,
+                          customerNameInfo: customerName,
+                          deliveryNameInfo: deliveryName,
+                          shoppingTypeInfo: shoppingType,
+                          paymentMethodInfo: paymentMethod,
+                          promotionModel: promotion,
+                        ));
+                      },
+                      icon: Icons.edit_note,
+                      iconSize: 22,
+                    ),
+                  ),
+                  const SizedBox(width: UIConstants.mediumSpace),
+                  Expanded(
+                    flex: 4,
+                    child: Builder(builder: (ctx) {
+                      return CusTxtIconElevatedBtn(
+                        txt: "Checkout (${sellUniqueItemModelList.length})",
+                        verticalpadding: 14,
+                        horizontalpadding: UIConstants.smallSpace,
+                        bdrRadius: UIConstants.smallRadius,
+                        bgClr: uiController.getpureOppositeClr(themeModeType),
+                        txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        txtClr: uiController.getpureDirectClr(themeModeType),
+                        func: () {
+                          if (sellUniqueItemModelList.isEmpty) {
+                            showInfoSnack("Please add at least one item before checkout.");
+                            return;
                           }
+                          Scaffold.of(ctx).openEndDrawer();
                         },
-                        selectedItemModelList: sellItemModelList,
-                        selectedUniqueItemList: sellUniqueItemModelList,
-                        deliveryChargesInfo: deliveryCharges,
-                        taxPercentageInfo: taxPercentage,
-                        additionalPromotionAmountInfo: additionalPromotionAmount,
-                        descriptionInfo: description,
-                        customerNameInfo: customerName,
-                        deliveryNameInfo: deliveryName,
-                        shoppingTypeInfo: shoppingType,
-                        paymentMethodInfo: paymentMethod,
-                        promotionModel: promotion,
-                      ));
-                    },
-                    icon: Icons.arrow_drop_down,
-                    iconSize: UIConstants.normalNormalIconSize,
-                  );
-                }
+                        icon: Icons.shopping_cart_checkout,
+                        iconSize: 22,
+                      );
+                    }),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

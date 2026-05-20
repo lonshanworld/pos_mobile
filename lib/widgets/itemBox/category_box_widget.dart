@@ -5,6 +5,7 @@ import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
 import "package:pos_mobile/constants/enums.dart";
+import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/error_handlers/error_handler.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/category_model.dart";
@@ -12,7 +13,6 @@ import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import 'package:pos_mobile/screens/confirm_screens_folder/comfirm_screen.dart';
 import "package:pos_mobile/screens/transaction/stockIn/category/edit_category_screen.dart";
 import "package:pos_mobile/widgets/cusPopMenuItem_widget.dart";
-import "package:pos_mobile/widgets/cusTxt_widget.dart";
 
 import "../../features/cus_showmodelbottomsheet.dart";
 
@@ -70,14 +70,14 @@ class CategoryBoxWidget extends StatelessWidget {
                       cancelBtnTxt: "Cancel",
                       acceptFunc: ()async{
                         context.read<LoadingCubit>().setLoading("Deleting ...");
-                        await context.read<ItemCubit>().deleteCategory(userModel!, categoryModel).then((value){
-                          Navigator.of(ctx).pop();
-                          if(value){
-                            context.read<LoadingCubit>().setSuccess("Success !");
-                          }else{
-                            context.read<LoadingCubit>().setFail("Cannot delete");
-                          }
-                        });
+                        final value = await context.read<ItemCubit>().deleteCategory(userModel!, categoryModel);
+                        if (!context.mounted) return;
+                        Navigator.of(ctx).pop();
+                        if(value){
+                          context.read<LoadingCubit>().setSuccess("Success !");
+                        }else{
+                          context.read<LoadingCubit>().setFail("Cannot delete");
+                        }
                       },
                       cancelFunc: (){
                         Navigator.of(ctx).pop();
@@ -95,7 +95,7 @@ class CategoryBoxWidget extends StatelessWidget {
       child: InkWell(
         // style: ElevatedButton.styleFrom(
         //   elevation: 8,
-        //   foregroundColor: Colors.grey.withOpacity(0.3),
+        //   foregroundColor: Colors.grey.withValues(alpha: 0.3),
         //   backgroundColor: uiController.getpureDirectClr(themeModeType),
         //   surfaceTintColor: uiController.getpureDirectClr(themeModeType),
         //   // side: BorderSide(
@@ -110,34 +110,100 @@ class CategoryBoxWidget extends StatelessWidget {
         //   ),
         // ),
         onLongPress: (){
-          if(userModel != null && userModel.userLevel == UserLevel.admin && isStorage == true){
+          if(userModel != null && userModel.userLevel == UserLevel.merchant && isStorage == true){
             popupMenu.currentState?.showButtonMenu();
           }
         },
         onTap: (){
           func();
         },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleSmall!,
-              txt: categoryModel.name,
+        borderRadius: UIConstants.mediumBorderRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: uiController.getpureDirectClr(themeModeType),
+            borderRadius: UIConstants.mediumBorderRadius,
+            border: Border.all(
+              color: uiController.getpureOppositeClr(themeModeType).withValues(alpha: 0.08),
             ),
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: uiController.getpureOppositeClr(themeModeType),
-              child: CusTxtWidget(
-                txtStyle: Theme.of(context).textTheme.titleLarge!.copyWith(
-                  color:  uiController.getpureDirectClr(themeModeType),
-                ),
-                txt: groupCount.toString(),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: UIConstants.mediumBorderRadius,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                // Colored header with category initial
+                Expanded(
+                  flex: 6,
+                  child: Container(
+                    color: _categoryColor(categoryModel.name).withValues(alpha: 0.12),
+                    child: Center(
+                      child: Text(
+                        categoryModel.name.isNotEmpty ? categoryModel.name[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: _categoryColor(categoryModel.name),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Name + count footer
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          categoryModel.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          "$groupCount ${groupCount == 1 ? 'group' : 'groups'}",
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Color _categoryColor(String name) {
+    const List<Color> palette = [
+      Color(0xFF1565C0),
+      Color(0xFF2E7D32),
+      Color(0xFF6A1B9A),
+      Color(0xFFE65100),
+      Color(0xFF00695C),
+      Color(0xFF283593),
+      Color(0xFF880E4F),
+      Color(0xFF00838F),
+      Color(0xFF4E342E),
+      Color(0xFF37474F),
+    ];
+    if (name.isEmpty) return palette[0];
+    return palette[name.codeUnitAt(0) % palette.length];
   }
 }

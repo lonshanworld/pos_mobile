@@ -35,6 +35,6 @@ class AlertDbStorage{
 
   static Future<void>onUpgrade(Database db)async{
     await onDelete(db);
-    await onUpgrade(db);
+    await onCreate(db);
   }
 }

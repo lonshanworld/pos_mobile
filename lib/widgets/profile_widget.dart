@@ -28,110 +28,124 @@ class ProfileWidget extends StatelessWidget {
 
     Widget profileBox(){
       if(userModel.imageId != null){
-
         // TODO : design for profilebox
         return const SizedBox();
       }else{
-        return const LogoImageWidget(widthandheight: 100);
+        return const LogoImageWidget(widthandheight: 80);
+      }
+    }
+
+    String userLevelLabel() {
+      switch (userModel.userLevel) {
+        case UserLevel.staff:
+          return "Staff";
+        case UserLevel.merchant:
+          return "Merchant";
+        case UserLevel.superAdmin:
+          return "Super Admin";
+      }
+    }
+
+    Color userLevelColor() {
+      switch (userModel.userLevel) {
+        case UserLevel.staff:
+          return Colors.blue;
+        case UserLevel.merchant:
+          return Colors.deepPurple;
+        case UserLevel.superAdmin:
+          return Colors.red;
       }
     }
 
     return SizedBox(
       width: double.infinity,
-      height: 190,
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            left: 0,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                profileBox(),
-                CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.bodyLarge!,
-                  txt: userModel.userName,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: UIConstants.bigSpace,
+          horizontal: UIConstants.mediumSpace,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            profileBox(),
+            const SizedBox(height: UIConstants.mediumSpace),
+            Text(
+              userModel.userName,
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: UIConstants.mediumSpace,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: userLevelColor().withValues(alpha: 0.1),
+                borderRadius: UIConstants.smallBorderRadius,
+              ),
+              child: Text(
+                userLevelLabel(),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: userLevelColor(),
+                  fontWeight: FontWeight.w600,
                 ),
-                CusTxtWidget(
-                  txt : TextFormatters.getDateTime(userModel.userLoginTime),
-                  txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: uiController.getOppositeClr(themeModeType).withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 6),
+            CusTxtWidget(
+              txt: TextFormatters.getDateTime(userModel.userLoginTime),
+              txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                color: uiController.getOppositeClr(themeModeType).withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: UIConstants.mediumSpace),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  showSheet.showCusDialogScreen(ConfirmScreen(
+                    txt: "Are you sure to logout ?",
+                    title: "Confirm !!!",
+                    acceptBtnTxt: "Yes, logout",
+                    cancelBtnTxt: "Cancel",
+                    acceptFunc: () async {
+                      final navigator = Navigator.of(context);
+                      final loadingCubit = context.read<LoadingCubit>();
+                      navigator.pop(); // Close dialog
+                      loadingCubit.setLoading("Logout ...");
+                      final value = await Logout.logout(context);
+                      if (value) {
+                        loadingCubit.changeLoadingValue(false);
+                        navigator.pushNamedAndRemoveUntil(
+                            CheckUserScreen.routeName, (route) => false);
+                      } else {
+                        loadingCubit.setFail("Logout Failed");
+                      }
+                    },
+                    cancelFunc: () {
+                      Navigator.of(context).pop();
+                    },
+                  ));
+                },
+                icon: const Icon(Icons.logout, size: 18),
+                label: const Text("Logout"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red, width: 1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: UIConstants.smallBorderRadius,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: UIConstants.smallSpace,
                   ),
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 20,
-            left: 20,
-            child:  IconButton(
-              tooltip: "Log out",
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              onPressed: (){
-                //
-
-                // showDialog(
-                //   context: context,
-                //   builder: (ctx){
-                //     return ConfirmScreen(
-                //       txt: "Are you sure to logout ?",
-                //       title: "Confirm !!!",
-                //       acceptBtnTxt: "Yes, logout",
-                //       cancelBtnTxt: "Cancel",
-                //       acceptFunc: ()async{
-                //         Navigator.of(ctx).pop();
-                //         context.read<LoadingCubit>().setLoading("Logout ...");
-                //         await Logout.logout(context).then((value) {
-                //           if(value){
-                //             context.read<LoadingCubit>().changeLoadingValue(false);
-                //             Navigator.of(context).pushNamedAndRemoveUntil(CheckUserScreen.routeName, (route) => false);
-                //           }else{
-                //             context.read<LoadingCubit>().setFail("Logout Failed");
-                //           }
-                //         });
-                //       },
-                //       cancelFunc: (){
-                //         Navigator.of(ctx).pop();
-                //       },
-                //     );
-                //   },
-                // );
-                showSheet.showCusDialogScreen(ConfirmScreen(
-                  txt: "Are you sure to logout ?",
-                  title: "Confirm !!!",
-                  acceptBtnTxt: "Yes, logout",
-                  cancelBtnTxt: "Cancel",
-                  acceptFunc: ()async{
-                    Navigator.of(context).pop();
-                    context.read<LoadingCubit>().setLoading("Logout ...");
-                    await Logout.logout(context).then((value) {
-                      if(value){
-                        context.read<LoadingCubit>().changeLoadingValue(false);
-                        Navigator.of(context).pushNamedAndRemoveUntil(CheckUserScreen.routeName, (route) => false);
-                      }else{
-                        context.read<LoadingCubit>().setFail("Logout Failed");
-                      }
-                    });
-                  },
-                  cancelFunc: (){
-                    Navigator.of(context).pop();
-                  },
-                ));
-              },
-              icon: const Icon(
-                Icons.logout,
-                size: UIConstants.bigIcon,
-                color: Colors.white,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

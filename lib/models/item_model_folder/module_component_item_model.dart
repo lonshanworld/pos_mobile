@@ -35,7 +35,7 @@ class ModuleComponentItemModel extends ItemInfoSkeletalModel{
   });
 
   @override
-  ModuleComponentItemModel.fromJson(Map<String, dynamic>jsonData):
+  ModuleComponentItemModel.fromJson(super.jsonData):
       name = jsonData["name"],
       parentId = jsonData["parentId"],
       uniqueId = jsonData["uniqueId"],
@@ -47,7 +47,7 @@ class ModuleComponentItemModel extends ItemInfoSkeletalModel{
       stockInId = jsonData["stockInId"],
       stockOutId = jsonData["stockOutId"],
       code = jsonData["code"],
-      super.fromJson(jsonData);
+      super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

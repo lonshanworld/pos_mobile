@@ -39,7 +39,14 @@ class TypeScreen extends StatefulWidget {
 
 class _TypeScreenState extends State<TypeScreen> {
   int selectedIndex = 0;
+  final TextEditingController searchController = TextEditingController();
+  String searchQuery = "";
 
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +57,9 @@ class _TypeScreenState extends State<TypeScreen> {
     void startSelectedAgain(){
       if(mounted){
         setState(() {
-          selectedIndex= 0;
+          selectedIndex = 0;
+          searchController.clear();
+          searchQuery = "";
         });
       }
     }
@@ -68,13 +77,42 @@ class _TypeScreenState extends State<TypeScreen> {
           final GroupModel groupModel = context.read<ItemCubit>().getGroup(widget.selectedGroupId!);
           final List<TypeModel> typeList = context.read<ItemCubit>().getSelectedTypeList(widget.selectedGroupId!);
           final TypeModel? typeModel = typeList.isEmpty ? null : context.read<ItemCubit>().getType(typeList[selectedIndex].id);
-          final List<ItemModel> itemList = typeList.isEmpty ? [] : context.read<ItemCubit>().getSelectedItemList(typeList[selectedIndex].id);
+          final List<ItemModel> rawItemList = typeList.isEmpty ? [] : context.read<ItemCubit>().getSelectedItemList(typeList[selectedIndex].id);
+          
+          final List<ItemModel> itemList = searchQuery.isEmpty 
+              ? rawItemList 
+              : rawItemList.where((item) => item.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+
+          OutlineInputBorder outlineInputBorder = OutlineInputBorder(
+            borderSide: const BorderSide(color: Colors.grey, width: 1),
+            borderRadius: BorderRadius.circular(50),
+          );
 
           return Column(
               children: [
                 StockInItemAppBar(
                   txt: "From  ${context.read<ItemCubit>().getGroup(widget.selectedGroupId!).name}",
                   func: widget.goBackFunc,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace, vertical: UIConstants.mediumSpace),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        searchQuery = val.trim();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Search Inventory...",
+                      labelStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.grey),
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      border: outlineInputBorder,
+                      focusedBorder: outlineInputBorder,
+                      enabledBorder: outlineInputBorder,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace, vertical: UIConstants.smallSpace),
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Column(
@@ -83,27 +121,39 @@ class _TypeScreenState extends State<TypeScreen> {
                         padding: const EdgeInsets.symmetric(
                           horizontal: UIConstants.smallSpace,
                         ),
-                        child: Material(
-                          elevation: 5,
-                          color: uiController.getpureDirectClr(themeModeType),
-                          borderRadius:UIConstants.smallBorderRadius,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: uiController.getpureDirectClr(themeModeType),
+                            borderRadius: UIConstants.smallBorderRadius,
+                            border: Border.all(
+                              color: uiController.getpureOppositeClr(themeModeType).withValues(alpha: 0.1),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.max,
                             children: [
                               if(widget.isStorage)Padding(
-                                padding: const EdgeInsets.only(
-                                  left: UIConstants.mediumSpace,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: UIConstants.mediumSpace,
+                                  vertical: UIConstants.smallSpace,
                                 ),
                                 child: CusTxtIconElevatedBtn(
                                   txt: "Add type",
                                   verticalpadding: 5,
-                                  horizontalpadding: 5,
-                                  bdrRadius: UIConstants.smallRadius,
-                                  bgClr: Colors.grey,
+                                  horizontalpadding: UIConstants.mediumSpace,
+                                  bdrRadius: UIConstants.mediumRadius,
+                                  bgClr: Colors.blueAccent,
                                   txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  txtClr: uiController.getpureOppositeClr(themeModeType),
+                                  txtClr: Colors.white,
                                   func: (){
                                     showSheet.showCusBottomSheet(CreateTypeScreen(selectedGroupModel: groupModel,));
                                   },
@@ -145,43 +195,31 @@ class _TypeScreenState extends State<TypeScreen> {
                       Expanded(
                         child: Stack(
                           children: [
-                            // Positioned(
-                            //   top: 0,
-                            //   bottom: 0,
-                            //   left: 0,
-                            //   right: 0,
-                            //   child: GridView.builder(
-                            //     padding: const EdgeInsets.all(UIConstants.bigSpace),
-                            //     itemCount: itemList.length,
-                            //     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            //       maxCrossAxisExtent: 350,
-                            //       mainAxisExtent: 120,
-                            //       mainAxisSpacing: UIConstants.bigSpace,
-                            //       crossAxisSpacing: UIConstants.bigSpace,
-                            //     ),
-                            //     itemBuilder: (ctx, index){
-                            //       return ItemBoxWidget(
-                            //         index: index + 1,
-                            //         itemModel: itemList[index],
-                            //         isStorage: widget.isStorage,
-                            //       );
-                            //     },
-                            //   ),
-                            // ),
                             Positioned(
                               top: UIConstants.bigSpace,
                               bottom: 0,
                               left: 0,
                               right: 0,
-                              child: Wrap(
-                                spacing: UIConstants.bigSpace,
-                                runSpacing: UIConstants.bigSpace,
-                                alignment: WrapAlignment.center,
-                                children: itemList.map((e) => ItemBoxWidget(
-                                    index: itemList.indexOf(e) + 1,
-                                    itemModel: e,
-                                    isStorage: widget.isStorage
-                                )).toList(),
+                              child: GridView.builder(
+                                padding: const EdgeInsets.only(
+                                  left: UIConstants.bigSpace,
+                                  right: UIConstants.bigSpace,
+                                  bottom: UIConstants.bigSpace * 4, // Space for FAB
+                                ),
+                                itemCount: itemList.length,
+                                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400,
+                                  mainAxisExtent: 140,
+                                  mainAxisSpacing: UIConstants.bigSpace,
+                                  crossAxisSpacing: UIConstants.bigSpace,
+                                ),
+                                itemBuilder: (ctx, index){
+                                  return ItemBoxWidget(
+                                    index: index + 1,
+                                    itemModel: itemList[index],
+                                    isStorage: widget.isStorage,
+                                  );
+                                },
                               ),
                             ),
                             if(typeModel != null && widget.isStorage)CreateItemBtnWidget(

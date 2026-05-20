@@ -15,9 +15,9 @@ class TypePromotionModel extends SomeModelPromotionSkeletalModel{
   });
 
   @override
-  TypePromotionModel.fromJson(Map<String, dynamic> jsonData) :
+  TypePromotionModel.fromJson(super.jsonData) :
         typeId = jsonData["typeId"],
-        super.fromJson(jsonData);
+        super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

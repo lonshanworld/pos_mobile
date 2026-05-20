@@ -1,0 +1,141 @@
+# Agent Skill Manual: POS Mobile
+
+This document serves as the architectural blueprint and developer guide for the **POS Mobile** project. It outlines the core tech stack, codebase structure, database schemas, state management design, and hardware/printing integrations. Refer to these guidelines whenever creating new features, modifying databases, or refactoring code.
+
+---
+
+## 1. Project Persona & Overview
+**POS Mobile** is a local-first, offline-capable Point of Sale mobile application built with **Flutter** and **Dart**.
+* **Primary Currency**: Myanmar Kyat (MMK) (indicated by `SetPromotion.mmk` enum).
+* **Database**: Local SQLite via `sqflite` (with relational constraints like `PRAGMA foreign_keys = ON`).
+* **State Management**: BLoC / Cubits (`flutter_bloc` package) for modular state and logic separation.
+* **Hardware Integration**: Bluetooth Low Energy (BLE) using `flutter_blue_plus` and raw thermal receipt printing layout utilities via `esc_pos_utils_plus`.
+* **Local Storage**: Key-value pairs using `get_storage` (for settings, theme selection, user state).
+
+---
+
+## 2. Directory Architecture
+
+```
+lib/
+├── blocs/               # Multi-Cubit state management classes
+├── constants/           # Color palettes, text constants, custom enums
+├── controller/          # UI scaling controllers & database helper orchestrator
+├── database/            # Table-specific SQLite DbServices (CRUD methods)
+├── error_handlers/      # Application-level error handling mechanics
+├── features/            # Isolated business features (e.g., printers, logout, filters)
+├── models/              # Structured models and database schemas
+├── routes/              # AppRouter for route configuration and screen navigation
+├── screens/             # UI Views organized by screen domains
+├── utils/               # Formatting helper utilities & custom debug prints
+└── widgets/             # Reusable UI widgets (vouchers, custom inputs, dialogs)
+```
+
+---
+
+## 3. Database Schema & Architecture (`lib/database/` & `lib/controller/DB_helper.dart`)
+
+The database architecture utilizes a **decentralized Service pattern** managed by a single central database gateway (`DBHelper`).
+* **Relational Integrity**: Foreign keys are explicitly enabled on configure:
+  ```dart
+  static Future<void> dbConfig(Database db) async {
+    await db.execute("PRAGMA foreign_keys = ON");
+  }
+  ```
+* **Soft Deletions**: To maintain history and transactional integrity, records (e.g., categories, groups, items) are **deactivated** (soft deleted) rather than purged:
+  * `deactivateCategory`
+  * `deactivateGroup`
+  * `deactivateType`
+  * `deactivateItem`
+
+### SQLite Sub-Services Map
+All low-level SQLite tables and query statements are encapsulated in their respective `DbService` classes:
+1. `UserDBService`: User credentials, access control levels (`UserLevel`).
+2. `CustomerDbService`: Client records for wholesale, shop, or online shopping.
+3. `DeliveryModelDbService` & `DeliveryPersonDbService`: Courier and delivery operator tracking.
+4. `RestrictionDBService`: Access control lists / operational restrictions.
+5. `PromotionDBService`: Promotions details (limits, rules, percentage or flat mmk discount).
+6. `GroupingItemDbService`: Coordinates structured items classification.
+7. `TransactionDBService`: Manages physical `stockIn` and `stockOut` processes.
+8. `UniqueItemDbService`: Identifies specific stock units, barcoded products, and item instances.
+9. `ModuleComponentItemDbService`: Manages modular sub-assemblies/nested ingredients.
+10. `AlertDbService` & `ReportDbService`: Outlines logging, audit trials, alerts, and system triggers.
+11. `HistoryDBService`: Stores transactional change history records.
+
+### Development Guideline for Data Access:
+> [!IMPORTANT]
+> **NEVER** write inline raw SQL queries inside UI widgets, Cubits, or Screens.
+> All database queries must be added to a specialized `DbService` under `lib/database/`, exposed through the global orchestrator `DBHelper` (in `lib/controller/DB_helper.dart`), and then consumed by the business logic cubit.
+
+---
+
+## 4. State Management Layout (`lib/blocs/`)
+
+The application bootstraps multiple global Cubits inside `lib/main.dart` using a `MultiBlocProvider` wrap at the root `MyApp` level:
+
+| Cubit Class Name | Directory Location | State / Target Responsibility |
+| :--- | :--- | :--- |
+| `ThemeCubit` | `theme_bloc/` | Manages dark/light modes using key `ThemeModeType`. |
+| `BluetoothPrinterCubit` | `bluetooth_printer_bloc/` | Handles receipt printer BLE connection & paper width options. |
+| `LoadingCubit` | `loading_bloc/` | Toggles dynamic spinners/loading screens globally. |
+| `UserDataCubit` | `userData_bloc/` | Persists session context for currently logged-in user. |
+| `ItemCubit` | `item_bloc/` | Orchestrates structural stocks, categories, groups, types, and items. |
+| `TransactionsCubit` | `transactions_bloc/` | Processes operations for checkout transactions, refunds, stock ins/outs. |
+| `HistoryCubit` | `history_bloc/` | Exposes logs and chronological inventory audit tracks. |
+| `PromotionCubit` | `promotion_bloc/` | Validates item-level and cart-wide discount parameters. |
+| `ConfirmByPasswordCubit`| `confirm_by_password_bloc/` | Manages secure credentials confirmation for sensitive actions. |
+
+### Cubit-to-Cubit Dependency Pattern:
+When a Cubit requires dependencies from another, utilize Flutter BLoC's watch pattern within the `MultiBlocProvider` initialization block:
+```dart
+BlocProvider<ConfirmByPasswordCubit>(
+  create: (ctx) {
+    return ConfirmByPasswordCubit(userModel: ctx.watch<UserDataCubit>().state.userModel);
+  },
+  lazy: true,
+)
+```
+
+---
+
+## 5. Hardware & Receipt Printing (`esc_pos_utils_plus` & `flutter_blue_plus`)
+Receipt generation is optimized for BLE-enabled mobile thermal ESC/POS roll printers.
+* **Paper Formatting Configurations**: Supports three standard roll widths (defined in `lib/constants/enums.dart`):
+  * **Small (mm58)**: 32 columns
+  * **Medium (mm72)**: 42 columns
+  * **Large (mm80)**: 48 columns
+* **Dynamic Voucher Widget**: `lib/widgets/voucher_box_widget.dart` generates a high-quality visual receipt layout. This visual model is mirrored when converting layouts into binary printer-friendly byte-arrays.
+
+---
+
+## 6. Critical Gotchas, Typo Warnings, & Constraints
+
+1. **Path Typos**: The folder containing authentication UI views in `lib/screens/` is spelled **`authenticaton`** (missing the second `i` before `on`).
+   * **Wrong path**: `lib/screens/authentication/`
+   * **Correct path**: `lib/screens/authenticaton/`
+   Be exceptionally careful with imports when introducing files here!
+2. **Item Hierarchy Hierarchy Structure**: Keep this model grouping logic strict:
+   `Category` ➔ `Group` ➔ `Type` ➔ `Item` ➔ `UniqueItem` (Specific serial unit / stock entry)
+3. **Responsive Geometry**: Avoid absolute, hard-coded pixel widths/heights for main container structures. Query `UIController` for pre-calculated dynamic layout dimensions:
+   ```dart
+   final UIController uiController = UIController.instance;
+   // Use uiController.setDeviceWidth and uiController.setDeviceHeight
+   ```
+4. **Null-Safety & Conversions**: Ensure all models have `fromJson` / `toJson` deserializers with clean null checks, specifically when dealing with double types from SQLite (e.g. converting `int` to `double` safely).
+
+---
+
+## 7. Developer Feature Checklist
+
+* [ ] **Add new Database Field**:
+  1. Add property to target model in `lib/models/`.
+  2. Implement database migrations or update schema in specific `DbService` (`lib/database/...`).
+  3. Map the field in the database helper `lib/controller/DB_helper.dart`.
+* [ ] **Create New Screen**:
+  1. Setup screen class in `lib/screens/` using dynamic layout tools.
+  2. Register static `routeName` in screen class.
+  3. Connect screen to router in `lib/routes/router.dart`.
+* [ ] **Emit State Action**:
+  1. Define a clean state subclass in the respective Cubit.
+  2. Use a standard `LoadingStatus` enum (`loading`, `success`, `fail`) to track asynchronous progress.
+  3. Wrap screen UI parts in `BlocBuilder` / `BlocConsumer` blocks to update UI states.

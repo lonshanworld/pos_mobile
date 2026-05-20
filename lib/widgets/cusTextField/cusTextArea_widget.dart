@@ -29,7 +29,7 @@ class CusTextArea extends StatelessWidget {
         maxLines: null,
         decoration: InputDecoration(
             focusedBorder: const OutlineInputBorder(
-              borderSide: const BorderSide(
+              borderSide: BorderSide(
                 color: Colors.grey,
                 width: 1,
               ),

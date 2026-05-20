@@ -17,7 +17,6 @@ import '../../../../blocs/theme_bloc/theme_cubit.dart';
 import '../../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../../constants/enums.dart';
 import '../../../../controller/ui_controller.dart';
-import '../../../../error_handlers/error_handler.dart';
 import '../../../../models/groupingItem_models_folders/group_model.dart';
 import '../../../../models/groupingItem_models_folders/type_model.dart';
 import '../../../../models/user_model_folder/user_model.dart';
@@ -64,13 +63,21 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
     final CategoryModel categoryModel = context.read<ItemCubit>().getCategory(groupModel.categoryId);
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     Future<void> createNewItemList()async{
       context.read<LoadingCubit>().setLoading("Adding ...");
 
-      await context.read<TransactionsCubit>().createNewUniqueItemList(
+      final value = await context.read<TransactionsCubit>().createNewUniqueItemList(
         userModel: userModel,
         categoryModel: categoryModel,
         groupModel: groupModel,
@@ -86,19 +93,18 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         placeController.text.trim()
         ,
         itemLength: moreItem,
-      ).then((value){
+      );
 
-        if(value){
-          context.read<ItemCubit>().reloadAllItem().then((_){
-            Navigator.of(context).pop();
+      if (!mounted) return;
+      if(value){
+        await context.read<ItemCubit>().reloadAllItem();
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        context.read<LoadingCubit>().setSuccess("Success !");
 
-            context.read<LoadingCubit>().setSuccess("Success !");
-          });
-
-        }else{
-          context.read<LoadingCubit>().setFail("Fail !");
-        }
-      });
+      }else{
+        context.read<LoadingCubit>().setFail("Fail !");
+      }
 
     }
 
@@ -247,11 +253,11 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                   func: ()async{
                     if(widget.itemModel.hasExpire){
                       if(expiredDate == null){
-                        errorHandlers.showErrorWithBtn(title: "Add Expired Date", txt: "This item can be expired.");
+                        showValidationMessage("Please add expired date");
                       }else{
                         if(widget.batchStockIn){
                           if(moreItem < 1){
-                            errorHandlers.showErrorWithBtn(title: null, txt: "Please add stock");
+                            showValidationMessage("Please add stock");
                           }else{
                             await createNewItemList();
                           }
@@ -262,7 +268,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                     }else{
                       if(widget.batchStockIn){
                         if(moreItem < 1){
-                          errorHandlers.showErrorWithBtn(title: null, txt: "Please add stock");
+                          showValidationMessage("Please add stock");
                         }else{
                           await createNewItemList();
                         }

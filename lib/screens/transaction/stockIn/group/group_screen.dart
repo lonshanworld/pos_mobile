@@ -79,10 +79,10 @@ class GroupScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(UIConstants.bigSpace),
                           itemCount: groupList.length,
                           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 200,
-                            childAspectRatio: 2/1,
-                            mainAxisSpacing: UIConstants.bigSpace,
-                            crossAxisSpacing: UIConstants.bigSpace,
+                            maxCrossAxisExtent: 240,
+                            mainAxisExtent: 120,
+                            mainAxisSpacing: UIConstants.mediumSpace,
+                            crossAxisSpacing: UIConstants.mediumSpace,
                           ),
                           itemBuilder: (ctx, index){
                             return GroupBoxWidget(

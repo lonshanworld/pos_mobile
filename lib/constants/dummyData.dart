@@ -19,7 +19,7 @@ class DummyData{
     id: 2,
     userName: "admin",
     password: "admin123",
-    userLevel: UserLevel.admin,
+    userLevel: UserLevel.merchant,
     userCreatedTime: DateTime.now(),
     activeStatus: false,
     imageId: null,

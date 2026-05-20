@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:pos_mobile/utils/auth_security.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 
 import '../../models/user_model_folder/user_model.dart';
@@ -17,7 +18,13 @@ class ConfirmByPasswordCubit extends Cubit<ConfirmByPasswordState> {
   TextEditingController get pinController => textEditingController;
 
   void confirmFunc(){
-    if(userModel != null && userModel!.password == textEditingController.text.trim()){
+    if(
+      userModel != null &&
+      AuthSecurity.verifyPassword(
+        storedPassword: userModel!.password,
+        inputPassword: textEditingController.text.trim(),
+      )
+    ){
       cusDebugPrint("success");
     }else{
       cusDebugPrint("fail");

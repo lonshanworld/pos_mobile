@@ -7,7 +7,6 @@ import '../../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../../constants/uiConstants.dart';
 import '../../../../controller/ui_controller.dart';
-import '../../../../error_handlers/error_handler.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
@@ -48,8 +47,16 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
 
     return Scaffold(
@@ -83,22 +90,23 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
                   txt: "Update",
                   func: ()async{
                     if(categoryNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Text cannot be empty");
+                      showValidationMessage("Category name cannot be empty");
                     }else{
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      await context.read<ItemCubit>().editCategoryName(
-                          name: categoryNameController.text.trim(),
-                          userModel: userModel,
-                          categoryModel: widget.categoryModel,
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      final value = await context.read<ItemCubit>().editCategoryName(
+                        name: categoryNameController.text.trim(),
+                        userModel: userModel,
+                        categoryModel: widget.categoryModel,
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

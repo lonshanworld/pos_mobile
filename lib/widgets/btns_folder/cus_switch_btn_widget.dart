@@ -15,10 +15,10 @@ class CusSwitchBtnWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Switch(
-      activeColor: clr,
-      activeTrackColor: clr.withOpacity(0.3),
-      inactiveThumbColor: Colors.grey.withOpacity(0.7),
-      inactiveTrackColor: Colors.grey.withOpacity(0.2),
+      activeThumbColor: clr,
+      activeTrackColor: clr.withValues(alpha: 0.3),
+      inactiveThumbColor: Colors.grey.withValues(alpha: 0.7),
+      inactiveTrackColor: Colors.grey.withValues(alpha: 0.2),
       value: boolValue,
       onChanged: func,
     );

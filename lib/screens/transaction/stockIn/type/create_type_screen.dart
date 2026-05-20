@@ -9,7 +9,6 @@ import '../../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../../constants/uiConstants.dart';
 import '../../../../controller/ui_controller.dart';
-import '../../../../error_handlers/error_handler.dart';
 import '../../../../models/groupingItem_models_folders/group_model.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
@@ -46,9 +45,17 @@ class _CreateTypeScreenState extends State<CreateTypeScreen> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
     final CategoryModel categoryModel = context.read<ItemCubit>().getCategory(widget.selectedGroupModel.categoryId);
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -121,10 +128,10 @@ class _CreateTypeScreenState extends State<CreateTypeScreen> {
                   txt: "Create",
                   func: ()async{
                     if(typeNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Type Name should not be empty");
+                      showValidationMessage("Type name should not be empty");
                     }else{
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      await context.read<ItemCubit>().createNewType(
+                      final value = await context.read<ItemCubit>().createNewType(
                         userModel: userModel,
                         categoryModel: categoryModel,
                         groupModel: widget.selectedGroupModel,
@@ -135,15 +142,16 @@ class _CreateTypeScreenState extends State<CreateTypeScreen> {
                             :
                         textAreaController.text.trim(),
                         hasExpire: hasExpire,
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

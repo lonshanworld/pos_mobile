@@ -40,7 +40,7 @@ class DrawerInLargeScreen extends StatelessWidget {
             color: uiController.getpureDirectClr(themeModeType),
             borderRadius: UIConstants.bigBorderRadius,
             border: Border.all(
-              color: themeModeType == ThemeModeType.dark ? Colors.purpleAccent.withOpacity(0.4) : Colors.transparent,
+              color: themeModeType == ThemeModeType.dark ? Colors.purpleAccent.withValues(alpha: 0.4) : Colors.transparent,
               width: 1,
             ),
             boxShadow: [

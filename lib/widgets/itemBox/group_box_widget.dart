@@ -61,32 +61,6 @@ class GroupBoxWidget extends StatelessWidget {
                   txt: "There are $typeCount types in this group. You can delete only if there is no type left.",
                 );
               }else{
-                // showDialog(
-                //   context: btnCtx,
-                //   barrierDismissible: false,
-                //   builder: (ctx){
-                //     return ConfirmScreen(
-                //       txt: "Are you sure want to delete this group?",
-                //       title: "Delete",
-                //       acceptBtnTxt: "Yes, delete",
-                //       cancelBtnTxt: "Cancel",
-                //       acceptFunc: ()async{
-                //         context.read<LoadingCubit>().setLoading("Deleting ...");
-                //         await context.read<ItemCubit>().deleteGroup(userModel!, groupModel).then((value){
-                //           Navigator.of(ctx).pop();
-                //           if(value){
-                //             context.read<LoadingCubit>().setSuccess("Success !");
-                //           }else{
-                //             context.read<LoadingCubit>().setFail("Cannot delete");
-                //           }
-                //         });
-                //       },
-                //       cancelFunc: (){
-                //         Navigator.of(ctx).pop();
-                //       },
-                //     );
-                //   },
-                // );
                 showSheet.showCusDialogScreen( ConfirmScreen(
                   txt: "Are you sure want to delete this group?",
                   title: "Delete",
@@ -94,14 +68,14 @@ class GroupBoxWidget extends StatelessWidget {
                   cancelBtnTxt: "Cancel",
                   acceptFunc: ()async{
                     context.read<LoadingCubit>().setLoading("Deleting ...");
-                    await context.read<ItemCubit>().deleteGroup(userModel!, groupModel).then((value){
-                      Navigator.of(context).pop();
-                      if(value){
-                        context.read<LoadingCubit>().setSuccess("Success !");
-                      }else{
-                        context.read<LoadingCubit>().setFail("Cannot delete");
-                      }
-                    });
+                    final value = await context.read<ItemCubit>().deleteGroup(userModel!, groupModel);
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                    if(value){
+                      context.read<LoadingCubit>().setSuccess("Success !");
+                    }else{
+                      context.read<LoadingCubit>().setFail("Cannot delete");
+                    }
                   },
                   cancelFunc: (){
                     Navigator.of(context).pop();
@@ -117,21 +91,18 @@ class GroupBoxWidget extends StatelessWidget {
       },
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          elevation: 8,
-          foregroundColor: Colors.grey.withOpacity(0.3),
+          elevation: 2,
+          foregroundColor: Colors.grey.withValues(alpha: 0.2),
           backgroundColor: uiController.getpureDirectClr(themeModeType),
           surfaceTintColor: uiController.getpureDirectClr(themeModeType),
-          // side: BorderSide(
-          //   color: Colors.deepPurple.shade100,
-          // ),
           minimumSize: const Size(0, 0),
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.all(UIConstants.mediumSpace),
           shape: const RoundedRectangleBorder(
             borderRadius: UIConstants.mediumBorderRadius,
           ),
         ),
         onLongPress: (){
-          if(userModel != null && userModel.userLevel == UserLevel.admin && isStorage == true){
+          if(userModel != null && userModel.userLevel == UserLevel.merchant && isStorage == true){
             popupMenu.currentState?.showButtonMenu();
           }
         },
@@ -139,44 +110,49 @@ class GroupBoxWidget extends StatelessWidget {
           func();
         },
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleSmall!,
-              txt: groupModel.name,
-            ),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.bodyMedium!,
-                  txt: "Types : ",
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: uiController.getpureOppositeClr(themeModeType),
-                    borderRadius: UIConstants.mediumBorderRadius,
-                  ),
-                  alignment: Alignment.center,
+                Icon(Icons.folder_open_rounded, size: 18, color: Colors.blueAccent.withValues(alpha: 0.8)),
+                const SizedBox(width: 6),
+                Expanded(
                   child: CusTxtWidget(
-                    txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      color:  uiController.getpureDirectClr(themeModeType),
+                    txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    txt: typeCount.toString(),
+                    txt: groupModel.name,
                   ),
                 ),
-
               ],
             ),
-            CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: Colors.grey
-              ),
-              txt: TextFormatters.getDateTime(groupModel.lastUpdateTime ?? groupModel.createTime),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.12),
+                    borderRadius: UIConstants.smallBorderRadius,
+                  ),
+                  child: CusTxtWidget(
+                    txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: Colors.blueAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    txt: "$typeCount ${typeCount == 1 ? 'type' : 'types'}",
+                  ),
+                ),
+                CusTxtWidget(
+                  txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: Colors.grey,
+                  ),
+                  txt: TextFormatters.getDateTime(groupModel.lastUpdateTime ?? groupModel.createTime),
+                ),
+              ],
             ),
           ],
         ),

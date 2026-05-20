@@ -10,7 +10,6 @@ import 'package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart';
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import 'package:pos_mobile/widgets/dividers/cus_divider_widget.dart';
 import 'package:pos_mobile/widgets/stockout_detail_box_widget.dart';
-import 'package:pos_mobile/widgets/voucher_box_widget.dart';
 
 import '../../../constants/enums.dart';
 import '../../../controller/ui_controller.dart';
@@ -88,24 +87,22 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   void initState() {
     super.initState();
 
-    setState(() {
-      if(widget.deliveryChargesInfo != null){
-        deliveryChargesController.text = widget.deliveryChargesInfo.toString();
-      }
+    if(widget.deliveryChargesInfo != null){
+      deliveryChargesController.text = widget.deliveryChargesInfo.toString();
+    }
 
-      if(widget.additionalPromotionAmountInfo != null){
-        additionalPromotionAmountController.text = widget.additionalPromotionAmountInfo.toString();
-      }
+    if(widget.additionalPromotionAmountInfo != null){
+      additionalPromotionAmountController.text = widget.additionalPromotionAmountInfo.toString();
+    }
 
-      taxPercentageController.text = widget.taxPercentageInfo.toString();
+    taxPercentageController.text = widget.taxPercentageInfo.toString();
 
-      descriptionController.text = widget.descriptionInfo ?? "";
-      customerNameController.text = widget.customerNameInfo ?? "";
-      deliveryNameController.text = widget.deliveryNameInfo ?? "";
-      shoppingType = widget.shoppingTypeInfo;
-      paymentMethod = widget.paymentMethodInfo;
-      selectedPromotionModel = widget.promotionModel;
-    });
+    descriptionController.text = widget.descriptionInfo ?? "";
+    customerNameController.text = widget.customerNameInfo ?? "";
+    deliveryNameController.text = widget.deliveryNameInfo ?? "";
+    shoppingType = widget.shoppingTypeInfo;
+    paymentMethod = widget.paymentMethodInfo;
+    selectedPromotionModel = widget.promotionModel;
     deliveryChargesController.addListener(() {
       reloadScreen();
     });
@@ -134,7 +131,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     additionalPromotionAmountController.dispose();
     descriptionController.dispose();
     customerNameController.dispose();
-    // descriptionController.dispose();
+    deliveryNameController.dispose();
     super.dispose();
   }
 
@@ -305,7 +302,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                   totalPrice: (finalSellPrice *  dataList.length).toString(),
                   index: (e.key + 1).toString(),
                 );
-              }).toList(),
+              }),
 
               dataRow(
                 cusTxtWidgetTitleSmall("Price"),
@@ -538,10 +535,57 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 bdrRadius: UIConstants.smallRadius,
                 bgClr: Colors.green,
                 func: (){
+                  final double? deliveryCharges =
+                      double.tryParse(deliveryChargesController.text.trim());
+                  final double? taxPercentage =
+                      double.tryParse(taxPercentageController.text.trim());
+                  final double? additionalPromotionAmount =
+                      double.tryParse(additionalPromotionAmountController.text.trim());
+
+                  if (deliveryChargesController.text.trim().isNotEmpty && deliveryCharges == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Delivery charges must be a valid number."),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (taxPercentageController.text.trim().isNotEmpty && taxPercentage == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Tax percentage must be a valid number."),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  if ((taxPercentage ?? 0) < 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Tax percentage cannot be negative."),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (additionalPromotionAmountController.text.trim().isNotEmpty && additionalPromotionAmount == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Additional promotion must be a valid number."),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
                   widget.func(
-                    deliveryChargesInfo: double.tryParse(deliveryChargesController.text.trim()),
-                    taxPercentageInfo: double.tryParse(taxPercentageController.text.trim()) ?? 0,
-                    additionalPromotionAmountInfo: double.tryParse(additionalPromotionAmountController.text.trim()),
+                    deliveryChargesInfo: deliveryCharges,
+                    taxPercentageInfo: taxPercentage ?? 0,
+                    additionalPromotionAmountInfo: additionalPromotionAmount,
                     descriptionInfo: descriptionController.text.trim() == "" ? null : descriptionController.text.trim(),
                     customerNameInfo: customerNameController.text.trim() == "" ? null : customerNameController.text.trim(),
                     deliveryNameInfo: deliveryNameController.text.trim() == "" ? null : deliveryNameController.text.trim(),

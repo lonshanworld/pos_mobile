@@ -34,13 +34,76 @@ class HistoryVoucherScreen extends StatefulWidget {
 
 class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
   bool showAdditionalPromotion = false;
+  late final GlobalKey _printKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _printKey = GlobalKey();
+  }
+
+  void _showSavedPathToast(BuildContext context, String savedPath) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Voucher PDF saved: $savedPath'),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handlePrint(
+    BuildContext context,
+    GlobalKey printKey,
+    BluetoothConnection? bluetoothConnection,
+  ) async {
+    final errorHandlers = ErrorHandlers();
+    final loadingCubit = context.read<LoadingCubit>();
+
+    if (bluetoothConnection != BluetoothConnection.connected) {
+      errorHandlers.showErrorWithBtn(
+        title: "Bluetooth Printer",
+        txt: "Bluetooth Printer not connected. Check devices in Settings.",
+      );
+      return;
+    }
+
+    loadingCubit.setLoading("Printing ...");
+    final success = await context.read<BluetoothPrinterCubit>().printVoucher(printKey);
+    if (!mounted) return;
+
+    if (success) {
+      loadingCubit.setSuccess("Print command sent !");
+    } else {
+      loadingCubit.setFail("Print failed.");
+    }
+  }
+
+  Future<void> _handleDownloadPdf(
+    BuildContext context,
+    GlobalKey printKey,
+  ) async {
+    final loadingCubit = context.read<LoadingCubit>();
+
+    loadingCubit.setLoading("Generating PDF ...");
+    final savedPath = await context.read<BluetoothPrinterCubit>().downloadVoucherPdf(
+      printKey,
+      fileName: 'voucher_${widget.stockOutModel.code}',
+    );
+
+    if (!mounted) return;
+    if (savedPath != null) {
+      loadingCubit.setSuccess("Voucher PDF downloaded.");
+      _showSavedPathToast(context, savedPath);
+    } else {
+      loadingCubit.setFail("Failed to download voucher PDF.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final GlobalKey printKey = GlobalKey();
     final BluetoothConnection? bluetoothConnection = context.watch<BluetoothPrinterCubit>().state.bluetoothConnection;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemFromStockOutId(widget.stockOutModel.id);
     final List<ItemModel> itemList = context.read<ItemCubit>().getItemListFromSelectedUniqueItemList(uniqueItemList);
     final CustomerModel? customerModel = widget.stockOutModel.customerId == null ? null : context.read<TransactionsCubit>().getCustomerModel(widget.stockOutModel.customerId!);
@@ -71,7 +134,7 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
                   child: Transform.scale(
                     scale: 0.6,
                     child: Switch.adaptive(
-                      activeColor: Colors.green.shade700,
+                      activeThumbColor: Colors.green.shade700,
                       activeTrackColor: Colors.green.shade200,
                       value: showAdditionalPromotion,
                       onChanged: (bool data){
@@ -93,19 +156,18 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
             horizontalpadding: UIConstants.mediumSpace,
             bdrRadius: UIConstants.smallRadius,
             bgClr:  bluetoothConnection == BluetoothConnection.connected ? Colors.blue : Colors.grey,
-            func: ()async{
-              if( bluetoothConnection == BluetoothConnection.connected ){
-                context.read<LoadingCubit>().setLoading("Printing ...");
-                await context.read<BluetoothPrinterCubit>().printVoucher(printKey).then((_){
-                  Future.delayed(const Duration(seconds: 5),(){
-                    Navigator.of(context).pop();
-                    context.read<LoadingCubit>().setSuccess("Print success !");
-                  });
-                });
-              }else{
-                errorHandlers.showErrorWithBtn(title: "Bluetooth Printer", txt: "Bluetooth Printer not found");
-              }
-            },
+            func: () => _handlePrint(context, _printKey, bluetoothConnection),
+            txtStyle: Theme.of(context).textTheme.titleSmall!,
+            txtClr: Colors.white,
+          ),
+          const SizedBox(width: UIConstants.smallSpace),
+          CusTxtElevatedBtn(
+            txt: "Download PDF",
+            verticalpadding: UIConstants.smallSpace,
+            horizontalpadding: UIConstants.mediumSpace,
+            bdrRadius: UIConstants.smallRadius,
+            bgClr: Colors.indigo,
+            func: () => _handleDownloadPdf(context, _printKey),
             txtStyle: Theme.of(context).textTheme.titleSmall!,
             txtClr: Colors.white,
           ),
@@ -114,7 +176,7 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
       ),
       body: SingleChildScrollView(
         child: RepaintBoundary(
-          key: printKey,
+          key: _printKey,
           child: VoucherBox(
             customerName: customerModel?.name,
             deliveryName: deliveryPersonModel?.name,

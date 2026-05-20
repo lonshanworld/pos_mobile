@@ -19,6 +19,8 @@ class TransactionStockOutItemDbStorage{
         )
       """
     );
+    // OPTIMIZATION: Add index for stockOutId to speed up lookup by order
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_stockOutItem_stockOutId ON ${TxtConstants.stockOutItemTableName}(stockOutId);");
   }
 
   static Future<void>onDelete(Database db)async{
@@ -34,8 +36,13 @@ class TransactionStockOutItemDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.stockOutItemTableName);
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 5000, int offset = 0})async{
+    return await db.query(
+      TxtConstants.stockOutItemTableName,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
   }
 
   static Future<List<int>>insertNewDataList({

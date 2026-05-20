@@ -23,7 +23,7 @@ class AlertTargetPersonDbStorage{
   }
 
   static Future<void>onUpgrade(Database db)async{
-    await onCreate(db);
     await onDelete(db);
+    await onCreate(db);
   }
 }

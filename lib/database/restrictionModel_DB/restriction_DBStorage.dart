@@ -53,7 +53,7 @@ class RestrictionDbStorage{
           title,
           reason,
           createTime,
-          createPersonId,
+          createPersonId
         )
         VALUES(?,?,?,?)
       """,

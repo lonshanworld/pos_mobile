@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:pos_mobile/database/alerts_DB/alert_DbService.dart';
+import 'package:pos_mobile/database/crash_report_DB/crash_report_DBService.dart';
 import 'package:pos_mobile/database/customer_DB/customer_Db_service.dart';
 import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_model_DbService.dart';
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
@@ -24,6 +25,7 @@ import 'package:pos_mobile/database/transactionModel_DB/transaction_DBservice.da
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
 import 'package:pos_mobile/models/customer_model.dart';
 
+import 'package:pos_mobile/models/crash_report_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
@@ -88,6 +90,7 @@ class DBHelper{
     await ModuleComponentItemDbService.initModuleComponentItemDbService(db);
     await AlertDbService.initAlertDb(db);
     await ReportDbService.initReportDb(db);
+    await CrashReportDbService.initCrashReportDb(db);
 
     await ItemPromotionDbService.initItemPromotionDB(db);
     await StockOutPromotionDbServive.initStockOutPromotionDb(db);
@@ -106,6 +109,10 @@ class DBHelper{
 
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion)async{
 
+  }
+
+  static Future<List<UniqueItemModel>>getAllUniqueItems({int limit = 5000, int offset = 0})async{
+    return await UniqueItemDbService.getAllData(database!, limit: limit, offset: offset);
   }
 
   static Future<List<UserModel>> getAllUsersFromDB()async{
@@ -129,9 +136,40 @@ class DBHelper{
     return await UserDBService.loginLogoutUserUpdate(database!, userModel,isLogin);
   }
 
+  static Future<bool> changeUserPassword({
+    required int userId,
+    required String newPassword,
+  }) async {
+    return await UserDBService.updateUserPassword(
+      db: database!,
+      userId: userId,
+      newPassword: newPassword,
+    );
+  }
+
   static Future<List<UpdateHistoryModel>> getHistoryList()async{
     List<dynamic> dataList = await HistoryDBService.getAllHistory(database!);
     return dataList.map((e) => UpdateHistoryModel.fromJson(e)).toList();
+  }
+
+  static Future<int> saveCrashReport(CrashReportModel report) async {
+    return await CrashReportDbService.saveCrashReport(database!, report);
+  }
+
+  static Future<List<CrashReportModel>> getUnsyncedCrashReports() async {
+    return await CrashReportDbService.getUnsyncedReports(database!);
+  }
+
+  static Future<int> getUnsyncedCrashReportCount() async {
+    return await CrashReportDbService.getUnsyncedCount(database!);
+  }
+
+  static Future<bool> markCrashReportsAsSynced(List<int> ids) async {
+    return await CrashReportDbService.markReportsAsSynced(database!, ids);
+  }
+
+  static Future<bool> deleteSyncedCrashReports() async {
+    return await CrashReportDbService.deleteSyncedReports(database!);
   }
 
   static Future<Map<String, List>> getAllItemData()async{
@@ -327,16 +365,16 @@ class DBHelper{
     return await GroupingItemDbService.deactivateItem(database!, userModel: userModel, itemModel: itemModel,uniqueItemList: uniqueItemList);
   }
 
-  static Future<List<StockOutModel>>getAllStockOut()async{
-    return await TransactionDBService.getAllStockOutData(database!);
+  static Future<List<StockInModel>>getAllStockIn({int limit = 2000, int offset = 0})async{
+    return await TransactionDBService.getAllStockInData(database!, limit: limit, offset: offset);
   }
 
-  static Future<List<StockInModel>>getAllStockIn()async{
-    return await TransactionDBService.getAllStockInData(database!);
+  static Future<List<StockOutModel>>getAllStockOut({int limit = 2000, int offset = 0})async{
+    return await TransactionDBService.getAllStockOutData(database!, limit: limit, offset: offset);
   }
 
-  static Future<List<StockOutItemModel>>getAllStockOutItem()async{
-    return await TransactionDBService.getAllStockOutItemData(database!);
+  static Future<List<StockOutItemModel>>getAllStockOutItem({int limit = 5000, int offset = 0})async{
+    return await TransactionDBService.getAllStockOutItemData(database!, limit: limit, offset: offset);
   }
 
   static Future<List<CustomerModel>>getAllCustomer()async{

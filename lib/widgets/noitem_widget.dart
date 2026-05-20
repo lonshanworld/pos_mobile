@@ -20,7 +20,7 @@ class NoItemWidget extends StatelessWidget {
         padding: const EdgeInsets.all(UIConstants.mediumSpace),
         decoration: BoxDecoration(
           borderRadius: UIConstants.bigBorderRadius,
-          border: Border.all(color: Colors.grey.withOpacity(0.7)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.7)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -29,11 +29,11 @@ class NoItemWidget extends StatelessWidget {
             Icon(
               Icons.not_interested,
               size: 50,
-              color: Colors.grey.withOpacity(0.7),
+              color: Colors.grey.withValues(alpha: 0.7),
             ),
             CusTxtWidget(
               txtStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                color: Colors.grey.withOpacity(0.7),
+                color: Colors.grey.withValues(alpha: 0.7),
               ),
               txt: noItemTxt,
             ),

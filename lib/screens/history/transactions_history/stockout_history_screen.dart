@@ -10,7 +10,6 @@ import 'package:pos_mobile/widgets/transaction_history_widgets_folder/stockout_h
 
 import '../../../constants/uiConstants.dart';
 import '../../../utils/formula.dart';
-import '../../../widgets/tables_folder/stockout_item_table.dart';
 
 class StockOutHistoryScreen extends StatelessWidget {
   const StockOutHistoryScreen({super.key});
@@ -22,47 +21,38 @@ class StockOutHistoryScreen extends StatelessWidget {
 
     return Column(
       children: [
-        Container(
-          color: Colors.deepOrange.withOpacity(0.2),
-          child: const StockOutItemTable(
-            name: "Item Name",
-            count: "Item count",
-            originalPrice: "Purchased price (MMK)",
-            finalSellPrice: "Sell price (MMK)",
-            profit: "Single item Profit(MMK)",
-            totalProfit: "Total profit (MMK)",
-          ),
-        ),
         Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: UIConstants.bigSpace,
-              ),
-              child: Wrap(
-                spacing: UIConstants.bigSpace,
-                runSpacing: UIConstants.bigSpace,
-                alignment: WrapAlignment.center,
-                children: stockOutHistoryList.reversed.map((e){
-                  List<StockOutModel> selectedStockOutList = e.stockOutList;
-                  double totalProfit = 0;
-                  
-                  for(int a = 0; a < selectedStockOutList.length; a++){
-                    final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(selectedStockOutList[a].id);
-                    final double totalOrgPrice = CalculationFormula.getItemTotalOriginalPriceForStockOut(selectedStockOutItemList);
-                    final double finalprice = selectedStockOutList[a].finalTotalPrice;
-                    final DeliveryModel? deliveryModel = selectedStockOutList[a].deliveryModelId == null ? null : context.read<TransactionsCubit>().getDeliveryModel(selectedStockOutList[a].deliveryModelId!);
-                    if(deliveryModel != null && deliveryModel.deliveryCharges != null){
-                      totalProfit = totalProfit + (finalprice - totalOrgPrice - deliveryModel.deliveryCharges!);
-                    }else{
-                      totalProfit = totalProfit + (finalprice - totalOrgPrice );
-                    }
-                  }
-                  
-                  return StockOutHistoryWidget(historyModel: e, totalProfit: totalProfit, );
-                }).toList(),
-              ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(
+              vertical: UIConstants.bigSpace,
+              horizontal: UIConstants.mediumSpace,
             ),
+            itemCount: stockOutHistoryList.length,
+            itemBuilder: (context, index) {
+              // Since we want reversed, we access from the end
+              final reversedIndex = stockOutHistoryList.length - 1 - index;
+              final e = stockOutHistoryList[reversedIndex];
+              
+              List<StockOutModel> selectedStockOutList = e.stockOutList;
+              double totalProfit = 0;
+              
+              for(int a = 0; a < selectedStockOutList.length; a++){
+                final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(selectedStockOutList[a].id);
+                final double totalOrgPrice = CalculationFormula.getItemTotalOriginalPriceForStockOut(selectedStockOutItemList);
+                final double finalprice = selectedStockOutList[a].finalTotalPrice;
+                final DeliveryModel? deliveryModel = selectedStockOutList[a].deliveryModelId == null ? null : context.read<TransactionsCubit>().getDeliveryModel(selectedStockOutList[a].deliveryModelId!);
+                if(deliveryModel != null && deliveryModel.deliveryCharges != null){
+                  totalProfit = totalProfit + (finalprice - totalOrgPrice - deliveryModel.deliveryCharges!);
+                }else{
+                  totalProfit = totalProfit + (finalprice - totalOrgPrice );
+                }
+              }
+              
+              return Padding(
+                padding: const EdgeInsets.only(bottom: UIConstants.bigSpace),
+                child: StockOutHistoryWidget(historyModel: e, totalProfit: totalProfit),
+              );
+            },
           ),
         ),
       ],

@@ -9,7 +9,6 @@ import '../../../../blocs/item_bloc/item_cubit.dart';
 import '../../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../../controller/ui_controller.dart';
-import '../../../../error_handlers/error_handler.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
@@ -42,8 +41,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -96,28 +103,28 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   txt: "Create",
                   func: ()async{
                     if(groupNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Group Name should not be empty");
+                      showValidationMessage("Group name should not be empty");
                     }else{
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      await context.read<ItemCubit>().createNewGroup(
-                          userModel: userModel,
-                          categoryModel: widget.selectedCategoryModel,
-                          groupName: groupNameController.text.trim(),
-                          description:
-                          (textAreaController.text.trim() == "" || textAreaController.text.trim().isEmpty)
-                              ?
-                            null
-                              :
-                            textAreaController.text.trim(),
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      final value = await context.read<ItemCubit>().createNewGroup(
+                        userModel: userModel,
+                        categoryModel: widget.selectedCategoryModel,
+                        groupName: groupNameController.text.trim(),
+                        description:
+                            (textAreaController.text.trim() == "" ||
+                                    textAreaController.text.trim().isEmpty)
+                                ? null
+                                : textAreaController.text.trim(),
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

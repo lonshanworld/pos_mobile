@@ -8,7 +8,6 @@ import '../../../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../../../constants/enums.dart';
 import '../../../../constants/uiConstants.dart';
 import '../../../../controller/ui_controller.dart';
-import '../../../../error_handlers/error_handler.dart';
 import '../../../../models/item_model_folder/item_model.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../utils/formula.dart';
@@ -82,10 +81,18 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     Widget priceInputField({
       required String hintTxt,
@@ -198,7 +205,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   horizontal: UIConstants.bigSpace,
                 ),
                 decoration: BoxDecoration(
-                  color: profitPrice< 0 ? Colors.red.withOpacity(0.4) : Colors.green.withOpacity(0.4),
+                  color: profitPrice< 0 ? Colors.red.withValues(alpha: 0.4) : Colors.green.withValues(alpha: 0.4),
                   borderRadius: UIConstants.mediumBorderRadius,
                 ),
                 child: Column(
@@ -218,27 +225,28 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   func: ()async{
 
                     if(itemNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Item Name should not be empty");
+                      showValidationMessage("Item name should not be empty");
                     }else if(originalPrice < 1){
-                      errorHandlers.showErrorWithBtn(title: "Update price", txt: "Original Price must not be Empty or Zero or Negative");
+                      showValidationMessage("Original price must be greater than zero");
                     }else{
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      await context.read<ItemCubit>().editItem(
+                      final value = await context.read<ItemCubit>().editItem(
                         userModel: userModel,
                         itemModel: widget.itemModel,
                         newName: itemNameController.text.trim(),
                         newOriginalPrice: originalPrice,
                         newProfitPrice: profitPrice,
                         newTaxPercentage: taxPercentage,
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

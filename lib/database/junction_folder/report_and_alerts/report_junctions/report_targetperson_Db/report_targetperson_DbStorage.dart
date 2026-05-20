@@ -17,7 +17,7 @@ class ReportTargetPersonDbStorage{
   static Future<void>onDelete(Database db)async{
     await db.execute(
       """
-        DROP TABLE IF EXISTS ${TxtConstants.reportImageTableName}
+        DROP TABLE IF EXISTS ${TxtConstants.reportTargetPersonTableName}
       """
     );
   }

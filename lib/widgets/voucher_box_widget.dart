@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/features/printer_font_changer.dart";
 import "package:pos_mobile/models/promotion_model_folder/promotion_model.dart";
 import "package:pos_mobile/widgets/tables_folder/voucherTable.dart";
@@ -7,7 +8,6 @@ import "package:qr_flutter/qr_flutter.dart";
 
 import "../blocs/promotion_bloc/promotion_cubit.dart";
 import "../constants/enums.dart";
-import "../constants/txtconstants.dart";
 import "../constants/uiConstants.dart";
 import "../controller/ui_controller.dart";
 import "../models/item_model_folder/item_model.dart";
@@ -56,6 +56,8 @@ class VoucherBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final PrinterFontChanger printerFontChanger = PrinterFontChanger.instance;
+    final ShopInfoState shopInfo = context.watch<ShopInfoCubit>().state;
+    final double logoSize = 140.0 * shopInfo.logoSizeRatio;
 
     Widget cusTxtWidgetBodyMedium(String value) => CusTxtWidget(
       txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
@@ -117,13 +119,27 @@ class VoucherBox extends StatelessWidget {
 
     return Container(
       color: Colors.white,
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: UIConstants.mediumSpace,
         vertical: UIConstants.bigSpace * 1.5,
       ),
       child: Column(
         children: [
-          const LogoImageWidget(widthandheight: 140),
+          LogoImageWidget(
+            widthandheight: logoSize,
+            customLogoPath: shopInfo.logoPath,
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: CusTxtWidget(
+              txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                color: Colors.black,
+                fontSize: printerFontChanger.printerFontSize * 1.1,
+                fontWeight: FontWeight.bold,
+              ),
+              txt: shopInfo.shopName,
+            ),
+          ),
           Align(
             alignment: Alignment.center,
             child: Text(
@@ -132,7 +148,7 @@ class VoucherBox extends StatelessWidget {
                 fontSize: printerFontChanger.printerFontSize * 0.8,
                 overflow: TextOverflow.fade,
               ),
-              TxtConstants.shopAddress,
+              shopInfo.shopAddress,
               textAlign: TextAlign.center,
             ),
           ),
@@ -143,7 +159,7 @@ class VoucherBox extends StatelessWidget {
                 color: Colors.black,
                 fontSize: printerFontChanger.printerFontSize * 1.1,
               ),
-              txt: TxtConstants.phNum,
+              txt: shopInfo.phNum,
             ),
           ),
           uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
@@ -295,7 +311,17 @@ class VoucherBox extends StatelessWidget {
                 color: Colors.black,
                 fontSize: printerFontChanger.printerFontSize.toDouble(),
               ),
-              txt: TxtConstants.noReturnNote,
+              txt: shopInfo.noReturnNote,
+            ),
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: CusTxtWidget(
+              txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                color: Colors.black,
+                fontSize: (printerFontChanger.printerFontSize * 0.75).toDouble(),
+              ),
+              txt: 'Need custom software for your business? https://nanonux.com',
             ),
           ),
         ],

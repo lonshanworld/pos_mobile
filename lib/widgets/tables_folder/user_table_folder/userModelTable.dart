@@ -61,8 +61,8 @@ class UserTable extends StatelessWidget {
       child: DataTable(
         dataRowMinHeight: 40,
         dataRowMaxHeight: 40,
-        headingRowColor: MaterialStateProperty.resolveWith((states) {
-          return Colors.teal.withOpacity(0.4);
+        headingRowColor: WidgetStateProperty.resolveWith((states) {
+          return Colors.teal.withValues(alpha: 0.4);
         }),
         columns: [
           dataColumn("No."),
@@ -75,7 +75,7 @@ class UserTable extends StatelessWidget {
         rows: userList.reversed.map((e) => dataRow(
           id: userList.indexOf(e) + 1,
           name: e.userName,
-          password: e.password,
+          password: '******',
           level: e.userLevel.name,
           loginTime: TextFormatters.getDateTime(e.userLoginTime),
           logoutTime: TextFormatters.getDateTime(e.userLogoutTime),

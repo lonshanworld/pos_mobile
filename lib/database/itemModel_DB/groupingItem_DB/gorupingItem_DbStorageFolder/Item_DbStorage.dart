@@ -31,6 +31,9 @@ class ItemDbStorage{
         )
       """
     );
+    // OPTIMIZATION: Add indexes for Item table
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_item_typeId ON ${TxtConstants.itemTableName}(typeId);");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_item_activeStatus ON ${TxtConstants.itemTableName}(activeStatus);");
   }
 
   static Future<void>onDelete(Database db)async{
@@ -46,8 +49,13 @@ class ItemDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.itemTableName);
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 5000, int offset = 0})async{
+    return await db.query(
+      TxtConstants.itemTableName,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
   }
 
   static Future<List<dynamic>>getAllActiveData(Database db)async{

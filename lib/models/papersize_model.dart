@@ -5,8 +5,18 @@ class PaperSizeModel{
   final PaperSize paperSize;
   final String sizeName;
 
-  PaperSizeModel({
+  const PaperSizeModel({
     required this.paperSize,
     required this.sizeName,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PaperSizeModel &&
+          paperSize == other.paperSize &&
+          sizeName == other.sizeName;
+
+  @override
+  int get hashCode => paperSize.hashCode ^ sizeName.hashCode;
 }

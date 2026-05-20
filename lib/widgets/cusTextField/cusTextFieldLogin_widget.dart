@@ -30,15 +30,15 @@ class CusTextFieldLogin extends StatelessWidget {
       style: txtStyle ?? Theme.of(context).textTheme.bodyLarge,
       keyboardType:txtInputType,
       decoration: InputDecoration(
-        focusedBorder: OutlineInputBorder(
-          borderSide:const BorderSide(
+        focusedBorder: const OutlineInputBorder(
+          borderSide:BorderSide(
             color: Colors.grey,
             width: 1,
           ),
           borderRadius: UIConstants.mediumBorderRadius,
         ),
-        border: OutlineInputBorder(
-          borderSide: const BorderSide(
+        border: const OutlineInputBorder(
+          borderSide: BorderSide(
             color: Colors.grey,
             width: 1
           ),

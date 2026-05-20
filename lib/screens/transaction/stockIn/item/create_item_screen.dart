@@ -11,7 +11,6 @@ import "../../../../blocs/loading_bloc/loading_cubit.dart";
 import "../../../../blocs/userData_bloc/user_data_cubit.dart";
 import "../../../../constants/uiConstants.dart";
 import "../../../../controller/ui_controller.dart";
-import "../../../../error_handlers/error_handler.dart";
 import "../../../../models/groupingItem_models_folders/category_model.dart";
 import "../../../../models/user_model_folder/user_model.dart";
 import "../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart";
@@ -49,17 +48,24 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     super.initState();
     originalPriceController.addListener(() {
       setState(() {
-        originalPrice = originalPriceController.text.trim() == "" ? 0 : double.parse(originalPriceController.text.trim());
+        originalPrice =
+            double.tryParse(originalPriceController.text.trim()) ?? 0;
       });
     });
     sellPriceController.addListener(() {
       setState(() {
-        profitPrice = sellPriceController.text.trim() == "" ? 0 : CalculationFormula.getItemProfitPrice(originalPrice: originalPrice, sellPrice: double.parse(sellPriceController.text.trim()));
+        final sellPrice = double.tryParse(sellPriceController.text.trim());
+        profitPrice = sellPrice == null
+            ? 0
+            : CalculationFormula.getItemProfitPrice(
+                originalPrice: originalPrice,
+                sellPrice: sellPrice,
+              );
       });
     });
     taxController.addListener(() {
       setState(() {
-        taxPercentage = taxController.text.trim() == "" ? 0 : double.parse(taxController.text.trim());
+        taxPercentage = double.tryParse(taxController.text.trim()) ?? 0;
       });
     });
   }
@@ -79,10 +85,18 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
     final GroupModel groupModel = context.read<ItemCubit>().getGroup(widget.typeModel.groupId);
     final CategoryModel categoryModel = context.read<ItemCubit>().getCategory(groupModel.categoryId);
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     Widget priceInputField({
       required String hintTxt,
@@ -221,7 +235,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   horizontal: UIConstants.bigSpace,
                 ),
                 decoration: BoxDecoration(
-                  color: profitPrice< 0 ? Colors.red.withOpacity(0.4) : Colors.green.withOpacity(0.4),
+                  color: profitPrice< 0 ? Colors.red.withValues(alpha: 0.4) : Colors.green.withValues(alpha: 0.4),
                   borderRadius: UIConstants.mediumBorderRadius,
                 ),
                 child: Column(
@@ -263,12 +277,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   func: ()async{
 
                     if(itemNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Item Name should not be empty");
+                      showValidationMessage("Item name should not be empty");
                     }else if(originalPrice < 1){
-                      errorHandlers.showErrorWithBtn(title: "Add price", txt: "Original Price must not be Empty or Zero or Negative");
+                      showValidationMessage("Original price must be greater than zero");
+                    }else if (double.tryParse(sellPriceController.text.trim()) == null ||
+                        double.tryParse(taxController.text.trim()) == null) {
+                      showValidationMessage("Sell price and tax must be valid numbers");
                     }else{
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      await context.read<ItemCubit>().createNewItem(
+                      final value = await context.read<ItemCubit>().createNewItem(
                         userModel: userModel,
                         categoryModel: categoryModel,
                         groupModel: groupModel,
@@ -283,15 +300,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         profitPrice: profitPrice,
                         originalPrice: originalPrice,
                         taxPercentage: taxPercentage,
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

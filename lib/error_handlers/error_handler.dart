@@ -8,7 +8,7 @@ import 'package:pos_mobile/globalkeys.dart';
 class ErrorHandlers{
   final MainGlobalKeys mainGlobalKeys = MainGlobalKeys.instance;
 
-  showErrorWithBtn({
+  void showErrorWithBtn({
     required String? title,
     required String txt,
   }){
@@ -21,7 +21,7 @@ class ErrorHandlers{
     );
   }
 
-  cannotDeleteItem({
+  void cannotDeleteItem({
     required String title,
     required String txt,
   }){

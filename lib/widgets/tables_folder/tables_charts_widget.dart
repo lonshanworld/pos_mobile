@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 
-class TablesAndCharts{
+class TablesAndCharts {
   final BuildContext context;
-  TablesAndCharts({
-    required this.context,
-  });
+  static final NumberFormat _numFormat = NumberFormat('#,##0.##');
 
-  DataCell normalDataCell(String txt){
+  TablesAndCharts({required this.context});
+
+  static String formatNum(double value) => _numFormat.format(value);
+
+  DataCell normalDataCell(String txt) {
     return DataCell(
       CusTxtWidget(
-        txtStyle:Theme.of(context).textTheme.bodyMedium!,
+        txtStyle: Theme.of(context).textTheme.bodyMedium!,
         txt: txt == "null" ? "- -" : txt,
       ),
       placeholder: true,
@@ -19,52 +22,44 @@ class TablesAndCharts{
   }
 
   DataCell sellPriceDataCell({
-    required double sellPrice,
-    required double originalPrice,
-  }){
+    required String formattedValue,
+    required bool isLow,
+  }) {
     return DataCell(
       CusTxtWidget(
-        txtStyle:Theme.of(context).textTheme.bodyMedium!.copyWith(
-            color: sellPrice < originalPrice ? Colors.red : Theme.of(context).textTheme.bodyMedium!.color
+        txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+          color: isLow ? Colors.red : null,
         ),
-        txt: sellPrice.toString(),
+        txt: formattedValue,
       ),
       placeholder: true,
     );
   }
 
-  DataCell profitDataCell({
-    required double profitPrice,
-  }){
-    // return DataCell(
-    //   CusTxtWidget(
-    //     txtStyle:Theme.of(context).textTheme.bodyMedium!.copyWith(
-    //       color: profitPrice == 0 ? Theme.of(context).textTheme.bodyMedium!.color : profitPrice < 0 ? Colors.red : Colors.green ,
-    //     ),
-    //     txt: profitPrice.toString(),
-    //   ),
-    //   placeholder: true,
-    // );
+  DataCell profitDataCell({required double profitPrice}) {
     return DataCell(
       Container(
-
         padding: const EdgeInsets.symmetric(
           vertical: UIConstants.smallSpace,
           horizontal: UIConstants.mediumSpace,
         ),
         decoration: BoxDecoration(
-          color: profitPrice == 0 ? Colors.transparent : profitPrice < 0 ? Colors.red.withOpacity(0.4) : Colors.green.withOpacity(0.4),
+          color: profitPrice == 0
+              ? Colors.transparent
+              : profitPrice < 0
+                  ? Colors.red.withValues(alpha: 0.4)
+                  : Colors.green.withValues(alpha: 0.4),
           borderRadius: UIConstants.smallBorderRadius,
         ),
         child: CusTxtWidget(
-          txtStyle:Theme.of(context).textTheme.bodyMedium!,
-          txt: profitPrice.toString(),
+          txtStyle: Theme.of(context).textTheme.bodyMedium!,
+          txt: formatNum(profitPrice),
         ),
       ),
     );
   }
 
-  DataColumn tableTitle(String txt){
+  DataColumn tableTitle(String txt) {
     return DataColumn(
       label: CusTxtWidget(
         txt: txt,
@@ -82,16 +77,26 @@ class TablesAndCharts{
     required double sellPrice,
     required double finalSellPrice,
     required double profit,
-  }){
+    required bool isEven,
+  }) {
     return DataRow(
+      color: WidgetStateProperty.resolveWith(
+        (_) => isEven ? Colors.grey.withValues(alpha: 0.07) : Colors.transparent,
+      ),
       cells: [
         normalDataCell(index.toString()),
         normalDataCell(txt),
-        normalDataCell(originalPrice.toString()),
-        sellPriceDataCell(sellPrice: sellPrice, originalPrice: originalPrice),
-        sellPriceDataCell(sellPrice: finalSellPrice, originalPrice: originalPrice),
+        normalDataCell(formatNum(originalPrice)),
+        sellPriceDataCell(
+          formattedValue: formatNum(sellPrice),
+          isLow: sellPrice < originalPrice,
+        ),
+        sellPriceDataCell(
+          formattedValue: formatNum(finalSellPrice),
+          isLow: finalSellPrice < originalPrice,
+        ),
         profitDataCell(profitPrice: profit),
-      ]
+      ],
     );
   }
 }

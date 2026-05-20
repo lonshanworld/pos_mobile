@@ -27,10 +27,12 @@ class TransactionStockOutDbStorage{
           deliveryModelId INTEGER REFERENCES ${TxtConstants.deliveryModelTableName}(id),
           finalTotalPrice REAL NOT NULL,
           customerCash REAL,
-          refunds REAL
-        )
+          refunds REAL)
       """
     );
+    // OPTIMIZATION: Add indexes for queries that filter by date or active status
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_stockOut_createTime ON ${TxtConstants.stockOutTableName}(createTime);");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_stockOut_activeStatus ON ${TxtConstants.stockOutTableName}(activeStatus);");
   }
 
   static Future<void>onDelete(Database db)async{
@@ -46,8 +48,13 @@ class TransactionStockOutDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.stockOutTableName);
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 2000, int offset = 0})async{
+    return await db.query(
+      TxtConstants.stockOutTableName,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
   }
 
 

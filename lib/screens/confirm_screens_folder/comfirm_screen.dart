@@ -43,7 +43,7 @@ class ConfirmScreen extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium,
         textAlign: TextAlign.center,
       ),
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: UIConstants.bigBorderRadius,
       ),
       titlePadding:  const EdgeInsets.only(

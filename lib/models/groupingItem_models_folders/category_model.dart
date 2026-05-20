@@ -32,7 +32,7 @@ class CategoryModel extends ItemInfoSkeletalModel{
   });
 
   @override
-  CategoryModel.fromJson(Map<String, dynamic> jsonData):
+  CategoryModel.fromJson(super.jsonData):
     // id = jsonData["id"],
     name = jsonData["name"],
     // createTime = DateTime.parse(jsonData["createTime"]),
@@ -45,7 +45,7 @@ class CategoryModel extends ItemInfoSkeletalModel{
     // deletePersonId = jsonData["deletePersonId"],
     // updateIdList = json.decode(jsonData["updateIdList"]);
     colorCode = jsonData["colorCode"],
-    super.fromJson(jsonData);
+    super.fromJson();
 
 
   @override

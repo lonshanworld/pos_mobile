@@ -53,8 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     void logoutFunc()async{
-      bool value = await Logout.logout(context);
-      if(value)Logout.forceLogout();
+      if (userModel == null) {
+        Logout.forceLogout();
+        return;
+      }
+
+      final bool isOwner =
+          userModel.userLevel == UserLevel.merchant || userModel.userLevel == UserLevel.superAdmin;
+
+      if (isOwner) {
+        bool value = await Logout.logout(context);
+        if (value) {
+          Logout.forceLogout();
+        }
+      } else {
+        Logout.forceLogout();
+      }
     }
 
     return PopScope(
@@ -62,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
       //   return await Logout.logout(context);
       // },
       canPop: false,
-      onPopInvoked: (value) {
+      onPopInvokedWithResult: (didPop, result) {
         logoutFunc();
       },
       child: LayoutBuilder(

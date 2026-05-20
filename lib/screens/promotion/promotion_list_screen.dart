@@ -50,7 +50,7 @@ class PromotionListScreen extends StatelessWidget {
               ),
             ),
           ),
-          if(userModel != null && userModel.userLevel == UserLevel.admin)Positioned(
+          if(userModel != null && userModel.userLevel == UserLevel.merchant)Positioned(
             bottom: 30,
             right: 30,
             child: CusTxtIconElevatedBtn(
@@ -61,7 +61,6 @@ class PromotionListScreen extends StatelessWidget {
               bgClr: Colors.pinkAccent,
               func: (){
                 goToCreateScreen();
-                // await context.read<PromotionCubit>().reloadAllPromotion();
               },
               txtStyle: Theme.of(context).textTheme.titleSmall!,
               txtClr: Colors.white,

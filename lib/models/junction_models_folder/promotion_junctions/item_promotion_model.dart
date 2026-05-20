@@ -15,9 +15,9 @@ class ItemPromotionModel extends SomeModelPromotionSkeletalModel{
   });
 
   @override
-  ItemPromotionModel.fromJson(Map<String, dynamic> jsonData) :
+  ItemPromotionModel.fromJson(super.jsonData) :
       itemId = jsonData["itemId"],
-      super.fromJson(jsonData);
+      super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

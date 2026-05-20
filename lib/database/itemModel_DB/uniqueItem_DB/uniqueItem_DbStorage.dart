@@ -32,6 +32,10 @@ class UniqueItemDbStorage{
         )
       """
     );
+    // OPTIMIZATION: Add indexes for itemId, stockOutId, and activeStatus
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_uniqueItem_itemId ON ${TxtConstants.uniqueItemTableName}(itemId);");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_uniqueItem_stockOutId ON ${TxtConstants.uniqueItemTableName}(stockOutId);");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_uniqueItem_activeStatus ON ${TxtConstants.uniqueItemTableName}(activeStatus);");
   }
 
   static Future<void>onDelete(Database db)async{
@@ -47,8 +51,13 @@ class UniqueItemDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>> getAllUniqueItemList(Database db)async{
-    return await db.query(TxtConstants.uniqueItemTableName);
+  static Future<List<dynamic>> getAllUniqueItemList(Database db, {int limit = 5000, int offset = 0})async{
+    return await db.query(
+      TxtConstants.uniqueItemTableName,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
   }
 
   // static Future<List<dynamic>>getAllActiveUniqueItems(Database db)async{

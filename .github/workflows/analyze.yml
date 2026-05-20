@@ -1,0 +1,43 @@
+name: Analyzer Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  flutter-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run analyzer
+        run: |
+          set -o pipefail
+          flutter analyze | tee analyze.log
+
+      - name: Fail on analyzer errors and selected warnings
+        run: |
+          if grep -qE "error •" analyze.log; then
+            echo "Analyzer errors found."
+            exit 1
+          fi
+
+          if grep -qE "warning • .* • (use_build_context_synchronously|deprecated_member_use|unused_import|unused_local_variable) •" analyze.log; then
+            echo "Selected analyzer warnings found."
+            exit 1
+          fi
+
+          echo "No analyzer errors or blocked warnings found."

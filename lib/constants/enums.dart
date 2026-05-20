@@ -3,7 +3,7 @@ import 'package:pos_mobile/models/papersize_model.dart';
 
 enum UserLevel{
   staff,
-  admin,
+  merchant,
   superAdmin,
 }
 
@@ -80,7 +80,7 @@ enum BluetoothConnection{
   connecting
 }
 
-List<PaperSizeModel> paperSizeList = [
+List<PaperSizeModel> paperSizeList = const [
   PaperSizeModel(paperSize: PaperSize.mm58, sizeName: "Small"),
   PaperSizeModel(paperSize: PaperSize.mm72, sizeName: "Medium"),
   PaperSizeModel(paperSize: PaperSize.mm80, sizeName: "Large"),

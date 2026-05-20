@@ -24,8 +24,6 @@ import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart'
 import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 
-import "../../error_handlers/error_handler.dart";
-
 
 
 class LoginScreen extends StatefulWidget {
@@ -56,9 +54,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     // final DBHelper dbController = DBHelper.instance;
-    final ErrorHandlers errorHandler = ErrorHandlers();
     final UIutils uIutils = UIutils();
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -117,34 +123,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 horizontalpadding: 40,
                 bdrRadius: 10,
                 bgClr: uiController.getpureOppositeClr(themeModeType),
-                func: () {
+                func: () async {
                   if(userNameController.text.trim().isEmpty || passwordController.text.trim().isEmpty ){
                     if(userNameController.text.trim().isEmpty && passwordController.text.trim().isEmpty){
-                      errorHandler.showErrorWithBtn(title: null, txt: "All forms must be filled");
+                      showValidationMessage("All forms must be filled");
                     }else if(userNameController.text.trim().isEmpty){
-                      errorHandler.showErrorWithBtn(title: null, txt: "Username cannot be empty");
+                      showValidationMessage("Username cannot be empty");
                     }else if(passwordController.text.trim().isEmpty){
-                      errorHandler.showErrorWithBtn(title: null, txt: "Password cannot be empty");
+                      showValidationMessage("Password cannot be empty");
                     }else{
-                      errorHandler.showErrorWithBtn(title: null, txt: "All forms must be filled");
+                      showValidationMessage("All forms must be filled");
                     }
-                  }else{
-                    context.read<UserDataCubit>().login(
+                    return;
+                  }
+
+                  final value = await context.read<UserDataCubit>().login(
                       userName: userNameController.text.trim(),
                       password: passwordController.text.trim(),
                       userLevel: widget.userLevel,
                       buildContext: context,
-                    ).then((value)async {
-                      // Navigator.of(context).pop();
+                    );
 
-                      if(value){
-                        await context.read<HistoryCubit>().reloadHistoryList().then((_){
-                          Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.routeName, (route) => false);
-                        });
-                      }
-                    });
+                  if (!mounted || !value) {
+                    return;
                   }
 
+                  await context.read<HistoryCubit>().reloadHistoryList();
+                  if (!mounted) return;
+                  Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.routeName, (route) => false);
                 },
                 txtStyle: Theme.of(context).textTheme.bodyLarge!,
                 txtClr: uiController.getpureDirectClr(themeModeType),

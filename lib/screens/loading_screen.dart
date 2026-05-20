@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/utils/debug_print.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 
 class LoadingScreen extends StatelessWidget {
@@ -47,7 +46,7 @@ class LoadingScreen extends StatelessWidget {
               borderRadius: UIConstants.bigBorderRadius,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.5), // Shadow color
+                  color: Colors.grey.withValues(alpha: 0.5), // Shadow color
                   spreadRadius: 3, // How far the shadow spreads
                   blurRadius: 5, // The intensity of the blur effect
                   offset: const Offset(0, 3), // Offset of the shadow (X, Y)

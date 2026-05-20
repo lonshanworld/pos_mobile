@@ -5,7 +5,6 @@ import "../../../../blocs/item_bloc/item_cubit.dart";
 import "../../../../blocs/loading_bloc/loading_cubit.dart";
 import "../../../../blocs/userData_bloc/user_data_cubit.dart";
 import "../../../../constants/uiConstants.dart";
-import "../../../../error_handlers/error_handler.dart";
 import "../../../../models/groupingItem_models_folders/group_model.dart";
 import "../../../../models/user_model_folder/user_model.dart";
 import "../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart";
@@ -46,8 +45,16 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ErrorHandlers errorHandlers = ErrorHandlers();
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+
+    void showValidationMessage(String message) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
 
 
     return Scaffold(
@@ -80,22 +87,23 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                   txt: "Update",
                   func: ()async{
                     if(groupNameController.text.trim().isEmpty){
-                      errorHandlers.showErrorWithBtn(title: null, txt: "Group Name should not be empty");
+                      showValidationMessage("Group name should not be empty");
                     }else{
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      await context.read<ItemCubit>().editGroupName(
+                      final value = await context.read<ItemCubit>().editGroupName(
                         userModel: userModel,
                         newName: groupNameController.text.trim(),
                         groupModel: widget.groupModel,
-                      ).then((value){
-                        if(value){
-                          Navigator.of(context).pop();
-                          context.read<LoadingCubit>().setSuccess("Success !");
+                      );
 
-                        }else{
-                          context.read<LoadingCubit>().setFail("Fail !");
-                        }
-                      });
+                      if (!mounted) return;
+                      if(value){
+                        Navigator.of(context).pop();
+                        context.read<LoadingCubit>().setSuccess("Success !");
+
+                      }else{
+                        context.read<LoadingCubit>().setFail("Fail !");
+                      }
                     }
                   },
                   clr: Colors.deepPurpleAccent,

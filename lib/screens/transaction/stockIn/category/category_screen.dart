@@ -38,19 +38,20 @@ class CategoryScreen extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(
-            height: 30,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.bigSpace
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.titleSmall!,
-                  txt: "Total Category ( ${categoryList.length.toString()} )",
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              UIConstants.bigSpace, UIConstants.mediumSpace,
+              UIConstants.bigSpace, UIConstants.smallSpace,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.grid_view_rounded, size: UIConstants.mediumIcon, color: Colors.grey),
+                const SizedBox(width: UIConstants.smallSpace),
+                CusTxtWidget(
+                  txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(color: Colors.grey),
+                  txt: "${categoryList.length} ${categoryList.length == 1 ? 'Category' : 'Categories'}",
                 ),
-              ),
+              ],
             ),
           ),
           Expanded(
@@ -74,10 +75,10 @@ class CategoryScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(UIConstants.bigSpace),
                     itemCount: categoryList.length,
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 100,
+                      maxCrossAxisExtent: 160,
                       childAspectRatio: 1,
-                      mainAxisSpacing:0,
-                      crossAxisSpacing: 0,
+                      mainAxisSpacing: UIConstants.mediumSpace,
+                      crossAxisSpacing: UIConstants.mediumSpace,
                     ),
                     itemBuilder: (ctx, index){
                       return CategoryBoxWidget(

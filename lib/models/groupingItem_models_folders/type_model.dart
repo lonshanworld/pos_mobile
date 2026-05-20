@@ -36,7 +36,7 @@ class TypeModel extends ItemInfoSkeletalModel{
   });
 
   @override
-  TypeModel.fromJson(Map<String, dynamic>jsonData):
+  TypeModel.fromJson(super.jsonData):
       // id = jsonData["id"],
       groupId = jsonData["groupId"],
       name = jsonData["name"],
@@ -53,7 +53,7 @@ class TypeModel extends ItemInfoSkeletalModel{
       generalDescription = jsonData["generalDescription"],
       generalRestrictionId = jsonData["generalRestrictionId"],
       hasExpire = jsonData["hasExpire"] == 1 ? true : false,
-      super.fromJson(jsonData);
+      super.fromJson();
 
   @override
   Map<String, dynamic> toJson(){

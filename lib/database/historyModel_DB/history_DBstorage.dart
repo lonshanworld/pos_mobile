@@ -20,6 +20,13 @@ class HistoryDbStorage{
         )
       """
     );
+    // OPTIMIZATION: Add indexes to significantly speed up queries filtering by time or type
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS idx_history_createTime ON ${TxtConstants.historyTableName}(createTime);"
+    );
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS idx_history_modelType ON ${TxtConstants.historyTableName}(modelType);"
+    );
   }
 
   static Future<void>onDelete(Database db)async{
@@ -36,7 +43,13 @@ class HistoryDbStorage{
   }
 
   static Future<List<dynamic>>getAllHistoryList(Database db)async{
-    List<dynamic> data = await db.query(TxtConstants.historyTableName);
+    // OPTIMIZATION: Limit the query to prevent Out-Of-Memory exceptions
+    // Sort by ID descending to always show the most recent actions first.
+    List<dynamic> data = await db.query(
+      TxtConstants.historyTableName,
+      orderBy: 'id DESC',
+      limit: 200,
+    );
     cusDebugPrint(data);
     return data;
   }

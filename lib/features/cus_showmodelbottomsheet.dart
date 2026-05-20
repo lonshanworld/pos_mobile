@@ -6,7 +6,7 @@ import '../globalkeys.dart';
 class CusShowSheet{
   final MainGlobalKeys mainGlobalKeys = MainGlobalKeys.instance;
 
-  showCusBottomSheet(Widget screen){
+  void showCusBottomSheet(Widget screen){
     showModalBottomSheet(
       context: mainGlobalKeys.cusGlobalNavigatorKey.currentContext!,
       useSafeArea: true,
@@ -23,7 +23,7 @@ class CusShowSheet{
     );
   }
   
-  showCusDialogScreen(Widget screen){
+  void showCusDialogScreen(Widget screen){
     showDialog(
       context: mainGlobalKeys.cusGlobalNavigatorKey.currentContext!,
       barrierDismissible: false,
