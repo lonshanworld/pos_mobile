@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" tools:replace="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
-        android:label="Nano-Nux Mini POS Mobile"
+        android:label="Nano-Nux Mini POS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

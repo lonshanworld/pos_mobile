@@ -235,7 +235,7 @@ class ItemBoxWidget extends StatelessWidget {
                     Expanded(
                       flex: 6,
                       child: Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
                         color: uiController.getpureDirectClr(themeModeType),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,6 +255,7 @@ class ItemBoxWidget extends StatelessWidget {
                             // Prices based on user level
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (userModel?.userLevel == UserLevel.merchant && isStorage) ...[
                                   Text(

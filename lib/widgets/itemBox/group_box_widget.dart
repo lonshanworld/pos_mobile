@@ -146,11 +146,13 @@ class GroupBoxWidget extends StatelessWidget {
                     txt: "$typeCount ${typeCount == 1 ? 'type' : 'types'}",
                   ),
                 ),
-                CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color: Colors.grey,
+                Flexible(
+                  child: CusTxtWidget(
+                    txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: Colors.grey,
+                    ),
+                    txt: TextFormatters.getDateTime(groupModel.lastUpdateTime ?? groupModel.createTime),
                   ),
-                  txt: TextFormatters.getDateTime(groupModel.lastUpdateTime ?? groupModel.createTime),
                 ),
               ],
             ),
