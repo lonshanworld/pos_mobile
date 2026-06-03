@@ -14,17 +14,12 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "changeme")
     
-    # API Tokens for mobile clients
-    MOBILE_API_TOKENS: list[str] = os.getenv(
-        "MOBILE_API_TOKENS",
-        "mobile-token-1,mobile-token-2"
-    ).split(",")
-    
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 10
     
     class Config:
         env_file = ".env"
+        env_file_encoding = 'utf-8'
         case_sensitive = True
 
 settings = Settings()
