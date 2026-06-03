@@ -20,7 +20,7 @@ class DrawerWidget extends StatelessWidget {
     switch (title.toLowerCase()) {
       case 'dashboard':
         return Icons.dashboard_rounded;
-      case 'stock out':
+      case 'check out':
         return Icons.shopping_cart_checkout_rounded;
       case 'stock in':
         return Icons.inventory_2_rounded;

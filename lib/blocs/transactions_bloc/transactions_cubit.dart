@@ -42,15 +42,6 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   }
 
   Future<void> _initTransactionsList() async {
-    // emit(
-    //     TransactionsData(
-    //       stockInList: await DBHelper.getAllStockIn(),
-    //       stockOutList: await DBHelper.getAllStockOut(),
-    //       stockOutItemList: await DBHelper.getAllStockOutItem(),
-    //       customerList: await DBHelper.getAllCustomer(),
-    //       deliveryModelList: await DBHelper.getAllDeliveryModel(),
-    //       deliveryPersonList: await DBHelper.getAllDeliveryPerson(),
-    //     ));
     List<StockInModel> activeStockInList = [];
     List<StockInModel> inActiveStockInList = [];
     List<StockOutModel> activeStockOutList = [];
@@ -58,7 +49,8 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     List<DeliveryPersonModel> activeDeliveryPersonList = [];
     List<DeliveryPersonModel> inActiveDeliveryPersonList = [];
 
-    List<StockInModel> allStockInList = await DBHelper.getAllStockIn();
+    // Fetch first page (100 items)
+    List<StockInModel> allStockInList = await DBHelper.getAllStockIn(limit: 100, offset: 0);
     for (int a = 0; a < allStockInList.length; a++) {
       if (allStockInList[a].activeStatus) {
         activeStockInList.add(allStockInList[a]);
@@ -67,7 +59,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
       }
     }
 
-    List<StockOutModel> allStockOutList = await DBHelper.getAllStockOut();
+    List<StockOutModel> allStockOutList = await DBHelper.getAllStockOut(limit: 100, offset: 0);
     for (int b = 0; b < allStockOutList.length; b++) {
       if (allStockOutList[b].activeStatus) {
         activeStockOutList.add(allStockOutList[b]);
@@ -95,7 +87,121 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         activeDeliveryPersonList: activeDeliveryPersonList,
         inActiveDeliveryPersonList: inActiveDeliveryPersonList,
         inActiveStockInList: inActiveStockInList,
-        inActiveStockOutList: inActiveStockOutList));
+        inActiveStockOutList: inActiveStockOutList,
+        stockInOffset: 0,
+        stockOutOffset: 0,
+        hasMoreStockIn: allStockInList.length == 100,
+        hasMoreStockOut: allStockOutList.length == 100,
+        isLoadingMoreStockIn: false,
+        isLoadingMoreStockOut: false));
+  }
+
+  Future<void> loadMoreStockIn() async {
+    if (state.isLoadingMoreStockIn || !state.hasMoreStockIn) return;
+
+    emit(TransactionsData(
+      activeStockInList: state.activeStockInList,
+      activeStockOutList: state.activeStockOutList,
+      stockOutItemList: state.stockOutItemList,
+      customerList: state.customerList,
+      deliveryModelList: state.deliveryModelList,
+      activeDeliveryPersonList: state.activeDeliveryPersonList,
+      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+      inActiveStockInList: state.inActiveStockInList,
+      inActiveStockOutList: state.inActiveStockOutList,
+      stockInOffset: state.stockInOffset,
+      stockOutOffset: state.stockOutOffset,
+      hasMoreStockIn: state.hasMoreStockIn,
+      hasMoreStockOut: state.hasMoreStockOut,
+      isLoadingMoreStockIn: true,
+      isLoadingMoreStockOut: state.isLoadingMoreStockOut,
+    ));
+
+    final int newOffset = state.stockInOffset + 100;
+    List<StockInModel> moreStockInList = await DBHelper.getAllStockIn(limit: 100, offset: newOffset);
+
+    List<StockInModel> newActiveStockInList = List.from(state.activeStockInList);
+    List<StockInModel> newInActiveStockInList = List.from(state.inActiveStockInList);
+
+    for (var item in moreStockInList) {
+      if (item.activeStatus) {
+        newActiveStockInList.add(item);
+      } else {
+        newInActiveStockInList.add(item);
+      }
+    }
+
+    emit(TransactionsData(
+      activeStockInList: newActiveStockInList,
+      activeStockOutList: state.activeStockOutList,
+      stockOutItemList: state.stockOutItemList,
+      customerList: state.customerList,
+      deliveryModelList: state.deliveryModelList,
+      activeDeliveryPersonList: state.activeDeliveryPersonList,
+      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+      inActiveStockInList: newInActiveStockInList,
+      inActiveStockOutList: state.inActiveStockOutList,
+      stockInOffset: newOffset,
+      stockOutOffset: state.stockOutOffset,
+      hasMoreStockIn: moreStockInList.length == 100,
+      hasMoreStockOut: state.hasMoreStockOut,
+      isLoadingMoreStockIn: false,
+      isLoadingMoreStockOut: state.isLoadingMoreStockOut,
+    ));
+  }
+
+  Future<void> loadMoreStockOut() async {
+    if (state.isLoadingMoreStockOut || !state.hasMoreStockOut) return;
+
+    emit(TransactionsData(
+      activeStockInList: state.activeStockInList,
+      activeStockOutList: state.activeStockOutList,
+      stockOutItemList: state.stockOutItemList,
+      customerList: state.customerList,
+      deliveryModelList: state.deliveryModelList,
+      activeDeliveryPersonList: state.activeDeliveryPersonList,
+      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+      inActiveStockInList: state.inActiveStockInList,
+      inActiveStockOutList: state.inActiveStockOutList,
+      stockInOffset: state.stockInOffset,
+      stockOutOffset: state.stockOutOffset,
+      hasMoreStockIn: state.hasMoreStockIn,
+      hasMoreStockOut: state.hasMoreStockOut,
+      isLoadingMoreStockIn: state.isLoadingMoreStockIn,
+      isLoadingMoreStockOut: true,
+    ));
+
+    final int newOffset = state.stockOutOffset + 100;
+    List<StockOutModel> moreStockOutList = await DBHelper.getAllStockOut(limit: 100, offset: newOffset);
+
+    List<StockOutModel> newActiveStockOutList = List.from(state.activeStockOutList);
+    List<StockOutModel> newInActiveStockOutList = List.from(state.inActiveStockOutList);
+
+    for (var item in moreStockOutList) {
+      if (item.activeStatus) {
+        newActiveStockOutList.add(item);
+      } else {
+        newInActiveStockOutList.add(item);
+      }
+    }
+
+    emit(TransactionsData(
+      activeStockInList: state.activeStockInList,
+      activeStockOutList: newActiveStockOutList,
+      stockOutItemList: state.stockOutItemList,
+      customerList: state.customerList,
+      deliveryModelList: state.deliveryModelList,
+      activeDeliveryPersonList: state.activeDeliveryPersonList,
+      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+      inActiveStockInList: state.inActiveStockInList,
+      inActiveStockOutList: newInActiveStockOutList,
+      stockInOffset: state.stockInOffset,
+      stockOutOffset: newOffset,
+      hasMoreStockIn: state.hasMoreStockIn,
+      hasMoreStockOut: moreStockOutList.length == 100,
+      isLoadingMoreStockIn: state.isLoadingMoreStockIn,
+      isLoadingMoreStockOut: false,
+    ));
   }
 
   Future<void> reloadList() async {

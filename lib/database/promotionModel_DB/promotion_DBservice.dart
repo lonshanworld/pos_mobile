@@ -15,8 +15,9 @@ class PromotionDBService{
     await PromotionDbStorage.onDelete(db);
   }
 
-  static Future<List<PromotionModel>>getAllPromotions(Database db)async{
-    List<dynamic> dataList = await PromotionDbStorage.getAllPromotion(db);
+
+  static Future<List<PromotionModel>>getAllPromotions(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> dataList = await PromotionDbStorage.getAllPromotion(db, limit: limit, offset: offset);
     return dataList.map((e) => PromotionModel.fromJson(e)).toList();
   }
 

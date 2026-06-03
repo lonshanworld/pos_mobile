@@ -43,7 +43,7 @@ class PromotionListScreen extends StatelessWidget {
                   spacing: UIConstants.bigSpace,
                   runSpacing: UIConstants.bigSpace,
                   alignment: WrapAlignment.center,
-                  children: promotionList.reversed.map((e){
+                  children: promotionList.map((e){
                     return PromotionWidget(promotionModel: e, index: promotionList.indexOf(e) + 1);
                   }).toList(),
                 ),

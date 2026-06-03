@@ -10,6 +10,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/screens/confirm_screens_folder/comfirm_screen.dart';
 import 'package:pos_mobile/screens/history/transactions_history/history_voucher_screen.dart';
+import 'package:pos_mobile/screens/history/transactions_history/merchant_order_detail_sheet.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/cusPopMenuItem_widget.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
@@ -134,6 +135,8 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
                 final UserModel? seller = context.read<UserDataCubit>().getSingleUser(transaction.createPersonId);
                 final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(transaction.id);
                 
+                final bool isMerchant = userModel?.userLevel == UserLevel.merchant || userModel?.userLevel == UserLevel.superAdmin;
+                
                 int totalItemsCount = 0;
                 for(var item in selectedStockOutItemList) {
                   totalItemsCount += item.count;
@@ -152,6 +155,20 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
                 return PopupMenuButton(
                   tooltip: "Options",
                   itemBuilder: (BuildContext ctx) => [
+                    // Only show to merchants / admins
+                    if (isMerchant)
+                      cusPopUpMenuItem(
+                        func: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => MerchantOrderDetailSheet(stockOutModel: transaction),
+                            ),
+                          );
+                        },
+                        txt: "View Order Detail",
+                        isImportant: false,
+                        context: ctx,
+                      ),
                     cusPopUpMenuItem(
                       func: () {
                         showSheet.showCusBottomSheet(

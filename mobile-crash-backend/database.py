@@ -1,5 +1,5 @@
 import aiosqlite
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from config import settings
 
@@ -23,7 +23,8 @@ class Database:
                     timestamp TEXT NOT NULL,
                     error_type TEXT NOT NULL,
                     received_at TEXT NOT NULL,
-                    client_token TEXT
+                    client_token TEXT,
+                    status TEXT DEFAULT 'error'
                 )
             ''')
             
@@ -36,12 +37,36 @@ class Database:
                 )
             ''')
             
+            # API Keys table for key validation feature
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT UNIQUE NOT NULL,
+                    status TEXT NOT NULL,
+                    user_device_id TEXT,
+                    created_at TEXT NOT NULL,
+                    activated_at TEXT,
+                    duration INTEGER
+                )
+            ''')
+            
+            # Key Devices registration history table
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS api_key_devices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT NOT NULL,
+                    device_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(key, device_id)
+                )
+            ''')
+            
             await db.commit()
     
     async def save_crash_reports(
         self,
         reports: List[Dict[str, Any]],
-        client_token: str
+        device_id: str
     ) -> int:
         """Save multiple crash reports to database"""
         async with aiosqlite.connect(self.db_path) as db:
@@ -52,8 +77,8 @@ class Database:
                     INSERT INTO crash_reports (
                         error_message, stack_trace, device_info, user_info,
                         app_version, platform, timestamp, error_type,
-                        received_at, client_token
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        received_at, client_token, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     report.get('errorMessage'),
                     report.get('stackTrace'),
@@ -64,7 +89,8 @@ class Database:
                     report.get('timestamp'),
                     report.get('errorType'),
                     received_at,
-                    client_token
+                    device_id,
+                    'error'
                 ))
             
             await db.commit()
@@ -173,5 +199,243 @@ class Database:
             
             await db.commit()
             return True
+    
+    async def create_api_key(self, key: str, duration: int = 90) -> bool:
+        """Create a new API key"""
+        async with aiosqlite.connect(self.db_path) as db:
+            created_at = datetime.utcnow().isoformat()
+            
+            await db.execute('''
+                INSERT INTO api_keys (key, status, created_at, duration)
+                VALUES (?, ?, ?, ?)
+            ''', (key, 'active', created_at, duration))
+            
+            await db.commit()
+            return True
+    
+    async def get_devices_for_key(self, key: str) -> List[Dict[str, Any]]:
+        """Get all devices registered to a key"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                'SELECT * FROM api_key_devices WHERE key = ? ORDER BY created_at ASC',
+                (key,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+
+    async def delete_key_device(self, key: str, device_id: str) -> bool:
+        """Delete a device registration for a key"""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                'DELETE FROM api_key_devices WHERE key = ? AND device_id = ?',
+                (key, device_id)
+            )
+            
+            # Check remaining devices
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                'SELECT COUNT(*) as count FROM api_key_devices WHERE key = ?',
+                (key,)
+            ) as cursor:
+                count = (await cursor.fetchone())['count']
+            
+            if count == 0:
+                # Update status back to active in api_keys and clear user_device_id and activated_at
+                await db.execute('''
+                    UPDATE api_keys
+                    SET status = ?, user_device_id = NULL, activated_at = NULL
+                    WHERE key = ?
+                ''', ('active', key))
+            else:
+                # Update user_device_id to the remaining device or first device
+                async with db.execute(
+                    'SELECT device_id FROM api_key_devices WHERE key = ? ORDER BY created_at ASC LIMIT 1',
+                    (key,)
+                ) as cursor:
+                    remaining_row = await cursor.fetchone()
+                    if remaining_row:
+                        await db.execute('''
+                            UPDATE api_keys
+                            SET user_device_id = ?
+                            WHERE key = ?
+                        ''', (remaining_row['device_id'], key))
+                        
+            await db.commit()
+            return True
+
+    async def validate_and_activate_key(self, key: str, device_id: str) -> Optional[Dict[str, Any]]:
+        """Validate and activate a key for a device"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            # Check if key exists
+            async with db.execute(
+                'SELECT * FROM api_keys WHERE key = ?',
+                (key,)
+            ) as cursor:
+                row = await cursor.fetchone()
+            
+            if not row:
+                return {
+                    'valid': False,
+                    'error_type': 'invalid_key',
+                    'message': 'Invalid key. Please check again.'
+                }
+            
+            # Get registered devices for this key
+            devices = await self.get_devices_for_key(key)
+            device_ids = [d['device_id'] for d in devices]
+            
+            current_time = datetime.utcnow().isoformat()
+            
+            if device_id in device_ids:
+                # This device is already registered
+                if len(device_ids) > 1:
+                    # Duplicate device mapping detected! Even though this device registered, there are other devices!
+                    return {
+                        'valid': False,
+                        'error_type': 'duplicate_device',
+                        'message': 'Duplicate Device detect and The app is locked. Please contact Nanonux for more information'
+                    }
+                else:
+                    # Exactly only this device is registered. Valid!
+                    # Check expiration if key duration is set
+                    if row['activated_at'] and row['duration']:
+                        activated_date = datetime.fromisoformat(row['activated_at'])
+                        if datetime.utcnow() > activated_date + timedelta(days=row['duration']):
+                            return {
+                                'valid': False,
+                                'error_type': 'expired_key',
+                                'message': 'This license activation key has expired.'
+                            }
+                    
+                    return {
+                        'valid': True,
+                        'key': key,
+                        'status': 'used',
+                        'activated_at': row['activated_at'] or current_time,
+                        'device_id': device_id
+                    }
+            else:
+                # This is a new / unregistered device ID trying to validate!
+                # Insert registration for this device
+                await db.execute('''
+                    INSERT INTO api_key_devices (key, device_id, created_at)
+                    VALUES (?, ?, ?)
+                ''', (key, device_id, current_time))
+                await db.commit()
+                
+                # Fetch devices again
+                devices = await self.get_devices_for_key(key)
+                device_ids = [d['device_id'] for d in devices]
+                
+                if len(device_ids) > 1:
+                    # Since there are now multiple devices, it is a duplicate!
+                    # Update status to used if needed
+                    await db.execute('''
+                        UPDATE api_keys 
+                        SET status = ?, activated_at = COALESCE(activated_at, ?)
+                        WHERE key = ?
+                    ''', ('used', current_time, key))
+                    await db.commit()
+                    
+                    return {
+                        'valid': False,
+                        'error_type': 'duplicate_device',
+                        'message': 'Duplicate Device detect and The app is locked. Please contact Nanonux for more information'
+                    }
+                else:
+                    # This is the very first device registered. Bind and validate successfully!
+                    await db.execute('''
+                        UPDATE api_keys 
+                        SET status = ?, user_device_id = ?, activated_at = ?
+                        WHERE key = ?
+                    ''', ('used', device_id, current_time, key))
+                    await db.commit()
+                    
+                    return {
+                        'valid': True,
+                        'key': key,
+                        'status': 'used',
+                        'activated_at': current_time,
+                        'device_id': device_id
+                    }
+    
+    async def check_key_status(self, key: str) -> Optional[Dict[str, Any]]:
+        """Check the status of a key"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            async with db.execute(
+                'SELECT * FROM api_keys WHERE key = ?',
+                (key,)
+            ) as cursor:
+                row = await cursor.fetchone()
+            
+            if not row:
+                return None
+            
+            key_data = dict(row)
+            key_data['devices'] = await self.get_devices_for_key(key)
+            return key_data
+    
+    async def get_all_api_keys(self) -> List[Dict[str, Any]]:
+        """Get all API keys (for admin dashboard)"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            async with db.execute(
+                'SELECT * FROM api_keys ORDER BY created_at DESC'
+            ) as cursor:
+                rows = await cursor.fetchall()
+                keys = [dict(row) for row in rows]
+            
+            # Fetch registered devices for each key
+            for key_obj in keys:
+                key_obj['devices'] = await self.get_devices_for_key(key_obj['key'])
+                
+            return keys
+    
+    async def get_key_by_device_id(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Check if device has already activated a key"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            # Find any key registered to this device in key devices
+            async with db.execute(
+                'SELECT key FROM api_key_devices WHERE device_id = ? LIMIT 1',
+                (device_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                
+            if not row:
+                return None
+            
+            key = row['key']
+            
+            async with db.execute(
+                'SELECT * FROM api_keys WHERE key = ?',
+                (key,)
+            ) as cursor:
+                key_row = await cursor.fetchone()
+                
+            if not key_row:
+                return None
+            
+            key_data = dict(key_row)
+            # Check if there are duplicate devices for this key
+            devices = await self.get_devices_for_key(key)
+            if len(devices) > 1:
+                key_data['status'] = 'locked'  # Flag it as locked when duplicate is detected
+                key_data['error_type'] = 'duplicate_device'
+                
+            # Check if duration has passed since activation
+            if key_data['activated_at'] and key_data['duration']:
+                activated_date = datetime.fromisoformat(key_data['activated_at'])
+                if datetime.utcnow() > activated_date + timedelta(days=key_data['duration']):
+                    return None
+            
+            return key_data
 
 db = Database()

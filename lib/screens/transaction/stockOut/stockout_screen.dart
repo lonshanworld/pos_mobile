@@ -16,7 +16,6 @@ import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../widgets/loading_widget.dart';
 import 'add_more_info_stockOut_screen.dart';
 
-// TODO : please refix stockout screen by using bloc
 
 class StockOutScreen extends StatefulWidget {
   static const String routeName = "/stockoutscreen";

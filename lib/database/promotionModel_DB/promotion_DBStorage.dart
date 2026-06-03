@@ -44,10 +44,14 @@ class PromotionDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllPromotion(Database db)async{
-    List<dynamic> data = await db.query(TxtConstants.promotionTableName);
+  static Future<List<dynamic>>getAllPromotion(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> data = await db.query(TxtConstants.promotionTableName, orderBy: 'id DESC', limit: limit, offset: offset);
     cusDebugPrint(data);
     return data;
+  }
+
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+    return await db.query(TxtConstants.promotionTableName, orderBy: 'id DESC', limit: limit, offset: offset);
   }
 
   static Future<int> insertNewPromotion({

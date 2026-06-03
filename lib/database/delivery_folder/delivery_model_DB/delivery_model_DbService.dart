@@ -11,8 +11,8 @@ class DeliveryModelDbService{
     await DeliveryModelDbStorage.onDelete(db);
   }
 
-  static Future<List<DeliveryModel>>getAllDeliveryModel(Database db)async{
-    List<dynamic> rawDataList = await DeliveryModelDbStorage.getAllData(db);
+  static Future<List<DeliveryModel>>getAllDeliveryModel(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> rawDataList = await DeliveryModelDbStorage.getAllData(db, limit: limit, offset: offset);
     return rawDataList.map((e) => DeliveryModel.fromJson(e)).toList();
   }
 

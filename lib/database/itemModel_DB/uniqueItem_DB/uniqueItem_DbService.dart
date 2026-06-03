@@ -24,7 +24,7 @@ class UniqueItemDbService{
   // })async{
   //   List<int> values = await UniqueItemDbStorage.insertNewDataList(db: db, uniqueItemModelList: uniqueItemModelList);
   // }
-  static Future<List<UniqueItemModel>> getAllData(Database db, {int limit = 5000, int offset = 0})async{
+  static Future<List<UniqueItemModel>> getAllData(Database db, {int limit = 100, int offset = 0})async{
     List<dynamic> itemList = await UniqueItemDbStorage.getAllUniqueItemList(db, limit: limit, offset: offset);
     return itemList.map((e) => UniqueItemModel.fromJson(e)).toList();
   }

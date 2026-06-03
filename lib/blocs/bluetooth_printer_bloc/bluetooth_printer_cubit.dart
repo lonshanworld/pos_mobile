@@ -233,7 +233,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       bytes += generator.imageRaster(resized, align: PosAlign.center);
 
       // Feed paper and cut
-      bytes += generator.feed(1);
+      // bytes += generator.feed(1);
       bytes += generator.cut();
 
       // Send to Bluetooth printer in chunks to reduce transport overflow.

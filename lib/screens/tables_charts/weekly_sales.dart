@@ -28,7 +28,7 @@ class _WeeklySalesState extends State<WeeklySales> {
     final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
     final LinkedHashMap<String, List<StockOutModel>> weeklyMap =
         HistoryFilter.filterWeeklyStockOut(stockOutList);
-    final List<String> allKeys = weeklyMap.keys.toList().reversed.toList();
+    final List<String> allKeys = weeklyMap.keys.toList();
     final int totalCount = allKeys.length;
 
     if (totalCount == 0) return _emptyState(context);

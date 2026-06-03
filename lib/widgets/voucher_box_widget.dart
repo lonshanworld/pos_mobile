@@ -3,6 +3,7 @@ import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/features/printer_font_changer.dart";
 import "package:pos_mobile/models/promotion_model_folder/promotion_model.dart";
+import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/widgets/tables_folder/voucherTable.dart";
 import "package:qr_flutter/qr_flutter.dart";
 
@@ -85,18 +86,31 @@ class VoucherBox extends StatelessWidget {
 
     double getAllPrice(){
       double price = 0;
-      for(int i = 0; i < selectedUniqueItemList.length; i++){
-        final PromotionModel? promotionData = context.read<PromotionCubit>().getSinglePromotionFromItemId(selectedUniqueItemList[i].itemId);
+      final itemCubit = context.read<ItemCubit>();
+      final activePromotionList = context.read<PromotionCubit>().state.activePromotionList;
+      final itemPromotionList = context.read<PromotionCubit>().state.activeItemPromotionList;
+      
+      final dataList = itemCubit.getItemListWithCountFromUniqueItemListWithPromotion(
+        uniqueItemList: selectedUniqueItemList,
+        itemModelList: selectedItemModelList,
+        activePromotionList: activePromotionList,
+        itemPromotionList: itemPromotionList,
+      );
 
-        price = price + CalculationFormula.getItemAfterPromotionPrice(
-          sellPrice: CalculationFormula.getItemSellPrice(
-            originalPrice: selectedUniqueItemList[i].originalPrice,
-            profitPrice: selectedUniqueItemList[i].profitPrice,
-            taxPercentage: selectedUniqueItemList[i].taxPercentage,
-          ),
-          promotionPercentage: promotionData == null ? 0 : promotionData.promotionPercentage,
-          promotionPrice: promotionData == null ? 0 : promotionData.promotionPrice,
+      for (var item in dataList) {
+        double rawSellPrice = CalculationFormula.getItemSellPrice(
+          originalPrice: item.itemModel.originalPrice,
+          profitPrice: item.itemModel.profitPrice,
+          taxPercentage: item.itemModel.taxPercentage ?? 0,
         );
+        
+        double unitPriceAfterPromo = CalculationFormula.getItemAfterPromotionPrice(
+          sellPrice: rawSellPrice,
+          promotionPercentage: item.promotion?.promotionPercentage,
+          promotionPrice: item.promotion?.promotionPrice,
+        );
+        
+        price += unitPriceAfterPromo * item.count;
       }
       return price;
     }
@@ -138,8 +152,10 @@ class VoucherBox extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
               txt: shopInfo.shopName,
+              textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           Align(
             alignment: Alignment.center,
             child: Text(
@@ -152,6 +168,7 @@ class VoucherBox extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(height: UIConstants.smallSpace,),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -251,6 +268,7 @@ class VoucherBox extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -261,6 +279,7 @@ class VoucherBox extends StatelessWidget {
               txt: "**********************",
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -314,6 +333,7 @@ class VoucherBox extends StatelessWidget {
               txt: shopInfo.noReturnNote,
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(

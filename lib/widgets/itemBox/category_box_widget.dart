@@ -139,18 +139,15 @@ class CategoryBoxWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.max,
               children: [
                 // Colored header with category initial
-                Expanded(
-                  flex: 6,
-                  child: Container(
-                    color: _categoryColor(categoryModel.name).withValues(alpha: 0.12),
-                    child: Center(
-                      child: Text(
-                        categoryModel.name.isNotEmpty ? categoryModel.name[0].toUpperCase() : '?',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: _categoryColor(categoryModel.name),
-                        ),
+                Container(
+                  color: _categoryColor(categoryModel.name).withValues(alpha: 0.12),
+                  child: Center(
+                    child: Text(
+                      categoryModel.name.isNotEmpty ? categoryModel.name[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: _categoryColor(categoryModel.name),
                       ),
                     ),
                   ),

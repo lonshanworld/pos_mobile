@@ -34,8 +34,8 @@ class RestrictionDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllRestrictions(Database db)async{
-    List<dynamic> data = await db.query(TxtConstants.restrictionTableName);
+  static Future<List<dynamic>>getAllRestrictions(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> data = await db.query(TxtConstants.restrictionTableName, orderBy: 'id DESC', limit: limit, offset: offset);
     cusDebugPrint(data);
     return data;
   }

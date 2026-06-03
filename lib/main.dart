@@ -11,24 +11,28 @@ import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
 import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
+import 'package:pos_mobile/blocs/key_validation_bloc/key_validation_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/globalkeys.dart';
 import 'package:pos_mobile/routes/router.dart';
 import 'package:pos_mobile/services/crash_report_sync_manager.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
 
-
-void main() async{
-
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DBHelper.initiateAllDB();
   await GetStorage.init();
 
+  // Load environment
+  await dotenv.load(fileName: "assets/.env");
+  final String appEnv = dotenv.env['APPLICATION_ENVIRONMENT'] ?? 'production';
+
   await CrashReporter.initialize(
     appRunner: () async {
-      runApp(const MyApp());
+      runApp(MyApp(appEnv: appEnv));
     },
   );
 
@@ -52,7 +56,8 @@ void main() async{
 // }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String appEnv;
+  const MyApp({super.key, required this.appEnv});
 
   // This widget is the root of your application.
   @override
@@ -67,32 +72,30 @@ class MyApp extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ThemeCubit>(
-          create: (ctx)=>ThemeCubit(),
+        BlocProvider<ThemeCubit>(create: (ctx) => ThemeCubit(), lazy: false),
+        BlocProvider<BluetoothPrinterCubit>(
+          create: (ctx) => BluetoothPrinterCubit(),
           lazy: false,
         ),
-        BlocProvider<BluetoothPrinterCubit>(
-          create: (ctx)=>BluetoothPrinterCubit(),
+        BlocProvider<KeyValidationCubit>(
+          create: (ctx) => KeyValidationCubit(appEnv: appEnv),
           lazy: false,
         ),
         BlocProvider<LoadingCubit>(
-          create: (ctx)=>LoadingCubit(),
+          create: (ctx) => LoadingCubit(),
           lazy: false,
         ),
         BlocProvider<UserDataCubit>(
-          create: (ctx) =>UserDataCubit(),
+          create: (ctx) => UserDataCubit(),
           lazy: false,
         ),
-        BlocProvider<ItemCubit>(
-          create: (ctx) => ItemCubit(),
-          lazy: false,
-        ),
+        BlocProvider<ItemCubit>(create: (ctx) => ItemCubit(), lazy: false),
         BlocProvider<TransactionsCubit>(
-          create: (ctx)=>TransactionsCubit(),
+          create: (ctx) => TransactionsCubit(),
           lazy: false,
         ),
         BlocProvider<HistoryCubit>(
-          create: (ctx) =>HistoryCubit(),
+          create: (ctx) => HistoryCubit(),
           lazy: false,
         ),
         BlocProvider<PromotionCubit>(
@@ -105,7 +108,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ConfirmByPasswordCubit>(
           create: (ctx) {
-            return ConfirmByPasswordCubit(userModel: ctx.watch<UserDataCubit>().state.userModel);
+            return ConfirmByPasswordCubit(
+              userModel: ctx.watch<UserDataCubit>().state.userModel,
+            );
           },
           lazy: true,
         ),
@@ -123,9 +128,122 @@ class MyApp extends StatelessWidget {
               darkTheme: uiController.cusThemeData(ThemeModeType.dark),
               themeMode: ctx.watch<ThemeCubit>().getThemeMode(),
               onGenerateRoute: appRouter.onGenerateRoute,
+              builder: (context, child) {
+                return BlocBuilder<KeyValidationCubit, KeyValidationState>(
+                  builder: (context, state) {
+                    if (state.isAppLocked) {
+                      return Stack(
+                        children: [
+                          if (child != null) child,
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withOpacity(0.85),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
+                                    child: Card(
+                                      color: Colors.grey[900],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: const BorderSide(
+                                          color: Colors.red,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      elevation: 24,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(28.0),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.gpp_bad_rounded,
+                                              color: Colors.redAccent,
+                                              size: 72,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            const Text(
+                                              'SECURITY ALERT',
+                                              style: TextStyle(
+                                                color: Colors.redAccent,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              state.lockErrorMessage ??
+                                                  'Duplicate Device detect and The app is locked. Please contact NanoNux for more information',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                height: 1.5,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 24),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withOpacity(
+                                                  0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.lock,
+                                                    color: Colors.redAccent,
+                                                    size: 16,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    'DEVICE TERMINATED',
+                                                    style: TextStyle(
+                                                      color: Colors.redAccent,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      letterSpacing: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return child ?? const SizedBox.shrink();
+                  },
+                );
+              },
             ),
           );
-        }
+        },
       ),
     );
   }
@@ -145,7 +263,7 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Initialize crash report sync manager
     CrashReportSyncManager.instance.initialize();
   }
@@ -164,6 +282,12 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
     } else if (state == AppLifecycleState.resumed) {
       // Trigger crash report sync when app comes to foreground
       CrashReportSyncManager.instance.manualSync();
+
+      // Auto-unlock or refresh key validation status when app comes to foreground
+      final keyValidationCubit = context.read<KeyValidationCubit>();
+      if (keyValidationCubit.state.isKeyValidated) {
+        keyValidationCubit.verifyKeyWithServer();
+      }
     }
   }
 

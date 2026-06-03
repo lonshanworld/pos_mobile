@@ -28,7 +28,7 @@ class ImageDbStorage{
   }
 
   static Future<List<dynamic>>getAllImages(Database db)async{
-    List<dynamic> data = await db.query(TxtConstants.imageTableName);
+    List<dynamic> data = await db.query(TxtConstants.imageTableName, orderBy: 'id DESC');
     cusDebugPrint(data);
     return data;
   }

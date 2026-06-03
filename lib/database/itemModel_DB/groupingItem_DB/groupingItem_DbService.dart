@@ -31,11 +31,11 @@ class GroupingItemDbService{
     await CategoryDbStorage.onDelete(db);
   }
 
-  static Future<Map<String, List>>getAllData(Database db)async{
-    List<dynamic> categoryList = await CategoryDbStorage.getAllData(db);
-    List<dynamic> groupList = await GroupDbStorage.getAllData(db);
-    List<dynamic> typeList = await TypeDbStorage.getAllData(db);
-    List<dynamic> itemList = await ItemDbStorage.getAllData(db);
+  static Future<Map<String, List>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> categoryList = await CategoryDbStorage.getAllData(db, limit: limit, offset: offset);
+    List<dynamic> groupList = await GroupDbStorage.getAllData(db, limit: limit, offset: offset);
+    List<dynamic> typeList = await TypeDbStorage.getAllData(db, limit: limit, offset: offset);
+    List<dynamic> itemList = await ItemDbStorage.getAllData(db, limit: limit, offset: offset);
     return {
       "category" : categoryList.map((e) => CategoryModel.fromJson(e)).toList(),
       "group" : groupList.map((e) => GroupModel.fromJson(e)).toList(),

@@ -28,6 +28,11 @@
         h1 {
             color: #333;
         }
+        .header-right {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
         .logout-btn {
             padding: 0.5rem 1rem;
             background: #dc3545;
@@ -36,6 +41,30 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.9rem;
+        }
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            color: #333;
+            border: 2px solid transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover {
+            border-bottom: 2px solid #667eea;
+        }
+        .nav-btn.active {
+            border-bottom: 2px solid #667eea;
+            color: #667eea;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
         .stats-grid {
             display: grid;
@@ -64,6 +93,14 @@
             padding: 2rem;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; gap: 1rem; padding: 1rem; }
+            .header-right { flex-wrap: wrap; justify-content: center; }
+            .reports-section { padding: 1rem; overflow-x: auto; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 0.5rem; }
         }
         .filters {
             display: flex;
@@ -119,6 +156,15 @@
             background: #e8f5e9;
             color: #2e7d32;
         }
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-error { background: #ffebee; color: #c62828; }
+        .status-processing { background: #fff3e0; color: #ef6c00; }
+        .status-fixed { background: #e8f5e9; color: #2e7d32; }
         .stack-trace {
             max-width: 300px;
             overflow: hidden;
@@ -132,51 +178,200 @@
             padding: 2rem;
             color: #666;
         }
+        .key-generator {
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        .key-generator h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .input-group div {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+        .input-group input {
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            width: 100px;
+        }
+        .generate-btn {
+            padding: 0.5rem 1.5rem;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .generated-key-display {
+            margin-top: 1rem;
+            display: none;
+        }
+        .key-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        .key-box p {
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        .key-display {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .key-display code {
+            padding: 0.5rem 1rem;
+            background: #f0f0f0;
+            border-radius: 3px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            flex: 1;
+        }
+        .copy-btn {
+            padding: 0.25rem 0.75rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .key-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .key-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .key-status.used {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .key-status.expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🐛 Crash Report Dashboard</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="stats-grid" id="statsGrid">
-        <div class="stat-card">
-            <h3>Total Reports</h3>
-            <div class="value" id="totalReports">-</div>
-        </div>
-        <div class="stat-card">
-            <h3>Last 24 Hours</h3>
-            <div class="value" id="recent24h">-</div>
-        </div>
-        <div class="stat-card">
-            <h3>Flutter Errors</h3>
-            <div class="value" id="flutterErrors">-</div>
-        </div>
-        <div class="stat-card">
-            <h3>Platform Errors</h3>
-            <div class="value" id="platformErrors">-</div>
+        <h1>🐛 Crash Report & API Keys Dashboard</h1>
+        <div class="header-right">
+            <button class="nav-btn active" onclick="switchTab('reports')">Reports</button>
+            <button class="nav-btn" onclick="switchTab('keys')">API Keys</button>
+            <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
     </div>
 
-    <div class="reports-section">
-        <h2>Recent Crash Reports</h2>
-        <div class="filters">
-            <select id="errorTypeFilter">
-                <option value="">All Error Types</option>
-                <option value="FlutterError">Flutter Error</option>
-                <option value="PlatformError">Platform Error</option>
-            </select>
-            <select id="platformFilter">
-                <option value="">All Platforms</option>
-                <option value="android">Android</option>
-                <option value="ios">iOS</option>
-                <option value="windows">Windows</option>
-            </select>
-            <button class="refresh-btn" onclick="loadReports()">Refresh</button>
+    <!-- Reports Tab -->
+    <div id="reportsTab" class="tab-content active">
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>Total Reports</h3>
+                <div class="value" id="totalReports">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Last 24 Hours</h3>
+                <div class="value" id="recent24h">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Flutter Errors</h3>
+                <div class="value" id="flutterErrors">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Platform Errors</h3>
+                <div class="value" id="platformErrors">-</div>
+            </div>
         </div>
-        <div id="reportsTable">
-            <div class="loading">Loading reports...</div>
+
+        <div class="reports-section">
+            <h2>Recent Crash Reports</h2>
+            <div class="filters">
+                <select id="errorTypeFilter">
+                    <option value="">All Error Types</option>
+                    <option value="FlutterError">Flutter Error</option>
+                    <option value="PlatformError">Platform Error</option>
+                </select>
+                <select id="platformFilter">
+                    <option value="">All Platforms</option>
+                    <option value="android">Android</option>
+                    <option value="ios">iOS</option>
+                    <option value="windows">Windows</option>
+                </select>
+                <button class="refresh-btn" onclick="loadReports()">Refresh</button>
+            </div>
+            <div id="reportsTable">
+                <div class="loading">Loading reports...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Keys Tab -->
+    <div id="keysTab" class="tab-content">
+        <div class="stats-grid" id="keysStatsGrid">
+            <div class="stat-card">
+                <h3>Total Keys</h3>
+                <div class="value" id="totalKeys">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Keys</h3>
+                <div class="value" id="activeKeys">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Used Keys</h3>
+                <div class="value" id="usedKeys">-</div>
+            </div>
+        </div>
+
+        <div class="reports-section">
+            <h2>Generate New API Key</h2>
+            <div class="key-generator">
+                <div class="input-group">
+                    <div>
+                        <label for="expiresDays">Expires in (days):</label>
+                        <input type="number" id="expiresDays" value="90" min="1" max="365">
+                    </div>
+                    <button class="generate-btn" onclick="generateNewKey()">Generate Key</button>
+                </div>
+                <div id="generatedKeyDisplay" class="generated-key-display">
+                    <div class="key-box">
+                        <p>✅ Generated Key:</p>
+                        <div class="key-display">
+                            <code id="generatedKey"></code>
+                            <button class="copy-btn" onclick="copyToClipboard(event)">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Existing API Keys</h2>
+            <button class="refresh-btn" onclick="loadKeys()" style="margin-bottom: 1rem;">Refresh Keys</button>
+            <div id="keysTable">
+                <div class="loading">Loading keys...</div>
+            </div>
         </div>
     </div>
 
@@ -186,12 +381,43 @@
             window.location.href = '/login';
         }
 
-        async function apiCall(endpoint) {
-            const response = await fetch(endpoint, {
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+
+            // Load tab content
+            if (tabName === 'reports') {
+                loadStats();
+                loadReports();
+            } else if (tabName === 'keys') {
+                loadKeysStats();
+                loadKeys();
+            }
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
-            });
+            };
+
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(endpoint, options);
             
             if (response.status === 401) {
                 localStorage.removeItem('access_token');
@@ -202,6 +428,7 @@
             return response.json();
         }
 
+        // Reports Functions
         async function loadStats() {
             try {
                 const stats = await apiCall('/api/admin/stats');
@@ -252,6 +479,8 @@
                         <th>Version</th>
                         <th>Error</th>
                         <th>Stack Trace</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -263,6 +492,8 @@
                             <td>${report.app_version}</td>
                             <td>${escapeHtml(report.error_message.substring(0, 100))}...</td>
                             <td class="stack-trace" title="${escapeHtml(report.stack_trace)}">${escapeHtml(report.stack_trace)}</td>
+                            <td><span class="status-badge status-${report.status}">${report.status}</span></td>
+                            <td><button class="refresh-btn" onclick="viewDetail(${report.id})">Detail</button></td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -270,6 +501,151 @@
             
             container.innerHTML = '';
             container.appendChild(table);
+        }
+
+        function viewDetail(reportId) {
+            window.location.href = `/report/${reportId}`;
+        }
+
+        // Keys Functions
+        async function generateNewKey() {
+            const expiresDays = document.getElementById('expiresDays').value || 90;
+            
+            try {
+                const result = await apiCall('/api/admin/keys/generate', 'POST', {
+                    expires_days: parseInt(expiresDays)
+                });
+
+                if (result && result.key) {
+                    document.getElementById('generatedKey').textContent = result.key;
+                    document.getElementById('generatedKeyDisplay').style.display = 'block';
+                    loadKeysStats();
+                    loadKeys();
+                } else {
+                    alert('Failed to generate key');
+                }
+            } catch (err) {
+                alert('Error generating key: ' + err.message);
+            }
+        }
+
+        async function loadKeysStats() {
+            try {
+                const data = await apiCall('/api/admin/keys');
+                if (data) {
+                    document.getElementById('totalKeys').textContent = data.total || 0;
+                    document.getElementById('activeKeys').textContent = data.active || 0;
+                    document.getElementById('usedKeys').textContent = data.used || 0;
+                }
+            } catch (err) {
+                console.error('Failed to load keys stats:', err);
+            }
+        }
+
+        async function loadKeys() {
+            try {
+                const data = await apiCall('/api/admin/keys');
+                if (data && data.keys) {
+                    displayKeys(data.keys);
+                }
+            } catch (err) {
+                console.error('Failed to load keys:', err);
+            }
+        }
+
+        function displayKeys(keys) {
+            const container = document.getElementById('keysTable');
+            
+            if (keys.length === 0) {
+                container.innerHTML = '<div class="loading">No keys found</div>';
+                return;
+            }
+            
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Status</th>
+                        <th>Device ID</th>
+                        <th>Created</th>
+                        <th>Duration</th>
+                        <th>Activated</th>
+                        <th>Expires</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${keys.map(key => {
+                        let expiresDate = '-';
+                        if (key.activated_at && key.duration) {
+                            const date = new Date(key.activated_at);
+                            date.setDate(date.getDate() + key.duration);
+                            expiresDate = date.toLocaleString();
+                            
+                            // Optionally, we could show if it's already expired
+                            if (new Date() > date) {
+                                key.status = 'expired';
+                            }
+                        }
+                        return `
+                        <tr>
+                            <td><code style="background: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 3px;">${key.key}</code></td>
+                            <td><span class="key-status ${key.status.toLowerCase()}">${key.status}</span></td>
+                            <td>
+                                ${key.devices && key.devices.length > 0 ? key.devices.map(device => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 5px; padding: 4px; background: #fafafa; border-radius: 4px; border: 1px solid #eee;">
+                                        <div style="display: flex; flex-direction: column;">
+                                            <span style="font-family: monospace; font-size: 0.85rem; font-weight: bold; color: #333;">${device.device_id}</span>
+                                            <span style="font-size: 0.7rem; color: #888;">First seen: ${new Date(device.created_at).toLocaleString()}</span>
+                                        </div>
+                                        <button class="logout-btn" style="padding: 2px 6px; font-size: 0.7rem; border-radius: 3px; background: #dc3545;" onclick="removeDevice('${key.key}', '${device.device_id}')">Remove</button>
+                                    </div>
+                                `).join('') : '-'}
+                            </td>
+                            <td>${new Date(key.created_at).toLocaleString()}</td>
+                            <td>${key.duration ? key.duration + ' days' : '-'}</td>
+                            <td>${key.activated_at ? new Date(key.activated_at).toLocaleString() : '-'}</td>
+                            <td>${expiresDate}</td>
+                        </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            `;
+            
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        async function removeDevice(key, deviceId) {
+            if (!confirm(`Are you sure you want to remove device ${deviceId} from key ${key}?`)) {
+                return;
+            }
+            try {
+                const response = await apiCall(`/api/admin/keys/${key}/devices/${deviceId}`, 'DELETE');
+                if (response) {
+                    alert('Device removed successfully');
+                    loadKeysStats();
+                    loadKeys();
+                }
+            } catch (err) {
+                alert('Error removing device: ' + err.message);
+            }
+        }
+
+        function copyToClipboard(event) {
+            const keyElement = document.getElementById('generatedKey');
+            const key = keyElement.textContent;
+            
+            navigator.clipboard.writeText(key).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
         }
 
         function escapeHtml(text) {
@@ -283,6 +659,7 @@
             window.location.href = '/login';
         }
 
+        // Event listeners
         document.getElementById('errorTypeFilter').addEventListener('change', loadReports);
         document.getElementById('platformFilter').addEventListener('change', loadReports);
 
@@ -292,8 +669,11 @@
         
         // Refresh every 30 seconds
         setInterval(() => {
-            loadStats();
-            loadReports();
+            const activeTab = document.querySelector('.tab-content.active').id;
+            if (activeTab === 'reportsTab') {
+                loadStats();
+                loadReports();
+            }
         }, 30000);
     </script>
 </body>

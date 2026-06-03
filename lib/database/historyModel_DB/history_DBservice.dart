@@ -26,8 +26,8 @@ class HistoryDBService{
     await HistoryDbStorage.onDelete(db);
   }
 
-  static Future<List<dynamic>>getAllHistory(Database db)async{
-    return await HistoryDbStorage.getAllHistoryList(db);
+  static Future<List<dynamic>>getAllHistory(Database db, {int limit = 100, int offset = 0})async{
+    return await HistoryDbStorage.getAllHistoryList(db, limit: limit, offset: offset);
   }
 
   static Future<bool>addHistoryData({

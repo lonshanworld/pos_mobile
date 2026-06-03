@@ -2,8 +2,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Security, status, Request
+from database import db
 from config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -41,16 +42,21 @@ def verify_token(token: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-def verify_mobile_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> str:
-    """Verify mobile API token"""
-    token = credentials.credentials
-    if token not in settings.MOBILE_API_TOKENS:
+async def verify_mobile_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Security(security)
+) -> str:
+    """Verify mobile API token using device_id"""
+    device_id = credentials.credentials
+    # Check if this device_id is registered to any active key
+    key_info = await db.get_key_by_device_id(device_id)
+    if not key_info:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API token",
+            detail="Invalid device ID or not registered",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return token
+    return device_id
 
 def verify_admin_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
     """Verify admin JWT token"""

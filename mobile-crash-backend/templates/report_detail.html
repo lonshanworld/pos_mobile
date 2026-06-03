@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Detail - Crash Report Backend</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f5f7fa; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+        .actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 20px; cursor: pointer; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .card { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="reportDetail">
+        <h1>Report Detail</h1>
+        <div id="content">Loading...</div>
+        <div class="actions">
+            <button onclick="updateStatus('error')">Mark as Error</button>
+            <button onclick="updateStatus('processing')">Mark as Processing</button>
+            <button onclick="updateStatus('fixed')">Mark as Fixed</button>
+            <button onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+    <script>
+        const reportId = window.location.pathname.split('/').pop();
+        const token = localStorage.getItem('access_token');
+
+        async function loadReport() {
+            const response = await fetch(`/api/admin/reports/${reportId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const report = await response.json();
+            document.getElementById('content').innerHTML = `
+                <p><strong>Time:</strong> ${new Date(report.received_at).toLocaleString()}</p>
+                <p><strong>Status:</strong> ${report.status}</p>
+                <p><strong>Error:</strong> ${report.error_message}</p>
+                <p><strong>Stack Trace:</strong></p>
+                <pre>${report.stack_trace}</pre>
+            `;
+        }
+
+        async function updateStatus(status) {
+            await fetch(`/api/admin/reports/${reportId}/status`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+            loadReport();
+        }
+
+        loadReport();
+    </script>
+</body>
+</html>

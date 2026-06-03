@@ -26,7 +26,7 @@ class _DailySalesState extends State<DailySales> {
     final tablesAndCharts = TablesAndCharts(context: context);
     final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
     final List<StockOutHistoryModel> allRows =
-        HistoryFilter.filterStockOutHistory(stockOutList).reversed.toList();
+        HistoryFilter.filterStockOutHistory(stockOutList);
     final int totalCount = allRows.length;
 
     if (totalCount == 0) return _emptyState(context);

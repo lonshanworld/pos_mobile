@@ -9,4 +9,8 @@ class ReportDbService{
   static Future<void>deleteReportDb(Database db)async{
     await ReportDbStorage.onDelete(db);
   }
+
+  static Future<List<dynamic>>getAllReports(Database db, {int limit = 100, int offset = 0})async{
+    return await ReportDbStorage.getAllData(db, limit: limit, offset: offset);
+  }
 }

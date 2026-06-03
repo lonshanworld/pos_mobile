@@ -22,7 +22,7 @@ class StockOutPromotionDbStorage{
   }
 
   static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.stockOutPromotionTableName);
+    return await db.query(TxtConstants.stockOutPromotionTableName, orderBy: 'stockOutId DESC');
   }
 
   static Future<void>onUpgrade(Database db)async{

@@ -3,6 +3,7 @@ import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/screens/accounts/account_screen.dart';
 
 import 'package:pos_mobile/screens/authenticaton/check_user_screen.dart';
+import 'package:pos_mobile/screens/authenticaton/key_validation_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/merchant_setup_screen.dart';
 import 'package:pos_mobile/screens/home_screen.dart';
@@ -18,6 +19,13 @@ class AppRouter{
         return MaterialPageRoute(
           builder: (BuildContext ctx){
             return const CheckUserScreen();
+          }
+        );
+
+      case KeyValidationScreen.routeName :
+        return MaterialPageRoute(
+          builder: (BuildContext ctx){
+            return const KeyValidationScreen();
           }
         );
 

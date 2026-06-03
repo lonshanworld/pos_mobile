@@ -51,7 +51,7 @@ class DashboardStockOut extends StatelessWidget {
     return BlocBuilder<TransactionsCubit, TransactionsState>(
       builder: (context, state) {
         final List<StockOutModel> stockOutList =
-            context.read<TransactionsCubit>().getTodayStockOut().reversed.toList();
+            context.read<TransactionsCubit>().getTodayStockOut();
         
         double totalSalePrice = 0;
         for (var element in stockOutList) {

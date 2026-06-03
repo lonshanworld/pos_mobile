@@ -1,4 +1,3 @@
-import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBstorage.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/auth_security.dart';
@@ -37,8 +36,8 @@ class UserDBService{
     }
   }
 
-  static Future<List<UserModel>>getAllUsers(Database db)async{
-    List<dynamic> dataList = await UserDBStorage.getAllData(db);
+  static Future<List<UserModel>>getAllUsers(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> dataList = await UserDBStorage.getAllData(db, limit: limit, offset: offset);
     List<UserModel> userModelList = dataList.map((e) => UserModel.fromJson(e)).toList();
     cusDebugPrint("This is userlistLength ${userModelList.length}");
     return userModelList;

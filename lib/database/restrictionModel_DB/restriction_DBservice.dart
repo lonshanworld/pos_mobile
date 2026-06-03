@@ -11,8 +11,8 @@ class RestrictionDBService{
     await RestrictionDbStorage.onDelete(db);
   }
 
-  static Future<List<RestrictionModel>>getAllRestrictons(Database db)async{
-    List<dynamic> dataList = await RestrictionDbStorage.getAllRestrictions(db);
+  static Future<List<RestrictionModel>>getAllRestrictons(Database db, {int limit = 100, int offset = 0})async{
+    List<dynamic> dataList = await RestrictionDbStorage.getAllRestrictions(db, limit: limit, offset: offset);
     return dataList.map((e) => RestrictionModel.fromJson(e)).toList();
   }
 

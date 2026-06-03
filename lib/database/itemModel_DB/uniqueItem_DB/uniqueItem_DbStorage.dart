@@ -51,7 +51,7 @@ class UniqueItemDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>> getAllUniqueItemList(Database db, {int limit = 5000, int offset = 0})async{
+  static Future<List<dynamic>> getAllUniqueItemList(Database db, {int limit = 100, int offset = 0})async{
     return await db.query(
       TxtConstants.uniqueItemTableName,
       orderBy: 'id DESC',
@@ -241,7 +241,7 @@ class UniqueItemDbStorage{
   )async{
     return db.rawQuery(
         """
-          SELECT * FROM ${TxtConstants.uniqueItemTableName} WHERE stockOutId = ?
+          SELECT * FROM ${TxtConstants.uniqueItemTableName} WHERE stockOutId = ? ORDER BY id DESC
         """,
         [stockOutId]
     );

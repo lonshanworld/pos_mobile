@@ -65,7 +65,7 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
           ),
           Expanded(
             child: ListView(
-              children: promotionList.reversed.map((e){
+              children: promotionList.map((e){
                 return InkWell(
                   onTap: (){
                     if(mounted){

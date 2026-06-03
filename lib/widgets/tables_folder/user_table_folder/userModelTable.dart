@@ -72,7 +72,7 @@ class UserTable extends StatelessWidget {
           dataColumn("Last Login Time"),
           dataColumn("Last Logout Time"),
         ],
-        rows: userList.reversed.map((e) => dataRow(
+        rows: userList.map((e) => dataRow(
           id: userList.indexOf(e) + 1,
           name: e.userName,
           password: '******',

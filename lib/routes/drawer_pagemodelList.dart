@@ -6,7 +6,6 @@ import '../screens/promotion/main_promotion_screen.dart';
 import '../models/page_model.dart';
 
 import '../screens/dashboard/dashboardfortoday_screen.dart';
-import '../screens/history/history_screen.dart';
 import '../screens/history/transactions_history/transaction_history_tabbar.dart';
 import '../screens/settings_screen.dart';
 import '../screens/storage_screen.dart';
@@ -18,12 +17,12 @@ import '../screens/transaction/stockOut/stockout_screen.dart';
 class PageList{
   static const List<PageModel> pages = [
     PageModel(screen: DashBoardForTodayScreen(), title: "Dashboard"),
-    PageModel(screen: StockOutScreen(), title: "Stock out"),
+    PageModel(screen: StockOutScreen(), title: "Check out"),
     PageModel(screen: StockInScreen(isStorage: false,), title: "Stock in"),
     PageModel(screen: StorageScreen(), title: "Storage"),
     PageModel(screen: TransactionHistoryScreen(), title: "Transaction history"),
     // PageModel(screen: MyActivityScreen(), title: "My activity"),
-    PageModel(screen: HistoryScreen(), title: "History"),
+    // PageModel(screen: HistoryScreen(), title: "History"),
 
     PageModel(screen: TableAndChartScreen(), title: "Tables and Charts"),
     PageModel(screen: MainPromotionScreen(), title: "Promotions"),

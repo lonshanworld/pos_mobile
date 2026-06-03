@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
+import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
@@ -209,18 +210,31 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
 
     double getAllPrice(){
       double price = 0;
-      for(int i = 0; i < widget.selectedUniqueItemList.length; i++){
-        final PromotionModel? promotionData = context.read<PromotionCubit>().getSinglePromotionFromItemId(widget.selectedUniqueItemList[i].itemId);
+      final itemCubit = context.read<ItemCubit>();
+      final activePromotionList = context.read<PromotionCubit>().state.activePromotionList;
+      final itemPromotionList = context.read<PromotionCubit>().state.activeItemPromotionList;
+      
+      final dataList = itemCubit.getItemListWithCountFromUniqueItemListWithPromotion(
+        uniqueItemList: widget.selectedUniqueItemList,
+        itemModelList: widget.selectedItemModelList,
+        activePromotionList: activePromotionList,
+        itemPromotionList: itemPromotionList,
+      );
 
-        price = price + CalculationFormula.getItemAfterPromotionPrice(
-          sellPrice: CalculationFormula.getItemSellPrice(
-            originalPrice: widget.selectedUniqueItemList[i].originalPrice,
-            profitPrice: widget.selectedUniqueItemList[i].profitPrice,
-            taxPercentage: widget.selectedUniqueItemList[i].taxPercentage,
-          ),
-          promotionPercentage: promotionData == null ? 0 : promotionData.promotionPercentage,
-          promotionPrice: promotionData == null ? 0 : promotionData.promotionPrice,
+      for (var item in dataList) {
+        double rawSellPrice = CalculationFormula.getItemSellPrice(
+          originalPrice: item.itemModel.originalPrice,
+          profitPrice: item.itemModel.profitPrice,
+          taxPercentage: item.itemModel.taxPercentage ?? 0,
         );
+        
+        double unitPriceAfterPromo = CalculationFormula.getItemAfterPromotionPrice(
+          sellPrice: rawSellPrice,
+          promotionPercentage: item.promotion?.promotionPercentage,
+          promotionPrice: item.promotion?.promotionPrice,
+        );
+        
+        price += unitPriceAfterPromo * item.count;
       }
       return price;
     }

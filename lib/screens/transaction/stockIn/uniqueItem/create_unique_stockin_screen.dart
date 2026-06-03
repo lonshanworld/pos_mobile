@@ -155,11 +155,13 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: UIConstants.mediumSpace,),
               if(widget.batchStockIn)Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CusIconBtn(
                     size: UIConstants.normalBigIconSize,
+                    hasBorder: true,
                     func: (){
                       setState(() {
                         if(moreItem < 999){
@@ -175,6 +177,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                   uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.bigSpace),
                   CusIconBtn(
                     size: UIConstants.normalBigIconSize,
+                    hasBorder: true,
                     func: (){
                       setState(() {
                         if(moreItem > 0){

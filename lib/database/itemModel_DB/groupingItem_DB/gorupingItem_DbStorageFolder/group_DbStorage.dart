@@ -39,14 +39,14 @@ class GroupDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.groupTableName);
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+    return await db.query(TxtConstants.groupTableName, orderBy: 'id DESC', limit: limit, offset: offset);
   }
 
   static Future<List<dynamic>>getAllActiveData(Database db)async{
     return await db.rawQuery(
         """
-          SELECT * FROM ${TxtConstants.groupTableName} WHERE activeStatus = ?
+          SELECT * FROM ${TxtConstants.groupTableName} WHERE activeStatus = ? ORDER BY id DESC
         """,
         [1]);
   }

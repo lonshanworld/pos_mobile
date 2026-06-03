@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/models/crash_report_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
@@ -13,6 +12,17 @@ class CrashReporter {
   CrashReporter._();
 
   static PackageInfo? _packageInfo;
+
+  static Future<void> _captureWithSentry(
+    dynamic error, {
+    StackTrace? stackTrace,
+  }) async {
+    try {
+      await Sentry.captureException(error, stackTrace: stackTrace);
+    } catch (e) {
+      cusDebugPrint('Failed to send crash report to Sentry: $e');
+    }
+  }
 
   static Future<void> _saveToLocalDatabase({
     required dynamic error,
@@ -57,7 +67,7 @@ class CrashReporter {
       );
 
       if (sentryDsn.isNotEmpty) {
-        await Sentry.captureException(
+        await _captureWithSentry(
           details.exception,
           stackTrace: details.stack,
         );
@@ -74,7 +84,7 @@ class CrashReporter {
       );
 
       if (sentryDsn.isNotEmpty) {
-        Sentry.captureException(error, stackTrace: stack);
+        unawaited(_captureWithSentry(error, stackTrace: stack));
       } else {
         cusDebugPrint('PlatformError: $error');
       }

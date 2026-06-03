@@ -42,13 +42,14 @@ class HistoryDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllHistoryList(Database db)async{
+  static Future<List<dynamic>>getAllHistoryList(Database db, {int limit = 100, int offset = 0})async{
     // OPTIMIZATION: Limit the query to prevent Out-Of-Memory exceptions
     // Sort by ID descending to always show the most recent actions first.
     List<dynamic> data = await db.query(
       TxtConstants.historyTableName,
       orderBy: 'id DESC',
-      limit: 200,
+      limit: limit,
+      offset: offset,
     );
     cusDebugPrint(data);
     return data;

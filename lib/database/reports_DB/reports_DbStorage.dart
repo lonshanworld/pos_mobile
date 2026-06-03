@@ -32,4 +32,8 @@ class ReportDbStorage{
       """
     );
   }
+
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+    return await db.query(TxtConstants.reportTableName, orderBy: 'id DESC', limit: limit, offset: offset);
+  }
 }

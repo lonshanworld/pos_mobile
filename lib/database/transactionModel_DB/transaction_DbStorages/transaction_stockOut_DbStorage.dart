@@ -48,7 +48,7 @@ class TransactionStockOutDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db, {int limit = 2000, int offset = 0})async{
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
     return await db.query(
       TxtConstants.stockOutTableName,
       orderBy: 'id DESC',

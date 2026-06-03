@@ -36,7 +36,7 @@ class ItemPromotionDbStorage{
   }
 
   static Future<List<dynamic>>getAllData(Database db)async{
-    return await db.query(TxtConstants.itemPromotionTableName);
+    return await db.query(TxtConstants.itemPromotionTableName, orderBy: 'id DESC');
   }
 
   static Future<int>insertData({

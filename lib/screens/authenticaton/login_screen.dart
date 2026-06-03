@@ -113,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   horizontalPadding: 20,
                   hintTxt: "Enter your password",
                   txtInputType: TextInputType.text,
+                  isPassword: true,
                 ),
               ),
               uiController.sizedBox(

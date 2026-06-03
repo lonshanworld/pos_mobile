@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
+import 'package:pos_mobile/blocs/key_validation_bloc/key_validation_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
-import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
+import 'package:pos_mobile/screens/authenticaton/check_user_screen.dart';
 import 'package:pos_mobile/utils/ui_responsive_calculation.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
@@ -68,9 +69,13 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      // Mark first time setup as complete
+      if (!mounted) return;
+      await context.read<KeyValidationCubit>().completeFirstTimeSetup();
+      
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(
-        LoginScreen.routeName,
-        arguments: {"userLevel": UserLevel.merchant},
+        CheckUserScreen.routeName,
       );
     } else {
       _showMessage("Failed to create account. Username may already be taken.");
@@ -85,7 +90,7 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        leading: const CusLeadingBackIconBtn(),
+        // leading: const CusLeadingBackIconBtn(),
       ),
       body: SingleChildScrollView(
         child: Center(

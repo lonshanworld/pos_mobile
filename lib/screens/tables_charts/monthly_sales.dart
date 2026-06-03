@@ -28,7 +28,7 @@ class _MonthlySalesState extends State<MonthlySales> {
     final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
     final LinkedHashMap<String, List<StockOutModel>> monthlyMap =
         HistoryFilter.filterMonthlyStockOut(stockOutList);
-    final List<String> allKeys = monthlyMap.keys.toList().reversed.toList();
+    final List<String> allKeys = monthlyMap.keys.toList();
     final int totalCount = allKeys.length;
 
     if (totalCount == 0) return _emptyState(context);

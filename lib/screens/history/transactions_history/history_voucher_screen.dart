@@ -14,7 +14,6 @@ import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../blocs/bluetooth_printer_bloc/bluetooth_printer_cubit.dart';
 import '../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../constants/enums.dart';
-import '../../../controller/ui_controller.dart';
 import '../../../error_handlers/error_handler.dart';
 import '../../../models/customer_model.dart';
 import '../../../widgets/cusTxt_widget.dart';
@@ -102,7 +101,6 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final UIController uiController = UIController.instance;
     final BluetoothConnection? bluetoothConnection = context.watch<BluetoothPrinterCubit>().state.bluetoothConnection;
     final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemFromStockOutId(widget.stockOutModel.id);
     final List<ItemModel> itemList = context.read<ItemCubit>().getItemListFromSelectedUniqueItemList(uniqueItemList);
@@ -115,11 +113,12 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
         leading: const CusLeadingBackIconBtn(),
         centerTitle: true,
         title: const Text("Voucher"),
-        actions: [
+      ),
+      body: Column(
+        children: [
           Container(
-            height : 30,
-            padding: const EdgeInsets.only(
-              top: UIConstants.mediumSpace,
+            padding: const EdgeInsets.symmetric(
+              vertical: UIConstants.mediumSpace,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -150,50 +149,59 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
               ],
             ),
           ),
-          CusTxtElevatedBtn(
-            txt: "Print",
-            verticalpadding: UIConstants.smallSpace,
-            horizontalpadding: UIConstants.mediumSpace,
-            bdrRadius: UIConstants.smallRadius,
-            bgClr:  bluetoothConnection == BluetoothConnection.connected ? Colors.blue : Colors.grey,
-            func: () => _handlePrint(context, _printKey, bluetoothConnection),
-            txtStyle: Theme.of(context).textTheme.titleSmall!,
-            txtClr: Colors.white,
+          Padding(
+            padding: const EdgeInsets.only(bottom: UIConstants.mediumSpace),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CusTxtElevatedBtn(
+                  txt: "Print",
+                  verticalpadding: UIConstants.smallSpace,
+                  horizontalpadding: UIConstants.mediumSpace,
+                  bdrRadius: UIConstants.smallRadius,
+                  bgClr: bluetoothConnection == BluetoothConnection.connected ? Colors.blue : Colors.grey,
+                  func: () => _handlePrint(context, _printKey, bluetoothConnection),
+                  txtStyle: Theme.of(context).textTheme.titleSmall!,
+                  txtClr: Colors.white,
+                ),
+                const SizedBox(width: UIConstants.mediumSpace),
+                CusTxtElevatedBtn(
+                  txt: "Download PDF",
+                  verticalpadding: UIConstants.smallSpace,
+                  horizontalpadding: UIConstants.mediumSpace,
+                  bdrRadius: UIConstants.smallRadius,
+                  bgClr: Colors.indigo,
+                  func: () => _handleDownloadPdf(context, _printKey),
+                  txtStyle: Theme.of(context).textTheme.titleSmall!,
+                  txtClr: Colors.white,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: UIConstants.smallSpace),
-          CusTxtElevatedBtn(
-            txt: "Download PDF",
-            verticalpadding: UIConstants.smallSpace,
-            horizontalpadding: UIConstants.mediumSpace,
-            bdrRadius: UIConstants.smallRadius,
-            bgClr: Colors.indigo,
-            func: () => _handleDownloadPdf(context, _printKey),
-            txtStyle: Theme.of(context).textTheme.titleSmall!,
-            txtClr: Colors.white,
-          ),
-          uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.bigSpace),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: RepaintBoundary(
-          key: _printKey,
-          child: VoucherBox(
-            customerName: customerModel?.name,
-            deliveryName: deliveryPersonModel?.name,
-            selectedUniqueItemList: uniqueItemList,
-            selectedItemModelList: itemList,
-            shoppingType: widget.stockOutModel.shoppingType,
-            paymentMethod: widget.stockOutModel.paymentMethod,
-            additionalPromotionAmount: widget.stockOutModel.additionalPromotionAmount,
-            deliCharges: deliveryModel?.deliveryCharges,
-            description: widget.stockOutModel.description,
-            barCode: widget.stockOutModel.code,
-            taxPercentage: widget.stockOutModel.taxPercentage ?? 0,
-            promotionModel: null,
+          Expanded(
+            child: SingleChildScrollView(
+              child: RepaintBoundary(
+                key: _printKey,
+                child: VoucherBox(
+                  customerName: customerModel?.name,
+                  deliveryName: deliveryPersonModel?.name,
+                  selectedUniqueItemList: uniqueItemList,
+                  selectedItemModelList: itemList,
+                  shoppingType: widget.stockOutModel.shoppingType,
+                  paymentMethod: widget.stockOutModel.paymentMethod,
+                  additionalPromotionAmount: widget.stockOutModel.additionalPromotionAmount,
+                  deliCharges: deliveryModel?.deliveryCharges,
+                  description: widget.stockOutModel.description,
+                  barCode: widget.stockOutModel.code,
+                  taxPercentage: widget.stockOutModel.taxPercentage ?? 0,
+                  promotionModel: null,
 
-            showAdditionalPromotion: showAdditionalPromotion,
+                  showAdditionalPromotion: showAdditionalPromotion,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

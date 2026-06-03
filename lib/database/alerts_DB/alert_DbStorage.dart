@@ -37,4 +37,8 @@ class AlertDbStorage{
     await onDelete(db);
     await onCreate(db);
   }
+
+  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+    return await db.query(TxtConstants.alertTableName, orderBy: 'id DESC', limit: limit, offset: offset);
+  }
 }

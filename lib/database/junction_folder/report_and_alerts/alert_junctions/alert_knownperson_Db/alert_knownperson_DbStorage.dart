@@ -29,7 +29,7 @@ class AlertKnownPersonDbStorage{
   }
 
   static Future<List<dynamic>>getAllData(Database db)async{
-    List<dynamic> rawData = await db.query(TxtConstants.alertKnownPersonTableName);
+    List<dynamic> rawData = await db.query(TxtConstants.alertKnownPersonTableName, orderBy: 'id DESC');
     return rawData;
   }
 }

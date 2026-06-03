@@ -105,17 +105,17 @@ class TransactionDBService{
     }
   }
   
-  static Future<List<StockOutModel>> getAllStockOutData(Database db, {int limit = 2000, int offset = 0})async{
+  static Future<List<StockOutModel>> getAllStockOutData(Database db, {int limit = 100, int offset = 0})async{
     List<dynamic> dataList = await TransactionStockOutDbStorage.getAllData(db, limit: limit, offset: offset);
     return dataList.map((e) => StockOutModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockInModel>> getAllStockInData(Database db, {int limit = 2000, int offset = 0})async{
+  static Future<List<StockInModel>> getAllStockInData(Database db, {int limit = 100, int offset = 0})async{
     List<dynamic> dataList = await TransactionStockInDbStorage.getAllStockInList(db, limit: limit, offset: offset);
     return dataList.map((e) => StockInModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockOutItemModel>> getAllStockOutItemData(Database db, {int limit = 5000, int offset = 0})async{
+  static Future<List<StockOutItemModel>> getAllStockOutItemData(Database db, {int limit = 100, int offset = 0})async{
     List<dynamic> dataList = await TransactionStockOutItemDbStorage.getAllData(db, limit: limit, offset: offset);
     return dataList.map((e) => StockOutItemModel.fromJson(e)).toList();
   }

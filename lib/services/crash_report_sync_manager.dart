@@ -26,34 +26,40 @@ class CrashReportSyncManager {
       return;
     }
 
-    cusDebugPrint('Initializing CrashReportSyncManager...');
+    try {
+      cusDebugPrint('Initializing CrashReportSyncManager...');
 
-    // Check initial connectivity
-    final connectivityResult = await Connectivity().checkConnectivity();
-    _isOnline = _hasConnectivity(connectivityResult);
-    cusDebugPrint('Initial connectivity: ${_isOnline ? "Online" : "Offline"}');
+      // Check initial connectivity
+      final connectivityResult = await Connectivity().checkConnectivity();
+      _isOnline = _hasConnectivity(connectivityResult);
+      cusDebugPrint(
+        'Initial connectivity: ${_isOnline ? "Online" : "Offline"}',
+      );
 
-    // If online at startup, attempt initial sync
-    if (_isOnline) {
-      _attemptSync(reason: 'Initial startup');
+      // If online at startup, attempt initial sync
+      if (_isOnline) {
+        unawaited(_attemptSync(reason: 'Initial startup'));
+      }
+
+      // Listen for connectivity changes
+      _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+        _onConnectivityChanged,
+        onError: (error) {
+          cusDebugPrint('Connectivity listener error: $error');
+        },
+      );
+
+      // Set up periodic sync while online (every 5 minutes)
+      _periodicSyncTimer = Timer.periodic(
+        const Duration(minutes: 1),
+        (_) => unawaited(_attemptSync(reason: 'Periodic check')),
+      );
+
+      _isInitialized = true;
+      cusDebugPrint('CrashReportSyncManager initialized successfully');
+    } catch (e) {
+      cusDebugPrint('Failed to initialize CrashReportSyncManager: $e');
     }
-
-    // Listen for connectivity changes
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
-      _onConnectivityChanged,
-      onError: (error) {
-        cusDebugPrint('Connectivity listener error: $error');
-      },
-    );
-
-    // Set up periodic sync while online (every 5 minutes)
-    _periodicSyncTimer = Timer.periodic(
-      const Duration(minutes: 5),
-      (_) => _attemptSync(reason: 'Periodic check'),
-    );
-
-    _isInitialized = true;
-    cusDebugPrint('CrashReportSyncManager initialized successfully');
   }
 
   /// Handle connectivity changes
@@ -64,7 +70,7 @@ class CrashReportSyncManager {
     if (_isOnline && !wasOnline) {
       // Device just came online
       cusDebugPrint('Device came online - attempting crash report sync');
-      _attemptSync(reason: 'Device came online');
+      unawaited(_attemptSync(reason: 'Device came online'));
     } else if (!_isOnline && wasOnline) {
       // Device went offline
       cusDebugPrint('Device went offline');

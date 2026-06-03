@@ -33,7 +33,7 @@ class DeliveryModelDbStorage{
     );
   }
 
-  static Future<List<dynamic>> getAllData(Database db)async{
-    return await db.query(TxtConstants.deliveryModelTableName);
+  static Future<List<dynamic>> getAllData(Database db, {int limit = 100, int offset = 0})async{
+    return await db.query(TxtConstants.deliveryModelTableName, orderBy: 'id DESC', limit: limit, offset: offset);
   }
 }
