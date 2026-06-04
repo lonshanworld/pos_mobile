@@ -7,6 +7,7 @@ import 'package:pos_mobile/models/crash_report_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:pos_mobile/services/crash_report_sync_manager.dart';
 
 class CrashReporter {
   CrashReporter._();
@@ -47,6 +48,9 @@ class CrashReporter {
 
       await DBHelper.saveCrashReport(report);
       cusDebugPrint('Crash report saved to local database');
+
+      // Attempt immediate sync if online
+      await CrashReportSyncManager.instance.triggerSync(reason: 'Immediate error submission');
     } catch (e) {
       cusDebugPrint('Failed to save crash report to database: $e');
     }

@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/release
 /assets/.env
 /mobile-crash-backend/.env
+
+.github/workflows
+github_ci
+github_ci.pub

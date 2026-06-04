@@ -1,4 +1,3 @@
-
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/history_bloc/history_cubit.dart";
@@ -13,6 +12,7 @@ import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 
 import 'package:pos_mobile/controller/ui_controller.dart';
+import 'package:pos_mobile/services/crash_report_sync_manager.dart';
 
 
 import "package:pos_mobile/screens/home_screen.dart";
@@ -144,6 +144,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       userLevel: widget.userLevel,
                       buildContext: context,
                     );
+
+                  if (value) {
+                    // Trigger crash report sync on successful login
+                    await CrashReportSyncManager.instance.triggerSync(reason: 'User login');
+                  }
 
                   if (!mounted || !value) {
                     return;
