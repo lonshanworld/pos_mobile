@@ -14,6 +14,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/models/papersize_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
+import 'package:pos_mobile/utils/crash_reporter.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
@@ -105,6 +106,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       ));
     } catch (e) {
       cusDebugPrint("Scan error: $e");
+      await CrashReporter.reportError("Bluetooth scan error: $e", errorType: "BluetoothError");
     }
   }
 
@@ -136,6 +138,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       ));
     } catch (e) {
       cusDebugPrint("Connect error: $e");
+      await CrashReporter.reportError("Bluetooth connect error: $e", errorType: "BluetoothError");
       emit(BluetoothPrinterData(
         bluetoothOpened: state.bluetoothOpened,
         bluetoothConnection: BluetoothConnection.disconnected,
@@ -152,6 +155,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       await _bluetooth.disconnect();
     } catch (e) {
       cusDebugPrint("Disconnect error: $e");
+      await CrashReporter.reportError("Bluetooth disconnect error: $e", errorType: "BluetoothError");
     }
     emit(BluetoothPrinterData(
       bluetoothOpened: state.bluetoothOpened,

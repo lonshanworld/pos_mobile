@@ -31,14 +31,14 @@ class _StockInHistoryScreenState extends State<StockInHistoryScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
       context.read<TransactionsCubit>().loadMoreStockIn();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TransactionsCubit>().state;
+    final state = context.select((TransactionsCubit cubit) => cubit.state);
     final List<StockInModel> stockInList = state.activeStockInList;
     final List<StockInHistoryModel> stockInHistoryList = HistoryFilter.filterStockInHistory(stockInList);
 

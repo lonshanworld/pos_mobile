@@ -119,9 +119,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                       if (!mounted) return;
                       if(value){
-                        Navigator.of(context).pop();
                         context.read<LoadingCubit>().setSuccess("Success !");
-
+                        Navigator.of(context).pop();
                       }else{
                         context.read<LoadingCubit>().setFail("Fail !");
                       }

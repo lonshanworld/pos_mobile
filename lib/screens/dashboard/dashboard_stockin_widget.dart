@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
+import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stockin_history_model.dart';
 import 'package:pos_mobile/widgets/transaction_history_widgets_folder/stockin_history_widget.dart';
 
 import '../../constants/uiConstants.dart';
+import '../../controller/ui_controller.dart';
 
 class DashboardStockIn extends StatelessWidget {
   const DashboardStockIn({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final UIController uiController = UIController.instance;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+
+
     return BlocBuilder<TransactionsCubit, TransactionsState>(
       builder: (context, state) {
         final StockInHistoryModel? stockInHistoryModel =
@@ -18,17 +25,17 @@ class DashboardStockIn extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color:uiController.getpureDirectClr(themeModeType),
             borderRadius: BorderRadius.circular(UIConstants.mediumRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
             ),
           ),
           child: Column(

@@ -59,7 +59,8 @@ class HistoryFilter{
   }
 
   static LinkedHashMap<String, List<StockOutModel>> filterWeeklyStockOut(List<StockOutModel> dataList){
-    LinkedHashMap<String, List<StockOutModel>> groupedDates = LinkedHashMap.from({});
+    final Map<String, DateTime> sortKeys = {};
+    final Map<String, List<StockOutModel>> groupedDates = {};
     for(int a = 0; a < dataList.length; a++){
       String dateStr = TextFormatters.getDate(dataList[a].createTime);
       DateTime dateTime = TextFormatters.reverseDate(dateStr);
@@ -75,9 +76,16 @@ class HistoryFilter{
       // Add the date to the corresponding week
       groupedDates.putIfAbsent(weekKey, () => []);
       groupedDates[weekKey]!.add(dataList[a]);
+      sortKeys.putIfAbsent(weekKey, () => weekStart);
     }
-    cusDebugPrint(groupedDates);
-    return groupedDates;
+    final orderedEntries = groupedDates.entries.toList()
+      ..sort(
+        (left, right) => sortKeys[right.key]!.compareTo(sortKeys[left.key]!),
+      );
+    final LinkedHashMap<String, List<StockOutModel>> orderedMap =
+        LinkedHashMap.fromEntries(orderedEntries);
+    cusDebugPrint(orderedMap);
+    return orderedMap;
     // groupedDates.forEach((key, value) {
     //   int index = groupedDates.keys.toList().indexOf(key);
     //   cusDebugPrint(index);
@@ -86,7 +94,8 @@ class HistoryFilter{
   }
 
   static LinkedHashMap<String, List<StockOutModel>> filterMonthlyStockOut(List<StockOutModel> dataList){
-    LinkedHashMap<String, List<StockOutModel>> groupedDates = LinkedHashMap.from({});
+    final Map<String, DateTime> sortKeys = {};
+    final Map<String, List<StockOutModel>> groupedDates = {};
     for(int a = 0; a < dataList.length; a++){
       String dateStr = TextFormatters.getDate(dataList[a].createTime);
       DateTime dateTime = TextFormatters.reverseDate(dateStr);
@@ -96,8 +105,15 @@ class HistoryFilter{
       // Add the date to the corresponding week
       groupedDates.putIfAbsent(monthKey, () => []);
       groupedDates[monthKey]!.add(dataList[a]);
+      sortKeys.putIfAbsent(monthKey, () => DateTime(dateTime.year, dateTime.month));
     }
-    cusDebugPrint(groupedDates);
-    return groupedDates;
+    final orderedEntries = groupedDates.entries.toList()
+      ..sort(
+        (left, right) => sortKeys[right.key]!.compareTo(sortKeys[left.key]!),
+      );
+    final LinkedHashMap<String, List<StockOutModel>> orderedMap =
+        LinkedHashMap.fromEntries(orderedEntries);
+    cusDebugPrint(orderedMap);
+    return orderedMap;
   }
 }

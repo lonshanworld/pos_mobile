@@ -18,6 +18,7 @@ import '../../../error_handlers/error_handler.dart';
 import '../../../models/customer_model.dart';
 import '../../../widgets/cusTxt_widget.dart';
 import '../../../widgets/voucher_box_widget.dart';
+import 'package:pos_mobile/utils/crash_reporter.dart';
 
 class HistoryVoucherScreen extends StatefulWidget {
   
@@ -75,6 +76,7 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
       loadingCubit.setSuccess("Print command sent !");
     } else {
       loadingCubit.setFail("Print failed.");
+      await CrashReporter.reportError("Print failed for voucher: ${widget.stockOutModel.code}", errorType: "PrintFailure");
     }
   }
 
@@ -101,7 +103,7 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final BluetoothConnection? bluetoothConnection = context.watch<BluetoothPrinterCubit>().state.bluetoothConnection;
+    final BluetoothConnection? bluetoothConnection = context.select((BluetoothPrinterCubit cubit) => cubit.state.bluetoothConnection);
     final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemFromStockOutId(widget.stockOutModel.id);
     final List<ItemModel> itemList = context.read<ItemCubit>().getItemListFromSelectedUniqueItemList(uniqueItemList);
     final CustomerModel? customerModel = widget.stockOutModel.customerId == null ? null : context.read<TransactionsCubit>().getCustomerModel(widget.stockOutModel.customerId!);

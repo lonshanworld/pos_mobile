@@ -18,13 +18,13 @@ class PageList{
   static const List<PageModel> pages = [
     PageModel(screen: DashBoardForTodayScreen(), title: "Dashboard"),
     PageModel(screen: StockOutScreen(), title: "Check out"),
-    PageModel(screen: StockInScreen(isStorage: false,), title: "Stock in"),
+    PageModel(screen: StockInScreen(isStorage: true,), title: "Stock in"),
     PageModel(screen: StorageScreen(), title: "Storage"),
     PageModel(screen: TransactionHistoryScreen(), title: "Transaction history"),
     // PageModel(screen: MyActivityScreen(), title: "My activity"),
     // PageModel(screen: HistoryScreen(), title: "History"),
 
-    PageModel(screen: TableAndChartScreen(), title: "Tables and Charts"),
+    PageModel(screen: TableAndChartScreen(), title: "Reports"),
     PageModel(screen: MainPromotionScreen(), title: "Promotions"),
     // PageModel(screen: ReportAndAlertTabScreen(), title: "Reports and Alerts"),
     PageModel(screen: SettingScreen(), title: "Settings"),

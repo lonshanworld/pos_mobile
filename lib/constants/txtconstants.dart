@@ -1,19 +1,4 @@
-import '../models/user_model_folder/user_model.dart';
-import 'enums.dart';
-
 class TxtConstants{
-
-  static final UserModel superAdminModelData = UserModel(
-    id: -1,
-    userName: "superAdmin",
-    password: "superAdmin123",
-    userLevel: UserLevel.superAdmin,
-    userCreatedTime: DateTime.now(),
-    activeStatus: true,
-    imageId: null,
-    userLoginTime: DateTime.now(),
-    userLogoutTime: null,
-  );
 
   static const String themeDbKey = "THEME_DB";
 
@@ -69,10 +54,10 @@ class TxtConstants{
   static const String alertTargetPersonTableName = "alertTargetPersonTable";
   static const String alertTargetProductTableName ="alertTargetProductTable";
 
-  static const String shopAddress = "အမှတ်(007)၊ ဘုရင့်နောင်တာဝါ 2(A)၊ ဘုရင်နောင်လမ်း၊ သင်္ဘောကျင်းမှတ်တိုင်၊ ကမာရွတ်မြို့နယ်";
-  static const String phNum = "09-768 032 076";
+  static const String shopAddress = "Shop Address";
+  static const String phNum = "Phone Number";
   static const String noReturnNote = "ဝယ်ပြီးပစ္စည်း ပြန်မလဲပေးပါ";
-  static const String shopName = "ME - Medical Equipments";
+  static const String shopName = "Shop Name";
 
   static const String printerFontSizeKey = "PrinterFontSize";
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/loading_bloc/loading_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
@@ -144,11 +145,11 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
 
                 final List<ItemModel> selectedItemModelList = [];
                 for(int a = 0 ; a < selectedStockOutItemList.length; a++){
-                  try {
-                    ItemModel singleItem = allItemModelList.firstWhere((element) => element.id == selectedStockOutItemList[a].itemId);
+                  final ItemModel? singleItem = allItemModelList.firstWhereOrNull((element) => element.id == selectedStockOutItemList[a].itemId);
+                  if (singleItem != null) {
                     selectedItemModelList.add(singleItem);
-                  } catch (e) {
-                    // Ignore if item not found
+                  } else {
+                    debugPrint('StockOutHistoryWidget: missing item for itemId=${selectedStockOutItemList[a].itemId}');
                   }
                 }
 

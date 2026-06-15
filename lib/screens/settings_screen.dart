@@ -53,34 +53,42 @@ class _SettingScreenState extends State<SettingScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            onPressed: () {
+              Navigator.of(ctx).pop(ctrl.text.trim());
+            },
             child: const Text('Save'),
           ),
         ],
       ),
     );
 
-    ctrl.dispose();
-    if (result == null || result.isEmpty) return;
-
-    switch (field) {
-      case 'shopName':
-        await cubit.updateShopName(result);
-        break;
-      case 'shopAddress':
-        await cubit.updateShopAddress(result);
-        break;
-      case 'phNum':
-        await cubit.updatePhNum(result);
-        break;
-      case 'noReturnNote':
-        await cubit.updateNoReturnNote(result);
-        break;
+    if (result != null && result.isNotEmpty) {
+      switch (field) {
+        case 'shopName':
+          await cubit.updateShopName(result);
+          break;
+        case 'shopAddress':
+          await cubit.updateShopAddress(result);
+          break;
+        case 'phNum':
+          await cubit.updatePhNum(result);
+          break;
+        case 'noReturnNote':
+          await cubit.updateNoReturnNote(result);
+          break;
+      }
     }
+
+    // Safely dispose of the controller after the dialog is completely closed
+    Future.delayed(const Duration(milliseconds: 200), () {
+      ctrl.dispose();
+    });
   }
 
   String _fieldLabel(String field) {
@@ -160,7 +168,9 @@ class _SettingScreenState extends State<SettingScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -188,9 +198,12 @@ class _SettingScreenState extends State<SettingScreen> {
       },
     );
 
-    currentController.dispose();
-    newController.dispose();
-    confirmController.dispose();
+    // Safely dispose of the controllers after the dialog is completely closed
+    Future.delayed(const Duration(milliseconds: 200), () {
+      currentController.dispose();
+      newController.dispose();
+      confirmController.dispose();
+    });
   }
 
   @override
@@ -630,7 +643,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   min: 0.5,
                   max: 3.0,
                   divisions: 25,
-                  value: shopInfoState.logoSizeRatio,
+                  value: shopInfoState.logoSizeRatio.clamp(0.5, 3.0),
                   label: shopInfoState.logoSizeRatio.toStringAsFixed(1),
                   onChanged: (val) {
                     context.read<ShopInfoCubit>().updateLogoSizeRatio(val);

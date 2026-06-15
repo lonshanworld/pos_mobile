@@ -41,7 +41,13 @@ class CheckUserScreen extends StatelessWidget {
     }
 
     // If it's first time setup and key is validated, go to merchant setup
-    if (keyValidationState.isFirstTimeSetup) {
+    final bool hasMerchant = context
+        .watch<UserDataCubit>()
+        .state
+        .allUserModelList
+        .any((u) => u.userLevel == UserLevel.merchant);
+
+    if (keyValidationState.isFirstTimeSetup && !hasMerchant) {
       return const MerchantSetupScreen();
     }
 

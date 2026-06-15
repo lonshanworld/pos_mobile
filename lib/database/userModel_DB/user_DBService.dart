@@ -3,6 +3,7 @@ import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/auth_security.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 
 import '../../constants/enums.dart';
 
@@ -36,7 +37,7 @@ class UserDBService{
     }
   }
 
-  static Future<List<UserModel>>getAllUsers(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<UserModel>>getAllUsers(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     List<dynamic> dataList = await UserDBStorage.getAllData(db, limit: limit, offset: offset);
     List<UserModel> userModelList = dataList.map((e) => UserModel.fromJson(e)).toList();
     cusDebugPrint("This is userlistLength ${userModelList.length}");

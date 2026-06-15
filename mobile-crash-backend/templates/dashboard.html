@@ -493,18 +493,35 @@
                             <td>${escapeHtml(report.error_message.substring(0, 100))}...</td>
                             <td class="stack-trace" title="${escapeHtml(report.stack_trace)}">${escapeHtml(report.stack_trace)}</td>
                             <td><span class="status-badge status-${report.status}">${report.status}</span></td>
-                            <td><button class="refresh-btn" onclick="viewDetail(${report.id})">Detail</button></td>
+                            <td>
+                                <button class="refresh-btn" onclick="viewDetail(${report.id})">Detail</button>
+                                <button class="logout-btn" style="padding: 0.5rem; margin-left: 5px;" onclick="deleteReport(${report.id})">Delete</button>
+                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
             `;
-            
             container.innerHTML = '';
             container.appendChild(table);
         }
 
         function viewDetail(reportId) {
             window.location.href = `/report/${reportId}`;
+        }
+
+        async function deleteReport(id) {
+            if (!confirm('Are you sure you want to delete this report?')) return;
+            try {
+                const response = await apiCall(`/api/admin/reports/${id}`, 'DELETE');
+                if (response && response.success) {
+                    loadReports();
+                } else {
+                    alert('Failed to delete report');
+                }
+            } catch (err) {
+                console.error('Failed to delete report:', err);
+                alert('Error deleting report');
+            }
         }
 
         // Keys Functions

@@ -1,4 +1,5 @@
 import 'package:pos_mobile/constants/enums.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/Item_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
@@ -31,17 +32,92 @@ class GroupingItemDbService{
     await CategoryDbStorage.onDelete(db);
   }
 
-  static Future<Map<String, List>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<Map<String, List>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     List<dynamic> categoryList = await CategoryDbStorage.getAllData(db, limit: limit, offset: offset);
     List<dynamic> groupList = await GroupDbStorage.getAllData(db, limit: limit, offset: offset);
-    List<dynamic> typeList = await TypeDbStorage.getAllData(db, limit: limit, offset: offset);
-    List<dynamic> itemList = await ItemDbStorage.getAllData(db, limit: limit, offset: offset);
+    List<dynamic> typeList = await TypeDbStorage.getAllData(db, limit: 5000, offset: 0);
+    List<dynamic> itemList = await ItemDbStorage.getAllData(db, limit: 5000, offset: 0);
+    List<dynamic> uniqueItemList = await UniqueItemDbService.getAllData(
+      db,
+      limit: 5000,
+      offset: 0,
+    );
     return {
       "category" : categoryList.map((e) => CategoryModel.fromJson(e)).toList(),
       "group" : groupList.map((e) => GroupModel.fromJson(e)).toList(),
       "type" : typeList.map((e) => TypeModel.fromJson(e)).toList(),
       "item" : itemList.map((e) => ItemModel.fromJson(e)).toList(),
+      "uniqueItem" : uniqueItemList,
     };
+  }
+
+  static Future<List<CategoryModel>> getAllCategories(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    List<dynamic> categoryList = await CategoryDbStorage.getAllData(db, limit: limit, offset: offset);
+    return categoryList.map((e) => CategoryModel.fromJson(e)).toList();
+  }
+
+  static Future<List<CategoryModel>> getAllActiveCategories(Database db) async {
+    final List<dynamic> categoryList = await CategoryDbStorage.getAllActiveData(db);
+    return categoryList.map((e) => CategoryModel.fromJson(e)).toList();
+  }
+
+  static Future<CategoryModel?> getCategoryById(Database db, int id) async {
+    return await CategoryDbStorage.getCategoryById(db, id);
+  }
+
+  static Future<int> getTotalCategoryCount(Database db) async {
+    return await CategoryDbStorage.getTotalCategoryCount(db);
+  }
+
+  static Future<List<GroupModel>> getAllGroups(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    List<dynamic> groupList = await GroupDbStorage.getAllData(db, limit: limit, offset: offset);
+    return groupList.map((e) => GroupModel.fromJson(e)).toList();
+  }
+
+  static Future<List<GroupModel>> getAllActiveGroups(Database db) async {
+    final List<dynamic> groupList = await GroupDbStorage.getAllActiveData(db);
+    return groupList.map((e) => GroupModel.fromJson(e)).toList();
+  }
+
+  static Future<GroupModel?> getGroupById(Database db, int id) async {
+    return await GroupDbStorage.getGroupById(db, id);
+  }
+
+  static Future<TypeModel?> getTypeById(Database db, int id) async {
+    return await TypeDbStorage.getTypeById(db, id);
+  }
+
+  static Future<List<TypeModel>> getAllActiveTypes(Database db) async {
+    final List<dynamic> typeList = await TypeDbStorage.getAllActiveData(db);
+    return typeList.map((e) => TypeModel.fromJson(e)).toList();
+  }
+
+  static Future<Map<int, int>> getGroupCountByCategory(Database db) async {
+    final List<dynamic> rows = await GroupDbStorage.getGroupCountByCategory(db);
+    final Map<int, int> result = {};
+    for (final row in rows) {
+      final Map<String, Object?> map = row as Map<String, Object?>;
+      final int? categoryId = map['categoryId'] as int?;
+      final int? total = map['total'] as int?;
+      if (categoryId != null && total != null) {
+        result[categoryId] = total;
+      }
+    }
+    return result;
+  }
+
+  static Future<Map<int, int>> getTypeCountByGroup(Database db) async {
+    final List<dynamic> rows = await TypeDbStorage.getTypeCountByGroup(db);
+    final Map<int, int> result = {};
+    for (final row in rows) {
+      final Map<String, Object?> map = row as Map<String, Object?>;
+      final int? groupId = map['groupId'] as int?;
+      final int? total = map['total'] as int?;
+      if (groupId != null && total != null) {
+        result[groupId] = total;
+      }
+    }
+    return result;
   }
 
   static Future<bool>createNewCategory(

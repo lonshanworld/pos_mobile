@@ -302,9 +302,9 @@ class _VoucherScreenState extends State<VoucherScreen> {
   Widget build(BuildContext context) {
     final UIutils uIutils = UIutils();
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
     final BluetoothConnection? bluetoothConnection =
-        context.watch<BluetoothPrinterCubit>().state.bluetoothConnection;
+        context.select((BluetoothPrinterCubit cubit) => cubit.state.bluetoothConnection);
 
     Widget paintWidget = RepaintBoundary(
       key: _printKey,

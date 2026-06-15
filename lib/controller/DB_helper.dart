@@ -7,6 +7,7 @@ import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
+import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/junction_folder/item_promotion_db/item_promotion_DbService.dart';
@@ -23,6 +24,7 @@ import 'package:pos_mobile/database/reports_DB/reports_DbService.dart';
 import 'package:pos_mobile/database/restrictionModel_DB/restriction_DBservice.dart';
 import 'package:pos_mobile/database/transactionModel_DB/transaction_DBservice.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
+import 'package:pos_mobile/database/db_schema_migrator.dart';
 import 'package:pos_mobile/models/customer_model.dart';
 
 import 'package:pos_mobile/models/crash_report_model.dart';
@@ -48,6 +50,7 @@ import '../models/groupingItem_models_folders/type_model.dart';
 import '../models/item_model_folder/item_model.dart';
 import '../models/promotion_model_folder/promotion_model.dart';
 import '../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 
 class DBHelper{
 
@@ -68,10 +71,11 @@ class DBHelper{
     String path = await getDbpath(TxtConstants.databaseKey);
     database = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
       onConfigure: DBHelper.dbConfig,
       onUpgrade: _onUpgrade,
+      onOpen: _onOpen,
     );
   }
 
@@ -108,7 +112,16 @@ class DBHelper{
   }
 
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion)async{
+    await _prepareDatabase(db);
+  }
 
+  static Future<void> _onOpen(Database db) async {
+    await _prepareDatabase(db);
+  }
+
+  static Future<void> _prepareDatabase(Database db) async {
+    await _onCreate(db, 2);
+    await DbSchemaMigrator.reconcile(db);
   }
 
   static Future<List<UniqueItemModel>>getAllUniqueItems({int limit = 5000, int offset = 0})async{
@@ -172,16 +185,17 @@ class DBHelper{
     return await CrashReportDbService.deleteSyncedReports(database!);
   }
 
-  static Future<Map<String, List>> getAllItemData()async{
-    Map<String, List> groupingItemList = await GroupingItemDbService.getAllData(database!);
-    List<UniqueItemModel> uniqueItemList = await UniqueItemDbService.getAllData(database!);
-    return {
-      "category" : groupingItemList["category"]!,
-      "group" : groupingItemList["group"]!,
-      "type" : groupingItemList["type"]!,
-      "item" : groupingItemList["item"]!,
-      "uniqueItem" : uniqueItemList,
-    };
+  static Future<List<CategoryModel>> getAllCategory({int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    List<dynamic> data = await CategoryDbStorage.getAllData(database!, limit: limit, offset: offset);
+    return data.map((e) => CategoryModel.fromJson(e)).toList();
+  }
+
+  static Future<int> getTotalCategoryCount() async {
+    return await GroupingItemDbService.getTotalCategoryCount(database!);
+  }
+
+  static Future<CategoryModel?> getCategoryById(int id) async {
+    return await GroupingItemDbService.getCategoryById(database!, id);
   }
 
   static Future<bool>createNewCategory(UserModel userModel, String categoryName)async{
@@ -365,15 +379,15 @@ class DBHelper{
     return await GroupingItemDbService.deactivateItem(database!, userModel: userModel, itemModel: itemModel,uniqueItemList: uniqueItemList);
   }
 
-  static Future<List<StockInModel>>getAllStockIn({int limit = 2000, int offset = 0})async{
+  static Future<List<StockInModel>>getAllStockIn({int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await TransactionDBService.getAllStockInData(database!, limit: limit, offset: offset);
   }
 
-  static Future<List<StockOutModel>>getAllStockOut({int limit = 2000, int offset = 0})async{
+  static Future<List<StockOutModel>>getAllStockOut({int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await TransactionDBService.getAllStockOutData(database!, limit: limit, offset: offset);
   }
 
-  static Future<List<StockOutItemModel>>getAllStockOutItem({int limit = 5000, int offset = 0})async{
+  static Future<List<StockOutItemModel>>getAllStockOutItem({int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await TransactionDBService.getAllStockOutItemData(database!, limit: limit, offset: offset);
   }
 
@@ -472,5 +486,46 @@ class DBHelper{
 
   static Future<bool>deleteUniqueItem(UniqueItemModel uniqueItemModel, UserModel userModel)async{
     return await UniqueItemDbService.deActivateUniqueItem(database!, uniqueItemModel: uniqueItemModel, userModel: userModel);
+  }
+
+  static Future<List<CategoryModel>> getAllCategories({int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    final data = await GroupingItemDbService.getAllCategories(database!, limit: limit, offset: offset);
+    return data;
+  }
+
+  static Future<List<CategoryModel>> getAllActiveCategories() async {
+    return await GroupingItemDbService.getAllActiveCategories(database!);
+  }
+
+  static Future<List<GroupModel>> getAllGroups({int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    return await GroupingItemDbService.getAllGroups(database!, limit: limit, offset: offset);
+  }
+
+  static Future<List<GroupModel>> getAllActiveGroups() async {
+    return await GroupingItemDbService.getAllActiveGroups(database!);
+  }
+
+  static Future<GroupModel?> getGroupById(int id) async {
+    return await GroupingItemDbService.getGroupById(database!, id);
+  }
+
+  static Future<TypeModel?> getTypeById(int id) async {
+    return await GroupingItemDbService.getTypeById(database!, id);
+  }
+
+  static Future<List<TypeModel>> getAllActiveTypes() async {
+    return await GroupingItemDbService.getAllActiveTypes(database!);
+  }
+
+  static Future<Map<String, List>> getAllItemData({int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    return await GroupingItemDbService.getAllData(database!, limit: limit, offset: offset);
+  }
+
+  static Future<Map<int, int>> getGroupCountByCategory() async {
+    return await GroupingItemDbService.getGroupCountByCategory(database!);
+  }
+
+  static Future<Map<int, int>> getTypeCountByGroup() async {
+    return await GroupingItemDbService.getTypeCountByGroup(database!);
   }
 }

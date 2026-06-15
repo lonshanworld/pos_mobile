@@ -25,6 +25,31 @@ class CrashReporter {
     }
   }
 
+  static Future<void> reportError(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String errorType = 'AppError',
+  }) async {
+    // Ignore network/internet connection errors to prevent cluttering reports
+    final errorStr = error.toString().toLowerCase();
+    if (errorStr.contains('socketexception') || 
+        errorStr.contains('clientexception') || 
+        errorStr.contains('handshakeexception') ||
+        errorStr.contains('no internet connection') ||
+        errorStr.contains('network_error') ||
+        errorStr.contains('failed host lookup')) {
+      return;
+    }
+
+    // If no stack trace is provided, capture the current stack trace
+    final trace = stackTrace ?? StackTrace.current;
+    await _saveToLocalDatabase(
+      error: error,
+      stackTrace: trace,
+      errorType: errorType,
+    );
+  }
+
   static Future<void> _saveToLocalDatabase({
     required dynamic error,
     required StackTrace? stackTrace,
@@ -63,6 +88,14 @@ class CrashReporter {
 
     FlutterError.onError = (FlutterErrorDetails details) async {
       FlutterError.presentError(details);
+
+      // Ignore layout overflow errors to prevent cluttering the crash reports
+      final errorStr = details.exception.toString();
+      if (errorStr.contains('A RenderFlex overflowed') || 
+          errorStr.contains('overflowed by') ||
+          errorStr.contains('RenderBox was not laid out')) {
+        return;
+      }
 
       await _saveToLocalDatabase(
         error: details.exception,

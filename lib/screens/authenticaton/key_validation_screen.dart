@@ -40,7 +40,7 @@ class _KeyValidationScreenState extends State<KeyValidationScreen> {
   @override
   Widget build(BuildContext context) {
     final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
+        context.select((ThemeCubit cubit) => cubit.state.themeModeType);
 
     return BlocListener<KeyValidationCubit, KeyValidationState>(
       listener: (context, state) {

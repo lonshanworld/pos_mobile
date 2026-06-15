@@ -34,6 +34,7 @@ class StockInHistoryWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final List<UniqueItemModel> activeUniqueItemList = context.watch<ItemCubit>().state.activeUniqueItemList;
 
     return Card(
       elevation: 4,
@@ -73,7 +74,6 @@ class StockInHistoryWidget extends StatelessWidget {
                 final e = stockInHistoryModel.stockInList[reversedIndex];
 
                 final UserModel? stockInPerson = context.read<UserDataCubit>().getSingleUser(e.createPersonId);
-                final List<UniqueItemModel> activeUniqueItemList = context.watch<ItemCubit>().state.activeUniqueItemList;
                 final List<UniqueItemModel> filteredInActiveUniqueItemList = context.read<ItemCubit>().filterInActiveUniqueItemList();
                 final List<UniqueItemModel> combineUniqueItemList = [...activeUniqueItemList, ...filteredInActiveUniqueItemList];
                 final List<UniqueItemModel> selectedUniqueItemList = [];
@@ -90,8 +90,17 @@ class StockInHistoryWidget extends StatelessWidget {
                   itemCounts[unique.itemId] = (itemCounts[unique.itemId] ?? 0) + 1;
                 }
 
+                // Get item names
+                final List<String> itemNames = [];
+                for (var itemId in itemCounts.keys) {
+                  final item = context.read<ItemCubit>().getItem(itemId);
+                  if (item != null) {
+                    itemNames.add("${item.name} (x${itemCounts[itemId]})");
+                  }
+                }
+                final String itemsSubtitle = itemNames.join(", ");
+
                 int totalItems = selectedUniqueItemList.length;
-                int uniqueTypes = itemCounts.keys.length;
 
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace, vertical: 8),
@@ -104,7 +113,7 @@ class StockInHistoryWidget extends StatelessWidget {
                     txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600),
                   ),
                   subtitle: CusTxtWidget(
-                    txt: "Added $totalItems items across $uniqueTypes types",
+                    txt: itemsSubtitle,
                     txtStyle: Theme.of(context).textTheme.bodySmall!,
                   ),
                   trailing: CusTxtWidget(

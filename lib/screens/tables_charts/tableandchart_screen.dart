@@ -4,7 +4,7 @@ import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/screens/tables_charts/daily_sales.dart';
 import 'package:pos_mobile/screens/tables_charts/monthly_sales.dart';
 import 'package:pos_mobile/screens/tables_charts/weekly_sales.dart';
-
+import 'package:pos_mobile/screens/tables_charts/per_transactions.dart';
 import '../../blocs/theme_bloc/theme_cubit.dart';
 import '../../constants/enums.dart';
 import '../../controller/ui_controller.dart';
@@ -25,7 +25,7 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
   @override
   void initState() {
     super.initState();
-    tabController = TabController(initialIndex: 0, length: 3, vsync: this);
+    tabController = TabController(initialIndex: 0, length: 4, vsync: this);
   }
 
   @override
@@ -64,6 +64,7 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
               overlayColor: WidgetStateProperty.all(
                   UIConstants.redVioletClr.withValues(alpha: 0.1)),
               tabs: const [
+                Tab(text: "Per Transaction"),
                 Tab(text: "Daily"),
                 Tab(text: "Weekly"),
                 Tab(text: "Monthly"),
@@ -75,6 +76,7 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
               controller: tabController,
               physics: const NeverScrollableScrollPhysics(),
               children: const [
+                PerTransactions(),
                 DailySales(),
                 WeeklySales(),
                 MonthlySales(),

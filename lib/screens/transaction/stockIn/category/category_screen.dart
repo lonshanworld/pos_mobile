@@ -3,7 +3,6 @@ import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/category_model.dart";
 import "package:pos_mobile/screens/transaction/stockIn/category/create_category_screen.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:pos_mobile/widgets/itemBox/category_box_widget.dart";
@@ -11,8 +10,7 @@ import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
 
 
-class CategoryScreen extends StatelessWidget {
-
+class CategoryScreen extends StatefulWidget {
   final Function(int value) setSelectedCategoryId;
   final bool isStorage;
   const CategoryScreen({
@@ -22,18 +20,35 @@ class CategoryScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final List<CategoryModel> categoryList = context.watch<ItemCubit>().state.activeCategoryList;
+  State<CategoryScreen> createState() => _CategoryScreenState();
+}
 
-    // List<GroupModel> getSelectedGroupList(int? id){
-    //   List<GroupModel> newList = [];
-    //   for(int a = 0 ; a < groupList.length; a++){
-    //     if(id == groupList[a].categoryId){
-    //       newList.add(groupList[a]);
-    //     }
-    //   }
-    //   return newList;
-    // }
+class _CategoryScreenState extends State<CategoryScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+      context.read<ItemCubit>().loadMoreCategories();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryList = context.select((ItemCubit cubit) => cubit.state.activeCategoryList);
+    final isLoadingMore = context.select((ItemCubit cubit) => cubit.state.isLoadingMoreCategory);
+    final totalCategoryCount = context.select((ItemCubit cubit) => cubit.state.totalCategoryCount);
     
     return Scaffold(
       body: Column(
@@ -45,11 +60,11 @@ class CategoryScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.grid_view_rounded, size: UIConstants.mediumIcon, color: Colors.grey),
+                const Icon(Icons.grid_view_rounded, color: Colors.grey),
                 const SizedBox(width: UIConstants.smallSpace),
                 CusTxtWidget(
                   txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(color: Colors.grey),
-                  txt: "${categoryList.length} ${categoryList.length == 1 ? 'Category' : 'Categories'}",
+                  txt: "$totalCategoryCount ${totalCategoryCount == 1 ? 'Category' : 'Categories'}",
                 ),
               ],
             ),
@@ -72,8 +87,9 @@ class CategoryScreen extends StatelessWidget {
                   left: 0,
                   right: 0,
                   child: GridView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(UIConstants.bigSpace),
-                    itemCount: categoryList.length,
+                    itemCount: categoryList.length + (isLoadingMore ? 1 : 0),
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 160,
                       childAspectRatio: 1,
@@ -81,18 +97,21 @@ class CategoryScreen extends StatelessWidget {
                       crossAxisSpacing: UIConstants.mediumSpace,
                     ),
                     itemBuilder: (ctx, index){
+                      if (index == categoryList.length) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
                       return CategoryBoxWidget(
                         categoryModel: categoryList[index],
-                        groupCount: context.read<ItemCubit>().getSelectedGroupList(categoryList[index].id).length,
+                        groupCount: context.read<ItemCubit>().getGroupCountForCategory(categoryList[index].id),
                         func: (){
-                          setSelectedCategoryId(categoryList[index].id);
+                          widget.setSelectedCategoryId(categoryList[index].id);
                         },
-                        isStorage : isStorage,
+                        isStorage : widget.isStorage,
                       );
                     },
                   ),
                 ),
-                if(isStorage)const CreateItemBtnWidget(
+                if(widget.isStorage)const CreateItemBtnWidget(
                   txt: "Create category",
                   widget: CreateCategoryScreen(),
                 ),

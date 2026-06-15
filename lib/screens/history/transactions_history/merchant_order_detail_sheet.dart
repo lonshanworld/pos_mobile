@@ -28,8 +28,8 @@ class MerchantOrderDetailSheet extends StatelessWidget {
         context.read<TransactionsCubit>().getSelectedStockOutItemList(stockOutModel.id);
         
     final List<ItemModel> allItemList = [
-      ...context.watch<ItemCubit>().state.activeItemList,
-      ...context.watch<ItemCubit>().state.inActiveItemList
+      ...context.select((ItemCubit cubit) => cubit.state.activeItemList),
+      ...context.select((ItemCubit cubit) => cubit.state.inActiveItemList)
     ];
 
     final double totalOrgPrice = CalculationFormula.getItemTotalOriginalPriceForStockOut(selectedStockOutItemList);
@@ -153,11 +153,9 @@ class MerchantOrderDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: UIConstants.mediumSpace),
             ...selectedStockOutItemList.map((item) {
-              ItemModel? singleItem;
-              try {
-                singleItem = allItemList.firstWhere((element) => element.id == item.itemId);
-              } catch (e) {
-                singleItem = null;
+              final ItemModel? singleItem = allItemList.firstWhereOrNull((element) => element.id == item.itemId);
+              if (singleItem == null) {
+                debugPrint('MerchantOrderDetailSheet: missing item for itemId=${item.itemId}');
               }
 
               final itemProfit = item.finalSellPrice - item.originalPrice; 

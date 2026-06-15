@@ -140,8 +140,8 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   Widget build(BuildContext context) {
 
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final List<PromotionModel> promotionList = context.watch<PromotionCubit>().state.activePromotionList;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+    final List<PromotionModel> promotionList = context.select((PromotionCubit cubit) => cubit.state.activePromotionList);
 
     //
     // double getAllPrice(){

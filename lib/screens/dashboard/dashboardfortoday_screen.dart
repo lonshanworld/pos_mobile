@@ -17,7 +17,7 @@ class DashBoardForTodayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
+    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double screenWidth = mediaQuery.size.width;
     final Orientation orientation = mediaQuery.orientation;

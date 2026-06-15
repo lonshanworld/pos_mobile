@@ -17,6 +17,7 @@ import "package:pos_mobile/widgets/cusAppbar_widget.dart";
 import "package:pos_mobile/widgets/loading_widget.dart";
 
 import "../features/logout_feature.dart";
+import "../constants/txtconstants.dart";
 
 
 class HomeScreen extends StatefulWidget {
@@ -31,19 +32,30 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
 
   int pageIndex = 0;
+  late final PageController pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    pageController = PageController(
+      initialPage: pageIndex,
+      keepPage: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    pageController.dispose();
+    super.dispose();
+  }
 
 
 
   @override
   Widget build(BuildContext context) {
-    UserModel? userModel= context.watch<UserDataCubit>().state.userModel;
+    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-
-    PageController pageController = PageController(
-      initialPage: pageIndex,
-      keepPage: true,
-    );
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
 
     void changePage(int value){
       setState(() {
@@ -106,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Column(
                         children: [
-                          const CusAppBar(txt: "ME - Medical Equipments"),
+                          const CusAppBar(txt: TxtConstants.shopName,),
                           Expanded(
                             child: PageView(
                               controller: pageController,

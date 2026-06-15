@@ -24,9 +24,20 @@ class PromotionCubit extends Cubit<PromotionState> {
   }
 
   Future<void> _loadAllData()async{
-    await _getAllPromotion();
-    await _getAllItemPromotion();
-    await _getAllStockOutPromotion();
+    try{
+      await _getAllPromotion();
+      await _getAllItemPromotion();
+      await _getAllStockOutPromotion();
+    }catch(e){
+      cusDebugPrint('Failed to load promotion data: $e');
+      emit(const PromotionData(
+        activePromotionList: [],
+        inActivePromotionList: [],
+        activeItemPromotionList: [],
+        inActiveItemPromotionList: [],
+        stockOutPromotionList: [],
+      ));
+    }
   }
 
   Future<void> reloadStockOutPromotionDataList()async{
@@ -98,16 +109,21 @@ class PromotionCubit extends Cubit<PromotionState> {
     required double? promotionPrice,
     required UserModel userModel,
   })async{
-    bool value = await DBHelper.addNewPromotion(
-      promotionName: promotionName,
-      promotionDescription: promotionDescription ?? " -- ",
-      promotionPercentage: promotionPercentage, 
-      promotionPrice: promotionPrice,
-      promotionCode: CodeGenerator.getUniqueCodeForPromotion(promotionName),
-      userModel: userModel,
-    );
-    await _getAllPromotion();
-    return value;
+    try{
+      bool value = await DBHelper.addNewPromotion(
+        promotionName: promotionName,
+        promotionDescription: promotionDescription ?? " -- ",
+        promotionPercentage: promotionPercentage,
+        promotionPrice: promotionPrice,
+        promotionCode: CodeGenerator.getUniqueCodeForPromotion(promotionName),
+        userModel: userModel,
+      );
+      await _getAllPromotion();
+      return value;
+    }catch(e){
+      cusDebugPrint('Failed to add promotion: $e');
+      return false;
+    }
   }
 
   Future<bool>deletePromotion({
@@ -120,19 +136,29 @@ class PromotionCubit extends Cubit<PromotionState> {
         selectedItemPromotionList.add(state.activeItemPromotionList[i]);
       }
     }
-    bool value = await DBHelper.deletePromotion(userModel: userModel, promotionId: promotionId, itemPromotionList: selectedItemPromotionList);
-    await _getAllPromotion();
-    await _getAllItemPromotion();
-    return value;
+    try{
+      bool value = await DBHelper.deletePromotion(userModel: userModel, promotionId: promotionId, itemPromotionList: selectedItemPromotionList);
+      await _getAllPromotion();
+      await _getAllItemPromotion();
+      return value;
+    }catch(e){
+      cusDebugPrint('Failed to delete promotion: $e');
+      return false;
+    }
   }
 
   Future<bool>detachItemWithPromotion({
     required UserModel userModel,
     required List<ItemPromotionModel> itemPromotionList,
   })async{
-    bool value = await DBHelper.detachItemWithPromotion(itemPromotionList: itemPromotionList, userModel: userModel);
-    await _getAllItemPromotion();
-    return value;
+    try{
+      bool value = await DBHelper.detachItemWithPromotion(itemPromotionList: itemPromotionList, userModel: userModel);
+      await _getAllItemPromotion();
+      return value;
+    }catch(e){
+      cusDebugPrint('Failed to detach promotion: $e');
+      return false;
+    }
   }
 
   Future<bool>attachItemWithPromotion({
@@ -140,9 +166,14 @@ class PromotionCubit extends Cubit<PromotionState> {
     required int promotionId,
     required int itemId,
   })async{
-    bool value = await DBHelper.attachItemWithPromotion(userModel: userModel, promotionId: promotionId, itemId: itemId);
-    await _getAllItemPromotion();
-    return value;
+    try{
+      bool value = await DBHelper.attachItemWithPromotion(userModel: userModel, promotionId: promotionId, itemId: itemId);
+      await _getAllItemPromotion();
+      return value;
+    }catch(e){
+      cusDebugPrint('Failed to attach promotion: $e');
+      return false;
+    }
   }
 
   Future<void>reloadAllPromotion()async{

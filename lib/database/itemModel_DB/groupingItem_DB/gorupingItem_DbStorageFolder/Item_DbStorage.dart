@@ -1,3 +1,4 @@
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/type_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
@@ -49,7 +50,7 @@ class ItemDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await db.query(
       TxtConstants.itemTableName,
       orderBy: 'id DESC',

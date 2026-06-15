@@ -41,7 +41,7 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
     final UIController uiController = UIController.instance;
     // final double deviceWidth = uiController.getDeviceWidth;
     final UIutils uIutils = UIutils();

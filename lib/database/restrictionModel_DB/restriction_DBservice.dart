@@ -1,3 +1,4 @@
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/database/restrictionModel_DB/restriction_DBStorage.dart';
 import 'package:pos_mobile/models/restriction_model_folder/restriction_model.dart';
 import 'package:sqflite/sqflite.dart';
@@ -11,7 +12,7 @@ class RestrictionDBService{
     await RestrictionDbStorage.onDelete(db);
   }
 
-  static Future<List<RestrictionModel>>getAllRestrictons(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<RestrictionModel>>getAllRestrictons(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     List<dynamic> dataList = await RestrictionDbStorage.getAllRestrictions(db, limit: limit, offset: offset);
     return dataList.map((e) => RestrictionModel.fromJson(e)).toList();
   }
