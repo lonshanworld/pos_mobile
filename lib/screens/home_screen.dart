@@ -1,7 +1,9 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
@@ -56,6 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+    final BusinessType businessType =
+        context.select((ShopInfoCubit cubit) => cubit.state.businessType);
+    final bool showThemeToggle = businessType.allowsThemeToggle;
 
     void changePage(int value){
       setState(() {
@@ -118,7 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Column(
                         children: [
-                          const CusAppBar(txt: TxtConstants.shopName,),
+                          CusAppBar(
+                            txt: TxtConstants.shopName,
+                            showThemeToggle: showThemeToggle,
+                          ),
                           Expanded(
                             child: PageView(
                               controller: pageController,
@@ -152,14 +160,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                   ),
                   actions: [
-                    CusIconBtn(
-                      size: UIConstants.bigIcon,
-                      func: (){
-                        context.read<ThemeCubit>().switchTheme();
-                      },
-                      clr: themeModeType == ThemeModeType.light ? Colors.orange : Colors.purple,
-                      icon: themeModeType == ThemeModeType.light ? Icons.light_mode : Icons.dark_mode,
-                    ),
+                    if (showThemeToggle)
+                      CusIconBtn(
+                        size: UIConstants.bigIcon,
+                        func: () {
+                          context.read<ThemeCubit>().switchTheme();
+                        },
+                        clr: themeModeType == ThemeModeType.light
+                            ? Colors.orange
+                            : Colors.purple,
+                        icon: themeModeType == ThemeModeType.light
+                            ? Icons.light_mode
+                            : Icons.dark_mode,
+                      ),
                   ],
                 ),
                 drawer: DrawerInSmallScreen(

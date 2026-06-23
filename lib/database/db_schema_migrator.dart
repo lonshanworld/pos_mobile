@@ -7,6 +7,7 @@ import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_Db
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/group_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/type_DbStorage.dart';
+import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
@@ -200,6 +201,10 @@ class DbSchemaMigrator {
           name: 'imageId',
           definition: 'INTEGER REFERENCES ${TxtConstants.imageTableName}(id)',
         ),
+        DbColumnSpec(
+          name: 'need_stock',
+          definition: 'INTEGER NOT NULL DEFAULT 1',
+        ),
       ],
     ),
     DbTableSpec(
@@ -240,6 +245,42 @@ class DbSchemaMigrator {
         ),
         DbColumnSpec(name: 'getItemFromWhere', definition: 'TEXT'),
         DbColumnSpec(name: 'moduleCount', definition: 'INTEGER'),
+        DbColumnSpec(name: 'instanceLength', definition: 'REAL'),
+        DbColumnSpec(name: 'instanceWidth', definition: 'REAL'),
+        DbColumnSpec(name: 'instanceBatchNumber', definition: 'TEXT'),
+      ],
+    ),
+    DbTableSpec(
+      tableName: TxtConstants.itemBusinessDetailTableName,
+      columns: [
+        DbColumnSpec(
+          name: 'itemId',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.itemTableName}(id) NOT NULL UNIQUE',
+        ),
+        DbColumnSpec(name: 'clothingColor', definition: 'TEXT'),
+        DbColumnSpec(name: 'measurementLength', definition: 'REAL'),
+        DbColumnSpec(name: 'measurementWidth', definition: 'REAL'),
+        DbColumnSpec(name: 'measurementUnit', definition: 'TEXT'),
+        DbColumnSpec(name: 'pricePerMeasurementUnit', definition: 'REAL'),
+        DbColumnSpec(name: 'brand', definition: 'TEXT'),
+        DbColumnSpec(name: 'deviceCategory', definition: 'TEXT'),
+        DbColumnSpec(name: 'deviceColor', definition: 'TEXT'),
+        DbColumnSpec(name: 'ram', definition: 'TEXT'),
+        DbColumnSpec(name: 'rom', definition: 'TEXT'),
+        DbColumnSpec(name: 'modelNumber', definition: 'TEXT'),
+        DbColumnSpec(name: 'weightValue', definition: 'REAL'),
+        DbColumnSpec(name: 'weightUnit', definition: 'TEXT'),
+        DbColumnSpec(name: 'packSize', definition: 'TEXT'),
+        DbColumnSpec(name: 'barcode', definition: 'TEXT'),
+        DbColumnSpec(
+          name: 'isOrganic',
+          definition: 'INTEGER NOT NULL DEFAULT 0',
+        ),
+        DbColumnSpec(name: 'shelfLifeDays', definition: 'INTEGER'),
+        DbColumnSpec(name: 'dosage', definition: 'TEXT'),
+        DbColumnSpec(name: 'activeIngredient', definition: 'TEXT'),
+        DbColumnSpec(name: 'manufacturer', definition: 'TEXT'),
       ],
     ),
   ];
@@ -267,6 +308,7 @@ class DbSchemaMigrator {
     await ItemDbStorage.onCreate(db);
     await UniqueItemDbService.initUniqueItemDb(db);
     await ModuleComponentItemDbService.initModuleComponentItemDbService(db);
+    await ItemBusinessDetailDbService.initItemBusinessDetailDb(db);
   }
 
   static Future<void> _ensureIndexes(Database db) async {

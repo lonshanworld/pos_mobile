@@ -5,6 +5,7 @@ import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import "package:collection/collection.dart";
 import 'package:pos_mobile/utils/debug_print.dart';
+import 'package:pos_mobile/utils/formula.dart';
 
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
@@ -12,14 +13,21 @@ import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 
 import '../../models/groupingItem_models_folders/group_model.dart';
 import '../../models/groupingItem_models_folders/type_model.dart';
+import '../../models/item_model_folder/item_business_detail_model.dart';
 import '../../models/item_model_folder/uniqueItem_model.dart';
 import '../../models/junction_models_folder/promotion_junctions/item_promotion_model.dart';
+import '../../utils/checkout_helpers.dart';
 import '../../models/promotion_model_folder/promotion_model.dart';
 import '../../models/user_model_folder/user_model.dart';
 
 part 'item_state.dart';
 
 class ItemCubit extends Cubit<ItemState> {
+
+  Map<int, ItemBusinessDetailModel> _businessDetailMap = {};
+
+  ItemBusinessDetailModel? getBusinessDetail(int itemId) =>
+      _businessDetailMap[itemId];
 
   ItemCubit() : super(const ItemData(
     activeCategoryList: [],
@@ -54,6 +62,10 @@ class ItemCubit extends Cubit<ItemState> {
         limit: UIConstants.defaultPageLimit,
         offset: 0,
       );
+      final businessDetails = await DBHelper.getAllItemBusinessDetails();
+      _businessDetailMap = {
+        for (final detail in businessDetails) detail.itemId: detail,
+      };
       final int totalCategoryCount = await DBHelper.getTotalCategoryCount();
       final Map<int, int> categoryGroupCountMap = await DBHelper.getGroupCountByCategory();
       final Map<int, int> groupTypeCountMap = await DBHelper.getTypeCountByGroup();
@@ -279,19 +291,46 @@ class ItemCubit extends Cubit<ItemState> {
     List<ItemModelWithUniqueItemCountWithPromotion> dataList = [];
     for(int i = 0; i < itemModelList.length; i++){
       PromotionModel? promotion;
-      int count = 0;
       ItemPromotionModel? datajoint = itemPromotionList.firstWhereOrNull((element) => element.itemId == itemModelList[i].id);
       if(datajoint != null){
         promotion = activePromotionList.firstWhereOrNull((element) => element.id == datajoint.promotionId);
       }
 
+      int count = 0;
       for(int j = 0; j < uniqueItemList.length; j++){
         if(itemModelList[i].id == uniqueItemList[j].itemId){
           count ++;
         }
       }
-      ItemModelWithUniqueItemCountWithPromotion dataModel = ItemModelWithUniqueItemCountWithPromotion(itemModel: itemModelList[i], count: count, promotion: promotion);
-      dataList.add(dataModel);
+
+      final agg = CheckoutHelpers.aggregateForItem(
+        itemId: itemModelList[i].id,
+        cartUnits: uniqueItemList,
+        promotion: promotion,
+      );
+
+      final fallbackSell = CalculationFormula.getItemSellPrice(
+        originalPrice: itemModelList[i].originalPrice,
+        profitPrice: itemModelList[i].profitPrice,
+        taxPercentage: itemModelList[i].taxPercentage ?? 0,
+      );
+      final fallbackFinal = CalculationFormula.getItemAfterPromotionPrice(
+        sellPrice: fallbackSell,
+        promotionPercentage: promotion?.promotionPercentage,
+        promotionPrice: promotion?.promotionPrice,
+      );
+
+      dataList.add(ItemModelWithUniqueItemCountWithPromotion(
+        itemModel: itemModelList[i],
+        count: count,
+        promotion: promotion,
+        avgOriginalPrice: count > 0
+            ? agg.avgOriginal
+            : itemModelList[i].originalPrice,
+        avgSellPrice: count > 0 ? agg.avgSell : fallbackSell,
+        avgFinalSellPrice: count > 0 ? agg.avgFinal : fallbackFinal,
+        lineTotal: count > 0 ? agg.lineTotal : 0,
+      ));
     }
     return dataList;
   }
@@ -364,9 +403,11 @@ class ItemCubit extends Cubit<ItemState> {
     required double profitPrice,
     required double originalPrice,
     required double taxPercentage,
+    required bool needStock,
+    ItemBusinessDetailModel? businessDetail,
   })async{
     try{
-      bool value = await DBHelper.createNewItem(
+      final int itemId = await DBHelper.createNewItem(
           userModel: userModel,
           categoryModel: categoryModel,
           groupModel: groupModel,
@@ -376,14 +417,56 @@ class ItemCubit extends Cubit<ItemState> {
           hasExpire: hasExpire,
           profitPrice: profitPrice,
           originalPrice: originalPrice,
-          taxPercentage: taxPercentage
+          taxPercentage: taxPercentage,
+          needStock: needStock,
       );
+      if (itemId <= 0) return false;
+      if (businessDetail != null && !businessDetail.isEmpty) {
+        await DBHelper.saveItemBusinessDetail(
+          ItemBusinessDetailModel(
+            id: businessDetail.id,
+            itemId: itemId,
+            clothingColor: businessDetail.clothingColor,
+            measurementLength: businessDetail.measurementLength,
+            measurementWidth: businessDetail.measurementWidth,
+            measurementUnit: businessDetail.measurementUnit,
+            pricePerMeasurementUnit: businessDetail.pricePerMeasurementUnit,
+            brand: businessDetail.brand,
+            deviceCategory: businessDetail.deviceCategory,
+            deviceColor: businessDetail.deviceColor,
+            ram: businessDetail.ram,
+            rom: businessDetail.rom,
+            modelNumber: businessDetail.modelNumber,
+            weightValue: businessDetail.weightValue,
+            weightUnit: businessDetail.weightUnit,
+            packSize: businessDetail.packSize,
+            barcode: businessDetail.barcode,
+            isOrganic: businessDetail.isOrganic,
+            shelfLifeDays: businessDetail.shelfLifeDays,
+            dosage: businessDetail.dosage,
+            activeIngredient: businessDetail.activeIngredient,
+            manufacturer: businessDetail.manufacturer,
+          ),
+        );
+      }
       await _initAllItemData();
-      return value;
+      return true;
     }catch(e){
       cusDebugPrint('Failed to create item: $e');
       return false;
     }
+  }
+
+  Future<bool> saveItemBusinessDetail(ItemBusinessDetailModel detail) async {
+    final ok = await DBHelper.saveItemBusinessDetail(detail);
+    if (ok) {
+      if (detail.isEmpty) {
+        _businessDetailMap.remove(detail.itemId);
+      } else {
+        _businessDetailMap[detail.itemId] = detail;
+      }
+    }
+    return ok;
   }
 
   
@@ -526,9 +609,39 @@ class ItemCubit extends Cubit<ItemState> {
     required double newOriginalPrice,
     required double newProfitPrice,
     required double newTaxPercentage,
+    required bool needStock,
+    ItemBusinessDetailModel? businessDetail,
   })async{
     List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(itemModel.id);
-    bool value = await DBHelper.editItem(userModel: userModel, itemModel: itemModel, uniqueItemList: uniqueItemList, newName: newName, newOriginalPrice: newOriginalPrice, newProfitPrice: newProfitPrice, newTaxPercentage: newTaxPercentage);
+    bool value = await DBHelper.editItem(userModel: userModel, itemModel: itemModel, uniqueItemList: uniqueItemList, newName: newName, newOriginalPrice: newOriginalPrice, newProfitPrice: newProfitPrice, newTaxPercentage: newTaxPercentage, needStock: needStock);
+    if (value && businessDetail != null) {
+      await saveItemBusinessDetail(
+        ItemBusinessDetailModel(
+          id: businessDetail.id,
+          itemId: itemModel.id,
+          clothingColor: businessDetail.clothingColor,
+          measurementLength: businessDetail.measurementLength,
+          measurementWidth: businessDetail.measurementWidth,
+          measurementUnit: businessDetail.measurementUnit,
+          pricePerMeasurementUnit: businessDetail.pricePerMeasurementUnit,
+          brand: businessDetail.brand,
+          deviceCategory: businessDetail.deviceCategory,
+          deviceColor: businessDetail.deviceColor,
+          ram: businessDetail.ram,
+          rom: businessDetail.rom,
+          modelNumber: businessDetail.modelNumber,
+          weightValue: businessDetail.weightValue,
+          weightUnit: businessDetail.weightUnit,
+          packSize: businessDetail.packSize,
+          barcode: businessDetail.barcode,
+          isOrganic: businessDetail.isOrganic,
+          shelfLifeDays: businessDetail.shelfLifeDays,
+          dosage: businessDetail.dosage,
+          activeIngredient: businessDetail.activeIngredient,
+          manufacturer: businessDetail.manufacturer,
+        ),
+      );
+    }
     await _initAllItemData();
     return value;
   }

@@ -12,10 +12,12 @@ import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import 'package:pos_mobile/widgets/dividers/cus_divider_widget.dart';
 import 'package:pos_mobile/widgets/stockout_detail_box_widget.dart';
 
+import '../../../blocs/shop_info_bloc/shop_info_cubit.dart';
 import '../../../constants/enums.dart';
 import '../../../controller/ui_controller.dart';
 import '../../../models/item_model_folder/item_model.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
+import '../../../utils/checkout_helpers.dart';
 import '../../../utils/formula.dart';
 import '../../../widgets/cusTxt_widget.dart';
 
@@ -141,28 +143,11 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
 
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+    final BusinessType businessType =
+        context.select((ShopInfoCubit cubit) => cubit.state.businessType);
     final List<PromotionModel> promotionList = context.select((PromotionCubit cubit) => cubit.state.activePromotionList);
 
     //
-    // double getAllPrice(){
-    //   double price = 0;
-    //
-    //   for(int i = 0; i < widget.selectedUniqueItemList.length; i++){
-    //     final PromotionModel? promotionData = context.read<PromotionCubit>().getSinglePromotionFromItemId(widget.selectedUniqueItemList[i].itemId);
-    //     price = price + CalculationFormula.getItemAfterPromotionPrice(
-    //
-    //       sellPrice: CalculationFormula.getItemSellPrice(
-    //         originalPrice: widget.selectedUniqueItemList[i].originalPrice,
-    //         profitPrice: widget.selectedUniqueItemList[i].profitPrice,
-    //         taxPercentage: widget.selectedUniqueItemList[i].taxPercentage,
-    //       ),
-    //       promotionPrice: promotionData == null ? 0 : promotionData.promotionPrice,
-    //       promotionPercentage: promotionData == null ? 0 : promotionData.promotionPercentage,
-    //     );
-    //   }
-    //   return price;
-    // }
-
     Widget cusTxtFieldStockOut({
       required TextEditingController txtController,
       required String hintTxt,
@@ -209,34 +194,11 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     );
 
     double getAllPrice(){
-      double price = 0;
-      final itemCubit = context.read<ItemCubit>();
-      final activePromotionList = context.read<PromotionCubit>().state.activePromotionList;
-      final itemPromotionList = context.read<PromotionCubit>().state.activeItemPromotionList;
-      
-      final dataList = itemCubit.getItemListWithCountFromUniqueItemListWithPromotion(
+      return CheckoutHelpers.cartSubtotal(
         uniqueItemList: widget.selectedUniqueItemList,
-        itemModelList: widget.selectedItemModelList,
-        activePromotionList: activePromotionList,
-        itemPromotionList: itemPromotionList,
+        activePromotionList: context.read<PromotionCubit>().state.activePromotionList,
+        itemPromotionList: context.read<PromotionCubit>().state.activeItemPromotionList,
       );
-
-      for (var item in dataList) {
-        double rawSellPrice = CalculationFormula.getItemSellPrice(
-          originalPrice: item.itemModel.originalPrice,
-          profitPrice: item.itemModel.profitPrice,
-          taxPercentage: item.itemModel.taxPercentage ?? 0,
-        );
-        
-        double unitPriceAfterPromo = CalculationFormula.getItemAfterPromotionPrice(
-          sellPrice: rawSellPrice,
-          promotionPercentage: item.promotion?.promotionPercentage,
-          promotionPrice: item.promotion?.promotionPrice,
-        );
-        
-        price += unitPriceAfterPromo * item.count;
-      }
-      return price;
     }
 
     Widget dataRow(Widget titleWidget, Widget txtWidget){
@@ -294,27 +256,42 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                   }
                 }
                 PromotionModel? promotion = context.read<PromotionCubit>().getSinglePromotionFromItemId(e.value.id);
-                double sellPrice = CalculationFormula.getItemSellPrice(
-                  originalPrice: e.value.originalPrice,
-                  profitPrice: e.value.profitPrice,
-                  taxPercentage: e.value.taxPercentage ?? 0,
+                final itemDetail = context.read<ItemCubit>().getBusinessDetail(e.value.id);
+                final agg = CheckoutHelpers.aggregateForItem(
+                  itemId: e.value.id,
+                  cartUnits: widget.selectedUniqueItemList,
+                  promotion: promotion,
                 );
-                double finalSellPrice = sellPrice;
-                if(promotion != null){
-                  finalSellPrice = CalculationFormula.getItemAfterPromotionPrice(
-                      sellPrice: sellPrice,
-                      promotionPercentage: promotion.promotionPercentage,
-                      promotionPrice: promotion.promotionPrice,
-                  );
+
+                final unitLines = <String>[];
+                if (businessType == BusinessType.clothing ||
+                    businessType == BusinessType.basicPharmacy ||
+                    businessType == BusinessType.grocery) {
+                  for (final unit in dataList) {
+                    final parts = CheckoutHelpers.unitDetailLines(
+                      businessType: businessType,
+                      unit: unit,
+                      itemDetail: itemDetail,
+                    );
+                    if (parts.isNotEmpty) {
+                      unitLines.add(
+                        '${parts.join(' · ')} — ${CheckoutHelpers.uniqueItemPriceAfterPromotion(unit, promotion).toStringAsFixed(0)} MMK',
+                      );
+                    }
+                  }
                 }
 
                 return StockOutDetailBoxWidget(
                   itemName: e.value.name,
                   count: dataList.length.toString(),
-                  sellPrice: sellPrice.toString(),
-                  finalSellPrice: promotion == null ? " -- " : finalSellPrice.toString(),
-                  totalPrice: (finalSellPrice *  dataList.length).toString(),
+                  sellPrice: '${agg.avgSell.toStringAsFixed(0)} MMK avg',
+                  finalSellPrice: promotion == null
+                      ? ' -- '
+                      : '${agg.avgFinal.toStringAsFixed(0)} MMK avg',
+                  totalPrice: agg.lineTotal.toStringAsFixed(0),
                   index: (e.key + 1).toString(),
+                  subtitle: itemDetail?.summaryLines(businessType).join(' · '),
+                  unitLines: unitLines,
                 );
               }),
 

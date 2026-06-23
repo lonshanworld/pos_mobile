@@ -3,6 +3,7 @@ import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../constants/txtconstants.dart';
+import '../../../models/stock_in_unit_spec.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
 
 
@@ -80,7 +81,7 @@ class UniqueItemDbStorage{
     );
   }
 
-  static Future<List<int>>insertNewDataList({
+  static Future<List<int>> insertNewDataList({
     required Database db,
     required int itemLength,
     required UserModel userModel,
@@ -91,9 +92,16 @@ class UniqueItemDbStorage{
     required DateTime? itemExpireDate,
     required String? getItemFromWhere,
     required String? code,
-  })async{
-    final Batch batch =db.batch();
-    for(int i = 0 ; i < itemLength; i++ ){
+    List<StockInUnitSpec>? unitSpecs,
+  }) async {
+    final int count = unitSpecs?.isNotEmpty == true ? unitSpecs!.length : itemLength;
+    final Batch batch = db.batch();
+    for (int i = 0; i < count; i++) {
+      final StockInUnitSpec? spec =
+          unitSpecs != null && i < unitSpecs.length ? unitSpecs[i] : null;
+      final double originalPrice = spec?.originalPrice ?? itemModel.originalPrice;
+      final double profitPrice = spec?.profitPrice ?? itemModel.profitPrice;
+
       batch.rawInsert(
         """
           INSERT INTO ${TxtConstants.uniqueItemTableName}
@@ -108,9 +116,12 @@ class UniqueItemDbStorage{
             profitPrice,
             taxPercentage,
             code,
-            getItemFromWhere
+            getItemFromWhere,
+            instanceLength,
+            instanceWidth,
+            instanceBatchNumber
           )
-          VALUES(?,?,?,?,?,?,?,?,?,?,?)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         [
           itemModel.id,
@@ -119,15 +130,19 @@ class UniqueItemDbStorage{
           userModel.id,
           itemManufactureDate?.toString(),
           itemExpireDate?.toString(),
-          itemModel.originalPrice,
-          itemModel.profitPrice,
+          originalPrice,
+          profitPrice,
           itemModel.taxPercentage,
           code,
-          getItemFromWhere
+          getItemFromWhere,
+          spec?.instanceLength,
+          spec?.instanceWidth,
+          spec?.instanceBatchNumber,
         ],
       );
     }
-    final List<int>results = (await batch.commit()).map((e) => e is int ? e : null).cast<int>().toList();
+    final List<int> results =
+        (await batch.commit()).map((e) => e is int ? e : null).cast<int>().toList();
     return results;
   }
 
@@ -140,9 +155,110 @@ class UniqueItemDbStorage{
       required int stockOutId,
     }
   )async{
-    final Batch batch =db.batch();
+    final List<int> results = [];
     for(int a = 0; a < uniqueItemList.length; a++){
-      batch.rawUpdate(
+      final UniqueItemModel cartUnit = uniqueItemList[a];
+      final List<Map<String, dynamic>> dbRows = await db.query(
+        TxtConstants.uniqueItemTableName,
+        where: 'id = ?',
+        whereArgs: [cartUnit.id],
+      );
+      if (dbRows.isEmpty) {
+        results.add(-1);
+        continue;
+      }
+      final Map<String, dynamic> dbRow = dbRows.first;
+      final double? dbLength = (dbRow['instanceLength'] as num?)?.toDouble();
+      final double? cartLength = cartUnit.instanceLength;
+
+      if (dbLength != null && cartLength != null && cartLength < dbLength) {
+        // Clothing measurement split:
+        final double remainingLength = dbLength - cartLength;
+        final double originalDbOriginalPrice = (dbRow['originalPrice'] as num).toDouble();
+        final double originalDbProfitPrice = (dbRow['profitPrice'] as num).toDouble();
+
+        final double remainingOriginalPrice = originalDbOriginalPrice * (remainingLength / dbLength);
+        final double remainingProfitPrice = originalDbProfitPrice * (remainingLength / dbLength);
+
+        final double soldOriginalPrice = originalDbOriginalPrice - remainingOriginalPrice;
+        final double soldProfitPrice = originalDbProfitPrice - remainingProfitPrice;
+
+        // Update the original piece in place with the remaining length and scaled prices
+        final int updateCount = await db.rawUpdate(
+          """
+            UPDATE ${TxtConstants.uniqueItemTableName}
+            SET
+            instanceLength = ?,
+            originalPrice = ?,
+            profitPrice = ?,
+            lastUpdateTime = ?
+            WHERE id = ? AND activeStatus = 1
+          """,
+          [
+            remainingLength,
+            remainingOriginalPrice,
+            remainingProfitPrice,
+            dateTime.toString(),
+            cartUnit.id,
+          ],
+        );
+
+        // Insert a new inactive unique item record representing the sold portion
+        final int insertId = await db.rawInsert(
+          """
+            INSERT INTO ${TxtConstants.uniqueItemTableName}
+            (
+              itemId,
+              stockInId,
+              stockOutId,
+              createTime,
+              lastUpdateTime,
+              deleteTime,
+              itemManufactureDate,
+              itemExpireDate,
+              code,
+              originalPrice,
+              profitPrice,
+              taxPercentage,
+              createPersonId,
+              deletePersonId,
+              activeStatus,
+              getItemFromWhere,
+              moduleCount,
+              instanceLength,
+              instanceWidth,
+              instanceBatchNumber
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          """,
+          [
+            dbRow['itemId'],
+            dbRow['stockInId'],
+            stockOutId,
+            dbRow['createTime'],
+            dateTime.toString(),
+            dateTime.toString(),
+            dbRow['itemManufactureDate'],
+            dbRow['itemExpireDate'],
+            dbRow['code'],
+            soldOriginalPrice,
+            soldProfitPrice,
+            dbRow['taxPercentage'],
+            dbRow['createPersonId'],
+            userModel.id,
+            0,
+            dbRow['getItemFromWhere'],
+            dbRow['moduleCount'],
+            cartLength,
+            dbRow['instanceWidth'],
+            dbRow['instanceBatchNumber'],
+          ],
+        );
+
+        results.add(updateCount > 0 && insertId != -1 ? insertId : -1);
+      } else {
+        // Normal checkout: mark as sold
+        final int count = await db.rawUpdate(
           """
             UPDATE ${TxtConstants.uniqueItemTableName}
             SET 
@@ -157,11 +273,12 @@ class UniqueItemDbStorage{
             dateTime.toString(),
             userModel.id,
             0,
-            uniqueItemList[a].id
+            cartUnit.id,
           ]
-      );
+        );
+        results.add(count > 0 ? cartUnit.id : -1);
+      }
     }
-    final List<int>results = (await batch.commit()).map((e) => e is int ? e : null).cast<int>().toList();
     return results;
   }
 
@@ -247,31 +364,25 @@ class UniqueItemDbStorage{
     );
   }
 
-  static Future<int>reInStockUniqueItemList(
+  static Future<int>reInStockUniqueItem(
     Database db,
     {
-      required int stockOutId,
-      required double originalPrice,
-      required double profitPrice,
-      required double taxPercentage,
+      required int uniqueItemId,
       required DateTime dateTime,
-
     }
   )async{
     return db.rawUpdate(
         """
           UPDATE ${TxtConstants.uniqueItemTableName}
           SET 
-          originalPrice = ?,
-          profitPrice = ?,
-          taxPercentage = ?,
           lastUpdateTime = ?,
           activeStatus = ?,
           deleteTime = ?,
-          deletePersonId = ?
-          WHERE stockOutId = ? AND activeStatus = ?
+          deletePersonId = ?,
+          stockOutId = ?
+          WHERE id = ? AND activeStatus = ?
         """,
-        [originalPrice, profitPrice, taxPercentage, dateTime.toString(), 1, null, null,stockOutId, 0]);
+        [dateTime.toString(), 1, null, null, null, uniqueItemId, 0]);
   }
 
   static Future<int>deActivateSingleUniqueItem(

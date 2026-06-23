@@ -12,6 +12,7 @@ import "package:pos_mobile/features/cus_showmodelbottomsheet.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/item_model_folder/item_model.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/screens/transaction/stockIn/item/create_item_screen.dart";
 import "package:pos_mobile/screens/transaction/stockIn/type/create_type_screen.dart";
 import "package:pos_mobile/widgets/btns_folder/cusTxtIconBtn_widget.dart";
@@ -19,6 +20,7 @@ import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/cusSelectTypeBtn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/item_box_widget.dart";
 import "package:pos_mobile/widgets/itemBox/stockin_item_appbar_widget.dart";
+import "package:pos_mobile/models/item_model_folder/item_business_detail_model.dart";
 
 class TypeScreen extends StatefulWidget {
   final int? selectedGroupId;
@@ -40,12 +42,15 @@ class _TypeScreenState extends State<TypeScreen> {
   int selectedIndex = 0;
   final TextEditingController searchController = TextEditingController();
   String searchQuery = "";
+  String selectedColor = "All";
   late final Future<GroupModel?> _groupFuture;
+  late final Future<List<ItemBusinessDetailModel>> _detailsFuture;
 
   @override
   void initState() {
     super.initState();
     _groupFuture = _loadGroup();
+    _detailsFuture = DBHelper.getAllItemBusinessDetails();
   }
 
   Future<GroupModel?> _loadGroup() async {
@@ -79,6 +84,10 @@ class _TypeScreenState extends State<TypeScreen> {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     final CusShowSheet showSheet = CusShowSheet();
+    final businessType = UIController.instance.businessType;
+    final groupLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.group);
+    final typeLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.type);
+    final itemLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.item);
 
     void startSelectedAgain() {
       if (!mounted) return;
@@ -86,13 +95,14 @@ class _TypeScreenState extends State<TypeScreen> {
         selectedIndex = 0;
         searchController.clear();
         searchQuery = "";
+        selectedColor = "All";
       });
     }
 
     if (widget.selectedGroupId == null) {
       return Scaffold(
         body: NoSelectedIdErrorWidget(
-          txt: "This group has some error",
+          txt: "This ${groupLabel.toLowerCase()} has some error",
           func: widget.goBackFunc,
         ),
       );
@@ -111,33 +121,59 @@ class _TypeScreenState extends State<TypeScreen> {
         if (groupModel == null) {
           return Scaffold(
             body: NoSelectedIdErrorWidget(
-              txt: "This group has some error",
+              txt: "This ${groupLabel.toLowerCase()} has some error",
               func: widget.goBackFunc,
             ),
           );
         }
 
-        return BlocBuilder<ItemCubit, ItemState>(
-          builder: (context, state) {
-            final itemCubit = context.read<ItemCubit>();
-            final List<TypeModel> typeList = itemCubit.getSelectedTypeList(widget.selectedGroupId!);
-            final TypeModel? typeModel = typeList.isEmpty
-                ? null
-                : itemCubit.state.activeTypeList.firstWhereOrNull((element) => element.id == typeList[selectedIndex].id);
-            final List<ItemModel> rawItemList = typeList.isEmpty
-                ? []
-                : itemCubit.getSelectedItemList(typeList[selectedIndex].id);
+        return FutureBuilder<List<ItemBusinessDetailModel>>(
+          future: _detailsFuture,
+          builder: (context, detailsSnapshot) {
+            final List<ItemBusinessDetailModel> detailsList = detailsSnapshot.data ?? [];
 
-            final List<ItemModel> itemList = searchQuery.isEmpty
-                ? rawItemList
-                : rawItemList
-                    .where((item) => item.name.toLowerCase().contains(searchQuery.toLowerCase()))
-                    .toList();
+            return BlocBuilder<ItemCubit, ItemState>(
+              builder: (context, state) {
+                final itemCubit = context.read<ItemCubit>();
+                final List<TypeModel> typeList = itemCubit.getSelectedTypeList(widget.selectedGroupId!);
+                final TypeModel? typeModel = typeList.isEmpty
+                    ? null
+                    : itemCubit.state.activeTypeList.firstWhereOrNull((element) => element.id == typeList[selectedIndex].id);
+                final List<ItemModel> rawItemList = typeList.isEmpty
+                    ? []
+                    : itemCubit.getSelectedItemList(typeList[selectedIndex].id);
 
-            final OutlineInputBorder outlineInputBorder = OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.grey, width: 1),
-              borderRadius: BorderRadius.circular(50),
-            );
+                // Extract colors for the dropdown
+                final Set<String> colorSet = {"All"};
+                final isColorSupported = businessType == BusinessType.clothing || businessType == BusinessType.phoneLaptopTablets;
+                if (isColorSupported) {
+                  for (final item in rawItemList) {
+                    final detail = detailsList.firstWhereOrNull((d) => d.itemId == item.id);
+                    if (detail != null) {
+                      final c = businessType == BusinessType.clothing ? detail.clothingColor : detail.deviceColor;
+                      if (c != null && c.isNotEmpty) {
+                        colorSet.add(c);
+                      }
+                    }
+                  }
+                }
+                final availableColors = colorSet.toList();
+
+                final List<ItemModel> itemList = rawItemList.where((item) {
+                  bool matchesSearch = searchQuery.isEmpty || item.name.toLowerCase().contains(searchQuery.toLowerCase());
+                  bool matchesColor = true;
+                  if (selectedColor != "All" && isColorSupported) {
+                    final detail = detailsList.firstWhereOrNull((d) => d.itemId == item.id);
+                    final c = businessType == BusinessType.clothing ? detail?.clothingColor : detail?.deviceColor;
+                    matchesColor = c == selectedColor;
+                  }
+                  return matchesSearch && matchesColor;
+                }).toList();
+
+                final OutlineInputBorder outlineInputBorder = OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.grey, width: 1),
+                  borderRadius: BorderRadius.circular(50),
+                );
 
             return Column(
               children: [
@@ -150,25 +186,57 @@ class _TypeScreenState extends State<TypeScreen> {
                     horizontal: UIConstants.bigSpace,
                     vertical: UIConstants.mediumSpace,
                   ),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: (val) {
-                      setState(() {
-                        searchQuery = val.trim();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      labelText: "Search Inventory...",
-                      labelStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.grey),
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      border: outlineInputBorder,
-                      focusedBorder: outlineInputBorder,
-                      enabledBorder: outlineInputBorder,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: UIConstants.bigSpace,
-                        vertical: UIConstants.smallSpace,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (val) {
+                            setState(() {
+                              searchQuery = val.trim();
+                            });
+                          },
+                          decoration: InputDecoration(
+                            labelText: "Search Inventory...",
+                            labelStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.grey),
+                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            border: outlineInputBorder,
+                            focusedBorder: outlineInputBorder,
+                            enabledBorder: outlineInputBorder,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: UIConstants.bigSpace,
+                              vertical: UIConstants.smallSpace,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      if (isColorSupported && availableColors.length > 1) ...[
+                        const SizedBox(width: UIConstants.mediumSpace),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: availableColors.contains(selectedColor) ? selectedColor : "All",
+                              items: availableColors.map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                              onChanged: (newValue) {
+                                setState(() {
+                                  selectedColor = newValue ?? "All";
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 Expanded(
@@ -201,7 +269,7 @@ class _TypeScreenState extends State<TypeScreen> {
                                     vertical: UIConstants.smallSpace,
                                   ),
                                   child: CusTxtIconElevatedBtn(
-                                    txt: "Add type",
+                                    txt: "Add $typeLabel",
                                     verticalpadding: 5,
                                     horizontalpadding: UIConstants.mediumSpace,
                                     bdrRadius: UIConstants.mediumRadius,
@@ -284,7 +352,7 @@ class _TypeScreenState extends State<TypeScreen> {
                             ),
                             if (typeModel != null && widget.isStorage)
                               CreateItemBtnWidget(
-                                txt: "Create Item",
+                                txt: "Create $itemLabel",
                                 widget: CreateItemScreen(typeModel: typeModel),
                               ),
                           ],
@@ -299,5 +367,7 @@ class _TypeScreenState extends State<TypeScreen> {
         );
       },
     );
+  },
+);
   }
 }

@@ -22,6 +22,7 @@ class ItemModel extends ItemInfoSkeletalModel{
   final String? code;
   final Color? colorCode;
   final double? taxPercentage;
+  final bool needStock;
 
   ItemModel({
     required super.id,
@@ -45,6 +46,7 @@ class ItemModel extends ItemInfoSkeletalModel{
     required this.imageId,
     required this.code,
     required this.taxPercentage,
+    this.needStock = true,
   });
 
   @override
@@ -70,6 +72,7 @@ class ItemModel extends ItemInfoSkeletalModel{
     // createPersonId = jsonData["createPersonId"],
     imageId = jsonData["imageId"],
     taxPercentage = jsonData["taxPercentage"],
+    needStock = jsonData["need_stock"] == 1 ? true : false,
     super.fromJson();
 
 
@@ -87,6 +90,7 @@ class ItemModel extends ItemInfoSkeletalModel{
     jsonData["code"] = code;
     jsonData["imageId"] = imageId;
     jsonData["taxPercentage"] = taxPercentage;
+    jsonData["need_stock"] = needStock ? 1 : 0;
     return jsonData;
   }
 }

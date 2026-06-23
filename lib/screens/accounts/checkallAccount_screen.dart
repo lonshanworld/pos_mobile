@@ -57,7 +57,7 @@ class CheckAllAccountScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<UserModel>(
-                      value: selectedUser,
+                      initialValue: selectedUser,
                       isExpanded: true,
                       items: eligibleUsers
                           .map(

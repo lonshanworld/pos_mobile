@@ -74,7 +74,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
     return Card(
       elevation: 4,
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
+      shape: const RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,6 +124,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
           Container(
             color: uiController.getpureDirectClr(themeModeType),
             child: ListView.separated(
+              padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.historyModel.stockOutList.length,

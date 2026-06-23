@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
+import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
@@ -12,8 +14,11 @@ import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/type_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
+import 'package:pos_mobile/models/item_model_folder/item_business_detail_model.dart';
 import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
+import 'package:pos_mobile/utils/checkout_helpers.dart';
 import 'package:pos_mobile/utils/formula.dart';
+import 'package:pos_mobile/widgets/checkout_line_detail.dart';
 
 class StockOutItemBoxWidget extends StatefulWidget {
   final ItemModel itemModel;
@@ -77,12 +82,342 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
     }
   }
 
+  void _showPartialMeasurementDialog({
+    required BuildContext context,
+    required List<UniqueItemModel> availableUnits,
+    required List<UniqueItemModel> cartUnits,
+    required ItemBusinessDetailModel? itemDetail,
+  }) {
+    final pool = availableUnits.where((u) => !CheckoutHelpers.isExpired(u)).toList();
+    if (pool.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No sellable pieces available.')),
+      );
+      return;
+    }
+
+    final accent = UIController.instance.accentColor();
+    final double rate = itemDetail?.pricePerMeasurementUnit ?? 0.0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        UniqueItemModel? selectedPiece;
+        if (pool.length == 1) {
+          selectedPiece = pool.first;
+        }
+
+        final formKey = GlobalKey<FormState>();
+        final lengthController = TextEditingController();
+        double calculatedPrice = 0.0;
+        double calculatedArea = 0.0;
+
+        if (selectedPiece != null) {
+          final existing = cartUnits.firstWhereOrNull((u) => u.id == selectedPiece!.id);
+          if (existing != null) {
+            lengthController.text = existing.instanceLength?.toString() ?? '';
+          }
+        }
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            void updateCalculation(String val) {
+              final len = double.tryParse(val) ?? 0.0;
+              final width = selectedPiece?.instanceWidth ?? 1.0;
+              setStateDialog(() {
+                calculatedArea = len * width;
+                calculatedPrice = calculatedArea * rate;
+              });
+            }
+
+            if (lengthController.text.isNotEmpty && calculatedPrice == 0.0) {
+              updateCalculation(lengthController.text);
+            }
+
+            return AlertDialog(
+              backgroundColor: Theme.of(context).cardColor,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Per Unit Measurement Purchase',
+                style: TextStyle(color: accent, fontWeight: FontWeight.bold),
+              ),
+              content: Form(
+                key: formKey,
+                child: SizedBox(
+                  width: 400,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (selectedPiece == null) ...[
+                        const Text(
+                          'Select a piece to sell from:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 180),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: pool.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final piece = pool[index];
+                              final existing = cartUnits.firstWhereOrNull((u) => u.id == piece.id);
+                              final bool isInCart = existing != null;
+                              final bool isSelected = selectedPiece?.id == piece.id;
+
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  'Piece #${piece.id}: ${piece.instanceLength} × ${piece.instanceWidth} ${itemDetail?.measurementUnit ?? 'ft'}',
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Price: ${CheckoutHelpers.uniqueItemSellPrice(piece).toInt()} MMK${isInCart ? ' (In Cart: ${existing.instanceLength} ${itemDetail?.measurementUnit ?? 'ft'})' : ''}',
+                                ),
+                                trailing: isSelected
+                                    ? Icon(Icons.check_circle, color: accent)
+                                    : const Icon(Icons.circle_outlined),
+                                onTap: () {
+                                  setStateDialog(() {
+                                    selectedPiece = piece;
+                                    if (isInCart) {
+                                      lengthController.text = existing.instanceLength?.toString() ?? '';
+                                    } else {
+                                      lengthController.clear();
+                                    }
+                                    calculatedPrice = 0.0;
+                                    calculatedArea = 0.0;
+                                  });
+                                  if (lengthController.text.isNotEmpty) {
+                                    updateCalculation(lengthController.text);
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Selected Piece #${selectedPiece!.id}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            if (pool.length > 1)
+                              TextButton(
+                                onPressed: () {
+                                  setStateDialog(() {
+                                    selectedPiece = null;
+                                    lengthController.clear();
+                                    calculatedPrice = 0.0;
+                                    calculatedArea = 0.0;
+                                  });
+                                },
+                                child: const Text('Change Piece'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: accent.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: accent.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Available Size: ${selectedPiece!.instanceLength} × ${selectedPiece!.instanceWidth} ${itemDetail?.measurementUnit ?? 'ft'}'),
+                              const SizedBox(height: 4),
+                              Text('Price Rate: ${rate.toInt()} MMK per square ${itemDetail?.measurementUnit ?? 'unit'}'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: lengthController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Length to sell (${itemDetail?.measurementUnit ?? 'ft'})',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: accent, width: 2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onChanged: updateCalculation,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Please enter length';
+                            }
+                            final len = double.tryParse(val);
+                            if (len == null || len <= 0) {
+                              return 'Enter a valid length > 0';
+                            }
+                            if (len > (selectedPiece!.instanceLength ?? 0.0)) {
+                              return 'Cannot exceed available length (${selectedPiece!.instanceLength})';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Calculated Area:', style: TextStyle(color: Colors.black54)),
+                                  Text(
+                                    '${calculatedArea.toStringAsFixed(2)} sq ${itemDetail?.measurementUnit ?? 'unit'}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Total Price:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                  Text(
+                                    '${calculatedPrice.toStringAsFixed(0)} MMK',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                if (selectedPiece != null)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      if (formKey.currentState!.validate()) {
+                        final inputLength = double.parse(lengthController.text);
+                        final double originalLength = selectedPiece!.instanceLength ?? 1.0;
+
+                        final double cloneOriginalPrice = selectedPiece!.originalPrice * (inputLength / originalLength);
+                        final double cloneProfitPrice = selectedPiece!.profitPrice * (inputLength / originalLength);
+
+                        final clone = UniqueItemModel(
+                          id: selectedPiece!.id,
+                          itemId: selectedPiece!.itemId,
+                          stockInId: selectedPiece!.stockInId,
+                          stockOutId: selectedPiece!.stockOutId,
+                          createTime: selectedPiece!.createTime,
+                          deleteTime: selectedPiece!.deleteTime,
+                          itemExpireDate: selectedPiece!.itemExpireDate,
+                          itemManufactureDate: selectedPiece!.itemManufactureDate,
+                          code: selectedPiece!.code,
+                          createPersonId: selectedPiece!.createPersonId,
+                          deletePersonId: selectedPiece!.deletePersonId,
+                          getItemFromWhere: selectedPiece!.getItemFromWhere,
+                          lastUpdateTime: selectedPiece!.lastUpdateTime,
+                          activeStatus: selectedPiece!.activeStatus,
+                          originalPrice: cloneOriginalPrice,
+                          profitPrice: cloneProfitPrice,
+                          taxPercentage: selectedPiece!.taxPercentage,
+                          moduleCount: selectedPiece!.moduleCount,
+                          instanceLength: inputLength,
+                          instanceWidth: selectedPiece!.instanceWidth,
+                          instanceBatchNumber: selectedPiece!.instanceBatchNumber,
+                        );
+
+                        widget.selectedUniqueItemList.removeWhere((item) => item.id == selectedPiece!.id);
+                        widget.addFunc(clone);
+
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text('Confirm'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final BusinessType businessType =
+        context.watch<ShopInfoCubit>().state.businessType;
     final PromotionModel? promotion = context.read<PromotionCubit>().getSinglePromotionFromItemId(widget.itemModel.id);
     final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemList(widget.itemModel.id);
+    final itemDetail = context.read<ItemCubit>().getBusinessDetail(widget.itemModel.id);
+    final cartUnitsForItem = widget.selectedUniqueItemList
+        .where((u) => u.itemId == widget.itemModel.id)
+        .toList();
+    final detailByItemId = {widget.itemModel.id: itemDetail};
+
+    String priceLabel() {
+      final nextUnit = CheckoutHelpers.pickNextUnit(
+        availableUnits: uniqueItemList,
+        cartUnits: widget.selectedUniqueItemList,
+        businessType: businessType,
+      );
+      if (nextUnit != null) {
+        return '${CheckoutHelpers.uniqueItemSellPrice(nextUnit).toInt()} MMK';
+      }
+
+      if (cartUnitsForItem.isNotEmpty) {
+        final prices =
+            cartUnitsForItem.map(CheckoutHelpers.uniqueItemSellPrice).toSet();
+        if (prices.length == 1) {
+          return '${prices.first.toInt()} MMK';
+        }
+        final minP = prices.reduce((a, b) => a < b ? a : b);
+        final maxP = prices.reduce((a, b) => a > b ? a : b);
+        return '${minP.toInt()}–${maxP.toInt()} MMK';
+      }
+
+      return '${CalculationFormula.getItemSellPrice(
+        originalPrice: widget.itemModel.originalPrice,
+        profitPrice: widget.itemModel.profitPrice,
+        taxPercentage: widget.itemModel.taxPercentage ?? 0,
+      ).toInt()} MMK';
+    }
+
+    int sellableCount() {
+      final inCart = widget.selectedUniqueItemList.map((e) => e.id).toSet();
+      return uniqueItemList
+          .where((u) => !inCart.contains(u.id) && !CheckoutHelpers.isExpired(u))
+          .length;
+    }
 
     return FutureBuilder<_StockOutItemParents?>(
       future: _parentsFuture,
@@ -124,228 +459,286 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
             final int titleLines = desktop ? 2 : 1;
 
             final int moreItem = widget.startIndex;
-            final int availableStock = uniqueItemList.length - moreItem;
-            final bool outOfStock = availableStock <= 0;
+            final int availableStock = sellableCount();
+            final bool outOfStock = widget.itemModel.needStock ? availableStock <= 0 : false;
+            final UniqueItemModel? nextUnit = widget.itemModel.needStock
+                ? CheckoutHelpers.pickNextUnit(
+                    availableUnits: uniqueItemList,
+                    cartUnits: widget.selectedUniqueItemList,
+                    businessType: businessType,
+                  )
+                : UniqueItemModel(
+                    id: DateTime.now().microsecondsSinceEpoch * -1,
+                    itemId: widget.itemModel.id,
+                    stockInId: 0,
+                    stockOutId: null,
+                    createTime: DateTime.now(),
+                    deleteTime: null,
+                    itemExpireDate: null,
+                    itemManufactureDate: null,
+                    code: widget.itemModel.code ?? '',
+                    createPersonId: 0,
+                    deletePersonId: null,
+                    getItemFromWhere: null,
+                    lastUpdateTime: null,
+                    activeStatus: true,
+                    originalPrice: widget.itemModel.originalPrice,
+                    profitPrice: widget.itemModel.profitPrice,
+                    taxPercentage: widget.itemModel.taxPercentage ?? 0,
+                    moduleCount: null,
+                  );
 
-            return Card(
-              elevation: 4,
-              shadowColor: Colors.black12,
-              shape: const RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
-              clipBehavior: Clip.antiAlias,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: uiController.getpureDirectClr(themeModeType),
-                  border: moreItem > 0 ? Border.all(color: Colors.amber, width: 2) : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: desktop ? 3 : 3,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Container(
-                            color: Colors.grey.withValues(alpha: 0.05),
-                            child: Center(
-                              child: Icon(
-                                Icons.inventory_2,
-                                size: iconSize,
-                                color: Colors.grey.withValues(alpha: 0.25),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            left: 8,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: compact ? 6 : tablet ? 8 : 10,
-                                vertical: compact ? 2 : 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: uiController.getpureOppositeClr(themeModeType),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                parents.categoryModel.name,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  color: uiController.getpureDirectClr(themeModeType),
-                                  fontSize: badgeFontSize,
-                                  fontWeight: FontWeight.bold,
+            return GestureDetector(
+              onLongPress: () {
+                if (businessType == BusinessType.clothing && !outOfStock) {
+                  _showPartialMeasurementDialog(
+                    context: context,
+                    availableUnits: uniqueItemList,
+                    cartUnits: widget.selectedUniqueItemList,
+                    itemDetail: itemDetail,
+                  );
+                }
+              },
+              child: Card(
+                elevation: 4,
+                shadowColor: Colors.black12,
+                shape: const RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
+                clipBehavior: Clip.antiAlias,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: uiController.getpureDirectClr(themeModeType),
+                    border: moreItem > 0 ? Border.all(color: Colors.amber, width: 2) : null,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        height: iconSize + 24,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Container(
+                              color: Colors.grey.withValues(alpha: 0.05),
+                              child: Center(
+                                child: Icon(
+                                  Icons.inventory_2,
+                                  size: iconSize,
+                                  color: Colors.grey.withValues(alpha: 0.25),
                                 ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-
-                              padding: EdgeInsets.symmetric(
-                                horizontal: compact ? 6 : tablet ? 8 : 10,
-                                vertical: compact ? 2 : 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: outOfStock ? UIConstants.redVioletClr : UIConstants.goldClr,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                outOfStock ? "Out of Stock" : "$availableStock left",
-                                style: TextStyle(
-                                  color: outOfStock ? Colors.white : Colors.black,
-                                  fontSize: titleFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (promotion != null)
                             Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
+                              top: 8,
+                              left: 8,
                               child: Container(
-                                color: Colors.amber.withValues(alpha: 0.9),
-                                padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 6 : tablet ? 8 : 10,
+                                  vertical: compact ? 2 : 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: uiController.getpureOppositeClr(themeModeType),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 child: Text(
-                                  "PROMO",
-                                  textAlign: TextAlign.center,
+                                  parents.categoryModel.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                   style: TextStyle(
-                                    color: Colors.black,
+                                    color: uiController.getpureDirectClr(themeModeType),
                                     fontSize: badgeFontSize,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: desktop ? 7 : 6,
-                      child: Padding(
-                        padding: cardPadding,
-                        child: Column(
-                          mainAxisAlignment: desktop ? MainAxisAlignment.spaceEvenly : MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.itemModel.name,
-                              maxLines: titleLines,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                                    fontWeight: FontWeight.bold,
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 6 : tablet ? 8 : 10,
+                                  vertical: compact ? 2 : 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: outOfStock ? UIConstants.redVioletClr : UIConstants.goldClr,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  widget.itemModel.needStock
+                                      ? (outOfStock ? "Out of Stock" : "$availableStock left")
+                                      : "∞",
+                                  style: TextStyle(
+                                    color: outOfStock ? Colors.white : Colors.black,
                                     fontSize: titleFontSize,
-                                    height: 1.1,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                            ),
-                            Text(
-                              "${parents.groupModel.name} > ${parents.typeModel.name}",
-                              maxLines: desktop ? 2 : 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                    color: Colors.grey[600],
-                                    fontSize: subtitleFontSize,
-                                  ),
-                            ),
-                            if (desktop)
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.inventory_2_outlined,
-                                    size: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      outOfStock ? "No stock left" : "$availableStock units ready to add",
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                            color: Colors.grey[600],
-                                            fontSize: subtitleFontSize,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            Text(
-                              "${CalculationFormula.getItemSellPrice(
-                                originalPrice: widget.itemModel.originalPrice,
-                                profitPrice: widget.itemModel.profitPrice,
-                                taxPercentage: widget.itemModel.taxPercentage ?? 0,
-                              ).toInt()} MMK",
-                              style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: priceFontSize,
-                                  ),
-                            ),
-                            Container(
-                              height: controlHeight,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                                borderRadius: BorderRadius.circular(controlHeight / 2),
-                                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(
-                                      minWidth: compact ? 28 : tablet ? 36 : 40,
-                                      minHeight: compact ? 28 : tablet ? 36 : 40,
-                                    ),
-                                    iconSize: compact ? 18 : tablet ? 20 : 22,
-                                    icon: Icon(
-                                      Icons.remove,
-                                      color: moreItem > 0 ? uiController.getpureOppositeClr(themeModeType) : Colors.grey,
-                                    ),
-                                    onPressed: () {
-                                      if (moreItem > 0) {
-                                        widget.reduceFunc(widget.itemModel);
-                                      }
-                                    },
-                                  ),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      moreItem.toString(),
-                                      style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: compact ? 13 : tablet ? 15 : 16,
-                                          ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(
-                                      minWidth: compact ? 28 : tablet ? 36 : 40,
-                                      minHeight: compact ? 28 : tablet ? 36 : 40,
-                                    ),
-                                    iconSize: compact ? 18 : tablet ? 20 : 22,
-                                    icon: Icon(
-                                      Icons.add,
-                                      color: outOfStock ? Colors.grey : uiController.getpureOppositeClr(themeModeType),
-                                    ),
-                                    onPressed: () {
-                                      if (!outOfStock) {
-                                        widget.addFunc(uniqueItemList[moreItem]);
-                                      }
-                                    },
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
+                            if (promotion != null)
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  color: Colors.amber.withValues(alpha: 0.9),
+                                  padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
+                                  child: Text(
+                                    "PROMO",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: badgeFontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: Padding(
+                          padding: cardPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.itemModel.name,
+                                        maxLines: titleLines,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: titleFontSize,
+                                              height: 1.1,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "${parents.groupModel.name} > ${parents.typeModel.name}",
+                                        maxLines: desktop ? 2 : 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                              color: Colors.grey[600],
+                                              fontSize: subtitleFontSize,
+                                            ),
+                                      ),
+                                      CheckoutItemDetailChips(
+                                        businessType: businessType,
+                                        detail: itemDetail,
+                                      ),
+                                      if (cartUnitsForItem.isNotEmpty)
+                                        CheckoutCartUnitSummary(
+                                          businessType: businessType,
+                                          cartUnitsForItem: cartUnitsForItem,
+                                          detailByItemId: detailByItemId,
+                                        ),
+                                      if (desktop) ...[
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.inventory_2_outlined,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                outOfStock ? "No stock left" : "$availableStock units ready to add",
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                                      color: Colors.grey[600],
+                                                      fontSize: subtitleFontSize,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                priceLabel(),
+                                style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: priceFontSize,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                height: controlHeight,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                  borderRadius: BorderRadius.circular(controlHeight / 2),
+                                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth: compact ? 28 : tablet ? 36 : 40,
+                                        minHeight: compact ? 28 : tablet ? 36 : 40,
+                                      ),
+                                      iconSize: compact ? 18 : tablet ? 20 : 22,
+                                      icon: Icon(
+                                        Icons.remove,
+                                        color: moreItem > 0 ? uiController.getpureOppositeClr(themeModeType) : Colors.grey,
+                                      ),
+                                      onPressed: () {
+                                        if (moreItem > 0) {
+                                          widget.reduceFunc(widget.itemModel);
+                                        }
+                                      },
+                                    ),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        moreItem.toString(),
+                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: compact ? 13 : tablet ? 15 : 16,
+                                            ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth: compact ? 28 : tablet ? 36 : 40,
+                                        minHeight: compact ? 28 : tablet ? 36 : 40,
+                                      ),
+                                      iconSize: compact ? 18 : tablet ? 20 : 22,
+                                      icon: Icon(
+                                        Icons.add,
+                                        color: outOfStock ? Colors.grey : uiController.getpureOppositeClr(themeModeType),
+                                      ),
+                                      onPressed: () {
+                                        if (!outOfStock && nextUnit != null) {
+                                          widget.addFunc(nextUnit);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

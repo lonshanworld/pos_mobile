@@ -13,6 +13,8 @@ import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/group_box_widget.dart";
 import "package:pos_mobile/widgets/itemBox/stockin_item_appbar_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
+import "package:pos_mobile/controller/ui_controller.dart";
 
 import "../../../../constants/uiConstants.dart";
 
@@ -69,10 +71,14 @@ class _GroupScreenState extends State<GroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final businessType = UIController.instance.businessType;
+    final categoryLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.category);
+    final groupLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.group);
+
     return Scaffold(
       body: widget.selectedCategoryId == null
           ? NoSelectedIdErrorWidget(
-              txt: "This category has some error",
+              txt: "This ${categoryLabel.toLowerCase()} has some error",
               func: widget.goBackFunc,
             )
           : FutureBuilder<CategoryModel?>(
@@ -85,7 +91,7 @@ class _GroupScreenState extends State<GroupScreen> {
                 final CategoryModel? categoryModel = snapshot.data;
                 if (categoryModel == null) {
                   return NoSelectedIdErrorWidget(
-                    txt: "This category has some error",
+                    txt: "This ${categoryLabel.toLowerCase()} has some error",
                     func: widget.goBackFunc,
                   );
                 }
@@ -99,19 +105,19 @@ class _GroupScreenState extends State<GroupScreen> {
                     return Column(
                       children: [
                         StockInItemAppBar(
-                          txt: "Total Group ( $totalGroupCount ) From ${categoryModel.name}",
+                          txt: "Total $groupLabel ( $totalGroupCount ) From ${categoryModel.name}",
                           func: widget.goBackFunc,
                         ),
                         Expanded(
                           child: Stack(
                             children: [
                               if (groupList.isEmpty)
-                                const Positioned(
+                                Positioned(
                                   top: 0,
                                   left: 0,
                                   right: 0,
                                   bottom: 0,
-                                  child: NoItemWidget(noItemTxt: "No group found"),
+                                  child: NoItemWidget(noItemTxt: "No ${groupLabel.toLowerCase()} found"),
                                 ),
                               if (groupList.isNotEmpty)
                                 Positioned(
@@ -146,7 +152,7 @@ class _GroupScreenState extends State<GroupScreen> {
                                 ),
                               if (widget.isStorage)
                                 CreateItemBtnWidget(
-                                  txt: "Create group",
+                                  txt: "Create $groupLabel",
                                   widget: CreateGroupScreen(selectedCategoryModel: categoryModel),
                                 ),
                             ],

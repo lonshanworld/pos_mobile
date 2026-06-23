@@ -18,6 +18,7 @@ import '../../models/groupingItem_models_folders/type_model.dart';
 import '../../models/itemModel_with_UniqueItemcount.dart';
 import '../../models/item_model_folder/item_model.dart';
 import '../../models/item_model_folder/uniqueItem_model.dart';
+import '../../models/stock_in_unit_spec.dart';
 import '../../models/promotion_model_folder/promotion_model.dart';
 import '../../models/transaction_model_folder/stockin_model_folder/stock_in_model.dart';
 import '../../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
@@ -279,6 +280,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required DateTime? itemExpireDate,
     required String? getItemFromWhere,
     required int itemLength,
+    List<StockInUnitSpec>? unitSpecs,
   }) async {
     try{
       bool value = await DBHelper.createStockIn(
@@ -291,7 +293,9 @@ class TransactionsCubit extends Cubit<TransactionsState> {
           itemManufactureDate: itemManufactureDate,
           itemExpireDate: itemExpireDate,
           getItemFromWhere: getItemFromWhere,
-          itemLength: itemLength);
+          itemLength: itemLength,
+          unitSpecs: unitSpecs,
+      );
       await _initTransactionsList();
       return value;
     }catch(e){

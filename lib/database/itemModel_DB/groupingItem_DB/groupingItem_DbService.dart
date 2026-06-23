@@ -196,7 +196,7 @@ class GroupingItemDbService{
     }
   }
 
-  static Future<bool>createNewItem(
+  static Future<int>createNewItem(
     Database db,
     {
       required UserModel userModel,
@@ -209,6 +209,7 @@ class GroupingItemDbService{
       required double profitPrice,
       required double originalPrice,
       required double taxPercentage,
+      required bool needStock,
     }
   )async{
     try{
@@ -226,12 +227,16 @@ class GroupingItemDbService{
           description: description,
           profitPrice: profitPrice,
           originalPrice: originalPrice,
-          taxPercentage: taxPercentage
+          taxPercentage: taxPercentage,
+          needStock: needStock,
       );
-      return value != -1 && groupValue != -1 && typeValue != -1 && itemId != -1;
+      if (value == -1 || groupValue == -1 || typeValue == -1 || itemId == -1) {
+        return -1;
+      }
+      return itemId;
     }catch(e){
       cusDebugPrint(e);
-      return false;
+      return -1;
     }
   }
 
@@ -410,6 +415,7 @@ class GroupingItemDbService{
       required double newOriginalPrice,
       required double newProfitPrice,
       required double newTaxPercentage,
+      required bool needStock,
     }
   )async{
     try{
@@ -425,6 +431,7 @@ class GroupingItemDbService{
         originalPrice: newOriginalPrice,
         profitPrice: newProfitPrice,
         taxPercentage: newTaxPercentage,
+        needStock: needStock,
       );
       if(value == -1) return false;
 

@@ -15,6 +15,7 @@ import '../../error_handlers/error_handler.dart';
 import '../../features/cus_showmodelbottomsheet.dart';
 import '../../models/groupingItem_models_folders/group_model.dart';
 import '../../screens/confirm_screens_folder/comfirm_screen.dart';
+import '../../constants/business_hierarchy_config.dart';
 import '../../utils/txt_formatters.dart';
 import '../cusTxt_widget.dart';
 
@@ -40,6 +41,8 @@ class GroupBoxWidget extends StatelessWidget {
     final GlobalKey<PopupMenuButtonState> popupMenu = GlobalKey<PopupMenuButtonState>();
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
+    final groupLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group);
+    final typeLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.type);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -58,11 +61,11 @@ class GroupBoxWidget extends StatelessWidget {
               if(typeCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $typeCount types in this group. You can delete only if there is no type left.",
+                  txt: "There are $typeCount ${typeLabel}s in this $groupLabel. You can delete only if there is no $typeLabel left.",
                 );
               }else{
                 showSheet.showCusDialogScreen( ConfirmScreen(
-                  txt: "Are you sure want to delete this group?",
+                  txt: "Are you sure want to delete this $groupLabel?",
                   title: "Delete",
                   acceptBtnTxt: "Yes, delete",
                   cancelBtnTxt: "Cancel",
@@ -143,7 +146,7 @@ class GroupBoxWidget extends StatelessWidget {
                       color: Colors.blueAccent,
                       fontWeight: FontWeight.w600,
                     ),
-                    txt: "$typeCount ${typeCount == 1 ? 'type' : 'types'}",
+                    txt: "$typeCount ${typeCount == 1 ? typeLabel.toLowerCase() : '${typeLabel.toLowerCase()}s'}",
                   ),
                 ),
                 Flexible(

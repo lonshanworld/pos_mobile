@@ -1,6 +1,7 @@
 class TxtConstants{
 
   static const String themeDbKey = "THEME_DB";
+  static const String businessTypeKey = "shopInfo_businessType";
 
 
 
@@ -18,6 +19,7 @@ class TxtConstants{
   static const String itemTableName = "itemTable";
   static const String uniqueItemTableName = "uniqueItemTable";
   static const String moduleComponentItemTableName = "moduleComponentItemTable";
+  static const String itemBusinessDetailTableName = "itemBusinessDetailTable";
 
   static const String restrictionTableName = "restrictionTable";
 

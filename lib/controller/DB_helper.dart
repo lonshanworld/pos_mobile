@@ -6,6 +6,7 @@ import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_m
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
+import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
@@ -47,7 +48,9 @@ import '../constants/txtconstants.dart';
 import '../models/deliver_model_folder/delivery_model.dart';
 import '../models/deliver_model_folder/delivery_person_model.dart';
 import '../models/groupingItem_models_folders/type_model.dart';
+import '../models/item_model_folder/item_business_detail_model.dart';
 import '../models/item_model_folder/item_model.dart';
+import '../models/stock_in_unit_spec.dart';
 import '../models/promotion_model_folder/promotion_model.dart';
 import '../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
@@ -92,6 +95,7 @@ class DBHelper{
     await TransactionDBService.initTransactionDb(db);
     await UniqueItemDbService.initUniqueItemDb(db);
     await ModuleComponentItemDbService.initModuleComponentItemDbService(db);
+    await ItemBusinessDetailDbService.initItemBusinessDetailDb(db);
     await AlertDbService.initAlertDb(db);
     await ReportDbService.initReportDb(db);
     await CrashReportDbService.initCrashReportDb(db);
@@ -228,7 +232,7 @@ class DBHelper{
     return await GroupingItemDbService.createNewType(database!, userModel: userModel, categoryModel: categoryModel, groupModel: groupModel, typeName: typeName, generalDescription: generalDescription, hasExpire: hasExpire);
   }
 
-  static Future<bool>createNewItem({
+  static Future<int>createNewItem({
     required UserModel userModel,
     required CategoryModel categoryModel,
     required GroupModel groupModel,
@@ -239,6 +243,7 @@ class DBHelper{
     required double profitPrice,
     required double originalPrice,
     required double taxPercentage,
+    required bool needStock,
   })async{
     return await GroupingItemDbService.createNewItem(
         database!,
@@ -251,8 +256,21 @@ class DBHelper{
         hasExpire: hasExpire,
         profitPrice: profitPrice,
         originalPrice: originalPrice,
-        taxPercentage: taxPercentage
+        taxPercentage: taxPercentage,
+        needStock: needStock,
     );
+  }
+
+  static Future<List<ItemBusinessDetailModel>> getAllItemBusinessDetails() async {
+    return await ItemBusinessDetailDbService.getAll(database!);
+  }
+
+  static Future<ItemBusinessDetailModel?> getItemBusinessDetail(int itemId) async {
+    return await ItemBusinessDetailDbService.getByItemId(database!, itemId);
+  }
+
+  static Future<bool> saveItemBusinessDetail(ItemBusinessDetailModel detail) async {
+    return await ItemBusinessDetailDbService.upsert(database!, detail);
   }
 
   static Future<bool>createStockIn({
@@ -266,6 +284,7 @@ class DBHelper{
     required DateTime? itemExpireDate,
     required String? getItemFromWhere,
     required int itemLength,
+    List<StockInUnitSpec>? unitSpecs,
   })async{
     return await TransactionDBService.createStockIn(
         database!,
@@ -278,7 +297,8 @@ class DBHelper{
         itemManufactureDate: itemManufactureDate,
         itemExpireDate: itemExpireDate,
         getItemFromWhere: getItemFromWhere,
-        itemLength: itemLength
+        itemLength: itemLength,
+        unitSpecs: unitSpecs,
     );
   }
 
@@ -358,6 +378,7 @@ class DBHelper{
     required double newOriginalPrice,
     required double newProfitPrice,
     required double newTaxPercentage,
+    required bool needStock,
   })async{
     return await GroupingItemDbService.updateItem(
       database!,
@@ -368,6 +389,7 @@ class DBHelper{
       newOriginalPrice: newOriginalPrice,
       newProfitPrice: newProfitPrice,
       newTaxPercentage: newTaxPercentage,
+      needStock: needStock,
     );
   }
 

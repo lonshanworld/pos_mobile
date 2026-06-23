@@ -91,3 +91,14 @@ enum SetPromotion{
   percentage,
   mmk,
 }
+
+enum BusinessType{
+  general, // default, current design flow
+  clothing,
+  electronics,
+  grocery,
+  convenience,
+  basicPharmacy,
+  phoneLaptopTablets,
+  food, // made-to-order & pre-stocked food; stock is optional (never blocks a sale)
+}

@@ -8,7 +8,8 @@ import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:pos_mobile/widgets/itemBox/category_box_widget.dart";
 import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
-
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
+import "package:pos_mobile/controller/ui_controller.dart";
 
 class CategoryScreen extends StatefulWidget {
   final Function(int value) setSelectedCategoryId;
@@ -50,6 +51,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final isLoadingMore = context.select((ItemCubit cubit) => cubit.state.isLoadingMoreCategory);
     final totalCategoryCount = context.select((ItemCubit cubit) => cubit.state.totalCategoryCount);
     
+    final businessType = UIController.instance.businessType;
+    final categoryLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.category);
+
     return Scaffold(
       body: Column(
         children: [
@@ -64,7 +68,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 const SizedBox(width: UIConstants.smallSpace),
                 CusTxtWidget(
                   txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(color: Colors.grey),
-                  txt: "$totalCategoryCount ${totalCategoryCount == 1 ? 'Category' : 'Categories'}",
+                  txt: "$totalCategoryCount ${totalCategoryCount == 1 ? categoryLabel : '${categoryLabel}s'}",
                 ),
               ],
             ),
@@ -78,7 +82,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   right: 0,
                   bottom: 0,
                   child: NoItemWidget(
-                    noItemTxt: "No category found",
+                    noItemTxt: "No item found",
                   ),
                 ),
                 if(categoryList.isNotEmpty)Positioned(
@@ -111,9 +115,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     },
                   ),
                 ),
-                if(widget.isStorage)const CreateItemBtnWidget(
-                  txt: "Create category",
-                  widget: CreateCategoryScreen(),
+                if(widget.isStorage) CreateItemBtnWidget(
+                  txt: "Create $categoryLabel",
+                  widget: const CreateCategoryScreen(),
                 ),
               ],
             ),

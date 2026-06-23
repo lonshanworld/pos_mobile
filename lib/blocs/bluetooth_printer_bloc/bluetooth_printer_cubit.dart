@@ -281,7 +281,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       doc.addPage(
         pw.Page(
           pageFormat: PdfPageFormat(pageWidth, imageHeight + (6 * PdfPageFormat.mm)),
-          margin: pw.EdgeInsets.all(3 * PdfPageFormat.mm),
+          margin: const pw.EdgeInsets.all(3 * PdfPageFormat.mm),
           build: (_) {
             return pw.Center(
               child: pw.Image(
@@ -363,8 +363,4 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     return cleaned;
   }
 
-  @override
-  Future<void> close() {
-    return super.close();
-  }
 }

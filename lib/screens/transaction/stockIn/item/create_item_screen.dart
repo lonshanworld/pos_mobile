@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
@@ -14,6 +15,7 @@ import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import "package:pos_mobile/utils/formula.dart";
+import "package:pos_mobile/widgets/business_item_detail_form.dart";
 import "package:pos_mobile/widgets/btns_folder/cusTextOnlyBtn_widget.dart";
 import "package:pos_mobile/widgets/btns_folder/cus_switch_btn_widget.dart";
 import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
@@ -39,10 +41,13 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final TextEditingController originalPriceController = TextEditingController();
   final TextEditingController sellPriceController = TextEditingController();
   final TextEditingController taxController = TextEditingController();
+  final GlobalKey<BusinessItemDetailFormState> _businessFormKey =
+      GlobalKey<BusinessItemDetailFormState>();
 
   double originalPrice = 0;
   double profitPrice = 0;
   double taxPercentage = 0;
+  bool _needStock = true;
   late final Future<_CreateItemParents?> _parentsFuture;
 
   @override
@@ -52,7 +57,17 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
 
     originalPriceController.addListener(() {
       setState(() {
-        originalPrice = double.tryParse(originalPriceController.text.trim()) ?? 0;
+        final double newOriginalPrice =
+            double.tryParse(originalPriceController.text.trim()) ?? 0;
+        final double? sellPrice =
+            double.tryParse(sellPriceController.text.trim());
+        originalPrice = newOriginalPrice;
+        profitPrice = sellPrice == null
+            ? 0
+            : CalculationFormula.getItemProfitPrice(
+                originalPrice: newOriginalPrice,
+                sellPrice: sellPrice,
+              );
       });
     });
 
@@ -103,6 +118,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
+    final BusinessType businessType =
+        context.watch<ShopInfoCubit>().state.businessType;
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,6 +259,26 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           ),
                         ],
                       ),
+                      if (businessType == BusinessType.food)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            CusTxtWidget(
+                              txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                              txt: "Track Stock ?",
+                            ),
+                            CusSwitchBtnWidget(
+                              boolValue: _needStock,
+                              func: (bool value) {
+                                setState(() {
+                                  _needStock = value;
+                                });
+                              },
+                              clr: Colors.blue,
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                   priceInputField(
@@ -315,6 +352,11 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           color: Colors.grey,
                         ),
                   ),
+                  BusinessItemDetailForm(
+                    key: _businessFormKey,
+                    businessType: businessType,
+                  ),
+                  uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
                   Align(
                     alignment: Alignment.centerRight,
                     child: CusTxtOnlyBtn(
@@ -330,11 +372,20 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             double.tryParse(taxController.text.trim()) == null) {
                           showValidationMessage("Sell price and tax must be valid numbers");
                         } else {
+                          final businessError =
+                              _businessFormKey.currentState?.validate();
+                          if (businessError != null) {
+                            showValidationMessage(businessError);
+                            return;
+                          }
+
                           final loadingCubit = context.read<LoadingCubit>();
                           final itemCubit = context.read<ItemCubit>();
                           final navigator = Navigator.of(context);
 
                           loadingCubit.setLoading("Creating ...");
+                          final businessDetail = _businessFormKey.currentState
+                              ?.buildDetail(0);
                           final value = await itemCubit.createNewItem(
                             userModel: userModel,
                             categoryModel: parents.categoryModel,
@@ -348,6 +399,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             profitPrice: profitPrice,
                             originalPrice: originalPrice,
                             taxPercentage: taxPercentage,
+                            needStock: businessType == BusinessType.food ? _needStock : true,
+                            businessDetail: businessDetail,
                           );
 
                           if (!mounted) return;

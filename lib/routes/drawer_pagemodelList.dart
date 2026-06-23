@@ -12,6 +12,7 @@ import '../screens/storage_screen.dart';
 import '../screens/tables_charts/tableandchart_screen.dart';
 import '../screens/transaction/stockIn/stockin_screen.dart';
 import '../screens/transaction/stockOut/stockout_screen.dart';
+import '../screens/reportAndAlerts/item_expiry_screen.dart';
 
 //  NOTE ::  Please do in order to change the page using index
 class PageList{
@@ -25,6 +26,7 @@ class PageList{
     // PageModel(screen: HistoryScreen(), title: "History"),
 
     PageModel(screen: TableAndChartScreen(), title: "Reports"),
+    PageModel(screen: ItemExpiryScreen(), title: "Item Expiry Tracker"),
     PageModel(screen: MainPromotionScreen(), title: "Promotions"),
     // PageModel(screen: ReportAndAlertTabScreen(), title: "Reports and Alerts"),
     PageModel(screen: SettingScreen(), title: "Settings"),
@@ -40,7 +42,7 @@ class PageList{
         return [
           pages[0],
           pages[1],
-          pages[2],
+          pages[3],
           pages[7],
           pages[8],
         ];

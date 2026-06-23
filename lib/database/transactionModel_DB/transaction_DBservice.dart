@@ -9,6 +9,7 @@ import 'package:pos_mobile/database/transactionModel_DB/transaction_DbStorages/t
 import 'package:pos_mobile/database/transactionModel_DB/transaction_DbStorages/transaction_stockOut_DbStorage.dart';
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
+import 'package:pos_mobile/models/stock_in_unit_spec.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
@@ -133,6 +134,7 @@ class TransactionDBService{
         required DateTime? itemExpireDate,
         required String? getItemFromWhere,
         required int itemLength,
+        List<StockInUnitSpec>? unitSpecs,
       }
       )async{
     DateTime dateTime = DateTime.now();
@@ -156,7 +158,19 @@ class TransactionDBService{
             if(itemValue == -1){
               return false;
             }else{
-              List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(db: db, itemLength: itemLength, userModel: userModel, stockInId: stockInId, dateTime: dateTime, itemModel: itemModel, itemManufactureDate: itemManufactureDate, itemExpireDate: itemExpireDate, getItemFromWhere: getItemFromWhere, code: code);
+              List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(
+                db: db,
+                itemLength: itemLength,
+                userModel: userModel,
+                stockInId: stockInId,
+                dateTime: dateTime,
+                itemModel: itemModel,
+                itemManufactureDate: itemManufactureDate,
+                itemExpireDate: itemExpireDate,
+                getItemFromWhere: getItemFromWhere,
+                code: code,
+                unitSpecs: unitSpecs,
+              );
               if(uniqueIdList.contains(-1)){
                 return false;
               }else{

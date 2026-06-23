@@ -7,6 +7,9 @@ class ShopInfoState {
   final String noReturnNote;
   final String? logoPath;
   final double logoSizeRatio;
+  final BusinessType businessType;
+  final bool includeQrCode;
+  final bool includeLogo;
 
   const ShopInfoState({
     required this.shopName,
@@ -15,6 +18,9 @@ class ShopInfoState {
     required this.noReturnNote,
     required this.logoPath,
     required this.logoSizeRatio,
+    required this.businessType,
+    this.includeQrCode = true,
+    this.includeLogo = true,
   });
 
   ShopInfoState copyWith({
@@ -25,6 +31,9 @@ class ShopInfoState {
     String? logoPath,
     bool clearLogoPath = false,
     double? logoSizeRatio,
+    BusinessType? businessType,
+    bool? includeQrCode,
+    bool? includeLogo,
   }) {
     return ShopInfoState(
       shopName: shopName ?? this.shopName,
@@ -33,6 +42,9 @@ class ShopInfoState {
       noReturnNote: noReturnNote ?? this.noReturnNote,
       logoPath: clearLogoPath ? null : (logoPath ?? this.logoPath),
       logoSizeRatio: logoSizeRatio ?? this.logoSizeRatio,
+      businessType: businessType ?? this.businessType,
+      includeQrCode: includeQrCode ?? this.includeQrCode,
+      includeLogo: includeLogo ?? this.includeLogo,
     );
   }
 }

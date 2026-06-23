@@ -58,7 +58,7 @@ class _KeyValidationScreenState extends State<KeyValidationScreen> {
         body: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.all(UIConstants.mediumSpace),
+              padding: const EdgeInsets.all(UIConstants.mediumSpace),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -177,7 +177,7 @@ class _KeyValidationScreenState extends State<KeyValidationScreen> {
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
                                 state.errorMessage!,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.red,
                                   fontSize: 12,
                                 ),

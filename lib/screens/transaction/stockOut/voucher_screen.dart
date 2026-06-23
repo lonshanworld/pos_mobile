@@ -17,6 +17,7 @@ import '../../../features/code_generator_feature.dart';
 import '../../../models/item_model_folder/item_model.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../models/promotion_model_folder/promotion_model.dart';
+import '../../../utils/checkout_helpers.dart';
 import '../../../utils/formula.dart';
 import '../../../utils/ui_responsive_calculation.dart';
 import '../../../widgets/btns_folder/cusTxtIconBtn_widget.dart';
@@ -82,26 +83,13 @@ class _VoucherScreenState extends State<VoucherScreen> {
   }
 
   double _getAllPrice(BuildContext context) {
-    double price = 0;
-    for (int i = 0; i < widget.selectedUniqueItemList.length; i++) {
-      final PromotionModel? promotionData = context
-          .read<PromotionCubit>()
-          .getSinglePromotionFromItemId(widget.selectedUniqueItemList[i].itemId);
-
-      price = price +
-          CalculationFormula.getItemAfterPromotionPrice(
-            sellPrice: CalculationFormula.getItemSellPrice(
-              originalPrice: widget.selectedUniqueItemList[i].originalPrice,
-              profitPrice: widget.selectedUniqueItemList[i].profitPrice,
-              taxPercentage: widget.selectedUniqueItemList[i].taxPercentage,
-            ),
-            promotionPercentage:
-                promotionData == null ? 0 : promotionData.promotionPercentage,
-            promotionPrice:
-                promotionData == null ? 0 : promotionData.promotionPrice,
-          );
-    }
-    return price;
+    return CheckoutHelpers.cartSubtotal(
+      uniqueItemList: widget.selectedUniqueItemList,
+      activePromotionList:
+          context.read<PromotionCubit>().state.activePromotionList,
+      itemPromotionList:
+          context.read<PromotionCubit>().state.activeItemPromotionList,
+    );
   }
 
   double _getFinalTotal(BuildContext context) {

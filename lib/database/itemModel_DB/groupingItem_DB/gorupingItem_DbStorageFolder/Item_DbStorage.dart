@@ -28,6 +28,7 @@ class ItemDbStorage{
           profitPrice REAL NOT NULL DEFAULT 0,
           originalPrice REAL NOT NULL DEFAULT 0,
           taxPercentage REAL NOT NULL DEFAULT 0,
+          need_stock INTEGER NOT NULL DEFAULT 1,
           imageId INTEGER REFERENCES ${TxtConstants.imageTableName}(id)
         )
       """
@@ -79,6 +80,7 @@ class ItemDbStorage{
       required double profitPrice,
       required double originalPrice,
       required double taxPercentage,
+      required bool needStock,
     }
   )async{
     return await db.rawInsert(
@@ -93,9 +95,10 @@ class ItemDbStorage{
             description,
             profitPrice,
             originalPrice,
-            taxPercentage
+            taxPercentage,
+            need_stock
           )
-          VALUES(?,?,?,?,?,?,?,?,?)
+          VALUES(?,?,?,?,?,?,?,?,?,?)
         """,
         [
           typeModel.id,
@@ -106,7 +109,8 @@ class ItemDbStorage{
           description,
           profitPrice,
           originalPrice,
-          taxPercentage
+          taxPercentage,
+          needStock ? 1 : 0
         ]
     );
   }
@@ -138,6 +142,7 @@ class ItemDbStorage{
       required double originalPrice,
       required double profitPrice,
       required double taxPercentage,
+      required bool needStock,
     }
   )async{
     return await db.rawUpdate(
@@ -147,10 +152,11 @@ class ItemDbStorage{
           lastUpdateTime = ?, 
           originalPrice = ?, 
           profitPrice = ?, 
-          taxPercentage = ? 
+          taxPercentage = ?,
+          need_stock = ? 
           WHERE id = ?
         """,
-        [newName, dateTime.toString(), originalPrice, profitPrice, taxPercentage, itemModel.id]);
+        [newName, dateTime.toString(), originalPrice, profitPrice, taxPercentage, needStock ? 1 : 0, itemModel.id]);
   }
 
   static Future<int>deactivateItem(

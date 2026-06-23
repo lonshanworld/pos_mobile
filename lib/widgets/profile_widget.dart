@@ -135,7 +135,7 @@ class ProfileWidget extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red, width: 1),
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: UIConstants.smallBorderRadius,
                   ),
                   padding: const EdgeInsets.symmetric(

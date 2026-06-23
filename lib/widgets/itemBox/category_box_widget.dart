@@ -13,6 +13,7 @@ import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import 'package:pos_mobile/screens/confirm_screens_folder/comfirm_screen.dart';
 import "package:pos_mobile/screens/transaction/stockIn/category/edit_category_screen.dart";
 import "package:pos_mobile/widgets/cusPopMenuItem_widget.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
 
 import "../../features/cus_showmodelbottomsheet.dart";
 
@@ -40,6 +41,8 @@ class CategoryBoxWidget extends StatelessWidget {
     final GlobalKey<PopupMenuButtonState> popupMenu = GlobalKey<PopupMenuButtonState>();
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
+    final categoryLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.category);
+    final groupLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -58,13 +61,13 @@ class CategoryBoxWidget extends StatelessWidget {
               if(groupCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $groupCount groups in this category. You can delete only if there is no group left.",
+                  txt: "There are $groupCount ${groupLabel}s in this $categoryLabel. You can delete only if there is no $groupLabel left.",
                 );
               }else{
 
                 showSheet.showCusDialogScreen(
                     ConfirmScreen(
-                      txt: "Are you sure want to delete this category?",
+                      txt: "Are you sure want to delete this $categoryLabel?",
                       title: "Delete",
                       acceptBtnTxt: "Yes, delete",
                       cancelBtnTxt: "Cancel",
@@ -170,7 +173,7 @@ class CategoryBoxWidget extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "$groupCount ${groupCount == 1 ? 'group' : 'groups'}",
+                          "$groupCount ${groupCount == 1 ? groupLabel.toLowerCase() : '${groupLabel.toLowerCase()}s'}",
                           style: Theme.of(context).textTheme.bodySmall!.copyWith(
                             color: Colors.grey,
                           ),

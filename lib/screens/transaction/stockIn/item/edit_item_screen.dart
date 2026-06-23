@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../blocs/shop_info_bloc/shop_info_cubit.dart';
 import '../../../../blocs/item_bloc/item_cubit.dart';
 import '../../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../../blocs/theme_bloc/theme_cubit.dart';
@@ -11,6 +12,8 @@ import '../../../../controller/ui_controller.dart';
 import '../../../../models/item_model_folder/item_model.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../utils/formula.dart';
+import '../../../../widgets/btns_folder/cus_switch_btn_widget.dart';
+import '../../../../widgets/business_item_detail_form.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
@@ -33,10 +36,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
   final TextEditingController originalPriceController = TextEditingController();
   final TextEditingController sellPriceController = TextEditingController();
   final TextEditingController taxController = TextEditingController();
+  final GlobalKey<BusinessItemDetailFormState> _businessFormKey =
+      GlobalKey<BusinessItemDetailFormState>();
 
   double originalPrice = 0;
   double profitPrice = 0;
   double taxPercentage = 0;
+  bool _needStock = true;
 
   @override
   void initState() {
@@ -50,17 +56,33 @@ class _EditItemScreenState extends State<EditItemScreen> {
         originalPrice = widget.itemModel.originalPrice;
         profitPrice =  widget.itemModel.profitPrice;
         taxPercentage = widget.itemModel.taxPercentage ?? 0;
+        _needStock = widget.itemModel.needStock;
       });
     }
     originalPriceController.addListener(() {
       setState(() {
-        originalPrice = originalPriceController.text.trim() == "" ? 0 : double.parse(originalPriceController.text.trim());
-        profitPrice = double.parse(sellPriceController.text.trim()) - double.parse(originalPriceController.text.trim());
+        final double newOriginalPrice =
+            double.tryParse(originalPriceController.text.trim()) ?? 0;
+        final double? sellPrice =
+            double.tryParse(sellPriceController.text.trim());
+        originalPrice = newOriginalPrice;
+        profitPrice = sellPrice == null
+            ? 0
+            : CalculationFormula.getItemProfitPrice(
+                originalPrice: newOriginalPrice,
+                sellPrice: sellPrice,
+              );
       });
     });
     sellPriceController.addListener(() {
       setState(() {
-        profitPrice = sellPriceController.text.trim() == "" ? 0 : CalculationFormula.getItemProfitPrice(originalPrice: originalPrice, sellPrice: double.parse(sellPriceController.text.trim()));
+        final sellPrice = double.tryParse(sellPriceController.text.trim());
+        profitPrice = sellPrice == null
+            ? 0
+            : CalculationFormula.getItemProfitPrice(
+                originalPrice: originalPrice,
+                sellPrice: sellPrice,
+              );
       });
     });
     taxController.addListener(() {
@@ -84,6 +106,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
     final UIController uiController = UIController.instance;
     final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final BusinessType businessType =
+        context.watch<ShopInfoCubit>().state.businessType;
+    final businessDetail =
+        context.read<ItemCubit>().getBusinessDetail(widget.itemModel.id);
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +208,28 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 txtInputType: TextInputType.text,
               ),
               uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              if (businessType == BusinessType.food)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    CusTxtWidget(
+                      txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                      txt: "Track Stock ?",
+                    ),
+                    CusSwitchBtnWidget(
+                      boolValue: _needStock,
+                      func: (bool value) {
+                        setState(() {
+                          _needStock = value;
+                        });
+                      },
+                      clr: Colors.blue,
+                    ),
+                  ],
+                ),
+              if (businessType == BusinessType.food)
+                uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
 
               priceInputField(
                 hintTxt: "Enter new purchased price",
@@ -217,6 +265,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 ),
               ),
               uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
+              BusinessItemDetailForm(
+                key: _businessFormKey,
+                businessType: businessType,
+                initialDetail: businessDetail,
+                itemId: widget.itemModel.id,
+              ),
+              uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
               Align(
                 alignment: Alignment.centerRight,
                 child: CusTxtOnlyBtn(
@@ -229,7 +284,16 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     }else if(originalPrice < 1){
                       showValidationMessage("Original price must be greater than zero");
                     }else{
+                      final businessError =
+                          _businessFormKey.currentState?.validate();
+                      if (businessError != null) {
+                        showValidationMessage(businessError);
+                        return;
+                      }
+
                       context.read<LoadingCubit>().setLoading("Updating ...");
+                      final detail = _businessFormKey.currentState
+                          ?.buildDetail(widget.itemModel.id);
                       final value = await context.read<ItemCubit>().editItem(
                         userModel: userModel,
                         itemModel: widget.itemModel,
@@ -237,6 +301,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         newOriginalPrice: originalPrice,
                         newProfitPrice: profitPrice,
                         newTaxPercentage: taxPercentage,
+                        needStock: businessType == BusinessType.food ? _needStock : true,
+                        businessDetail: detail,
                       );
 
                       if (!mounted) return;

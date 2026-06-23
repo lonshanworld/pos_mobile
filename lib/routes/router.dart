@@ -7,6 +7,8 @@ import 'package:pos_mobile/screens/authenticaton/key_validation_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/merchant_setup_screen.dart';
 import 'package:pos_mobile/screens/home_screen.dart';
+import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
 import 'package:pos_mobile/screens/transaction/stockIn/uniqueItem/uniqueitem_screen.dart';
 
 class AppRouter{
@@ -63,6 +65,16 @@ class AppRouter{
             ItemModel item = ItemModel.fromJson(routeArgs["item"]);
             return UniqueItemScreen(item: item,);
           }
+        );
+
+      case PrinterSettingsScreen.routeName:
+        return MaterialPageRoute(
+          builder: (BuildContext ctx) => const PrinterSettingsScreen(),
+        );
+
+      case GeneralSettingsScreen.routeName:
+        return MaterialPageRoute(
+          builder: (BuildContext ctx) => const GeneralSettingsScreen(),
         );
 
       default :
