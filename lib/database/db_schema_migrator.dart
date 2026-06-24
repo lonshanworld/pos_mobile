@@ -100,7 +100,7 @@ class DbSchemaMigrator {
         DbColumnSpec(
           name: 'categoryId',
           definition:
-              'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id) NOT NULL',
+              'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id)',
         ),
         DbColumnSpec(name: 'createTime', definition: 'TEXT NOT NULL'),
         DbColumnSpec(name: 'lastUpdateTime', definition: 'TEXT'),
@@ -126,7 +126,7 @@ class DbSchemaMigrator {
       columns: [
         DbColumnSpec(
           name: 'groupId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.groupTableName}(id) NOT NULL',
+          definition: 'INTEGER REFERENCES ${TxtConstants.groupTableName}(id)',
         ),
         DbColumnSpec(name: 'name', definition: 'TEXT NOT NULL'),
         DbColumnSpec(name: 'createTime', definition: 'TEXT NOT NULL'),
@@ -164,6 +164,14 @@ class DbSchemaMigrator {
       tableName: TxtConstants.itemTableName,
       columns: [
         DbColumnSpec(name: 'name', definition: 'TEXT NOT NULL'),
+        DbColumnSpec(
+          name: 'categoryId',
+          definition: 'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id)',
+        ),
+        DbColumnSpec(
+          name: 'groupId',
+          definition: 'INTEGER REFERENCES ${TxtConstants.groupTableName}(id)',
+        ),
         DbColumnSpec(
           name: 'typeId',
           definition: 'INTEGER REFERENCES ${TxtConstants.typeTableName}(id) NOT NULL',
@@ -248,6 +256,7 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'instanceLength', definition: 'REAL'),
         DbColumnSpec(name: 'instanceWidth', definition: 'REAL'),
         DbColumnSpec(name: 'instanceBatchNumber', definition: 'TEXT'),
+        DbColumnSpec(name: 'instanceImei', definition: 'TEXT'),
       ],
     ),
     DbTableSpec(
@@ -288,6 +297,7 @@ class DbSchemaMigrator {
   static Future<void> reconcile(Database db) async {
     try {
       await _recreateKnownTables(db);
+      await _migrateIndependentCatalogs(db);
       for (final tableSpec in _schemaSpecs) {
         await _ensureColumns(db, tableSpec);
       }
@@ -325,8 +335,136 @@ class DbSchemaMigrator {
       'CREATE INDEX IF NOT EXISTS idx_item_typeId ON ${TxtConstants.itemTableName}(typeId);',
     );
     await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_item_categoryId ON ${TxtConstants.itemTableName}(categoryId);',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_item_groupId ON ${TxtConstants.itemTableName}(groupId);',
+    );
+    await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_item_activeStatus ON ${TxtConstants.itemTableName}(activeStatus);',
     );
+  }
+
+  static Future<void> _migrateIndependentCatalogs(Database db) async {
+    await _ensureColumnIfMissing(
+      db,
+      TxtConstants.itemTableName,
+      'categoryId',
+      'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id)',
+    );
+    await _ensureColumnIfMissing(
+      db,
+      TxtConstants.itemTableName,
+      'groupId',
+      'INTEGER REFERENCES ${TxtConstants.groupTableName}(id)',
+    );
+
+    await db.execute('''
+      UPDATE ${TxtConstants.itemTableName}
+      SET groupId = (
+        SELECT groupId FROM ${TxtConstants.typeTableName}
+        WHERE ${TxtConstants.typeTableName}.id = ${TxtConstants.itemTableName}.typeId
+      )
+      WHERE groupId IS NULL
+    ''');
+
+    await db.execute('''
+      UPDATE ${TxtConstants.itemTableName}
+      SET categoryId = (
+        SELECT categoryId FROM ${TxtConstants.groupTableName}
+        WHERE ${TxtConstants.groupTableName}.id = ${TxtConstants.itemTableName}.groupId
+      )
+      WHERE categoryId IS NULL
+    ''');
+
+    final bool needsGroupRebuild = await _isColumnRequired(
+      db,
+      TxtConstants.groupTableName,
+      'categoryId',
+    );
+    final bool needsTypeRebuild = await _isColumnRequired(
+      db,
+      TxtConstants.typeTableName,
+      'groupId',
+    );
+
+    if (!needsGroupRebuild && !needsTypeRebuild) {
+      return;
+    }
+
+    await db.execute('PRAGMA foreign_keys = OFF');
+    try {
+      if (needsGroupRebuild) {
+        await db.execute('''
+          CREATE TABLE ${TxtConstants.groupTableName}_independent(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            categoryId INTEGER REFERENCES ${TxtConstants.categoryTableName}(id),
+            createTime TEXT NOT NULL,
+            lastUpdateTime TEXT,
+            deleteTime TEXT,
+            activeStatus INTEGER NOT NULL DEFAULT 1,
+            description TEXT,
+            createPersonId INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL,
+            deletePersonId INTEGER REFERENCES ${TxtConstants.userTableName}(id),
+            colorCode TEXT
+          )
+        ''');
+        await db.execute('''
+          INSERT INTO ${TxtConstants.groupTableName}_independent(
+            id, name, categoryId, createTime, lastUpdateTime, deleteTime,
+            activeStatus, description, createPersonId, deletePersonId, colorCode
+          )
+          SELECT
+            id, name, categoryId, createTime, lastUpdateTime, deleteTime,
+            activeStatus, description, createPersonId, deletePersonId, colorCode
+          FROM ${TxtConstants.groupTableName}
+        ''');
+        await db.execute('DROP TABLE ${TxtConstants.groupTableName}');
+        await db.execute(
+          'ALTER TABLE ${TxtConstants.groupTableName}_independent RENAME TO ${TxtConstants.groupTableName}',
+        );
+      }
+
+      if (needsTypeRebuild) {
+        await db.execute('''
+          CREATE TABLE ${TxtConstants.typeTableName}_independent(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            groupId INTEGER REFERENCES ${TxtConstants.groupTableName}(id),
+            name TEXT NOT NULL,
+            createTime TEXT NOT NULL,
+            lastUpdateTime TEXT,
+            deleteTime TEXT,
+            activeStatus INTEGER NOT NULL DEFAULT 1,
+            createPersonId INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL,
+            deletePersonId INTEGER REFERENCES ${TxtConstants.userTableName}(id),
+            colorCode TEXT,
+            imageId INTEGER REFERENCES ${TxtConstants.imageTableName}(id),
+            generalDescription TEXT,
+            generalRestrictionId INTEGER REFERENCES ${TxtConstants.restrictionTableName}(id),
+            hasExpire INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          INSERT INTO ${TxtConstants.typeTableName}_independent(
+            id, groupId, name, createTime, lastUpdateTime, deleteTime,
+            activeStatus, createPersonId, deletePersonId, colorCode,
+            imageId, generalDescription, generalRestrictionId, hasExpire
+          )
+          SELECT
+            id, groupId, name, createTime, lastUpdateTime, deleteTime,
+            activeStatus, createPersonId, deletePersonId, colorCode,
+            imageId, generalDescription, generalRestrictionId, hasExpire
+          FROM ${TxtConstants.typeTableName}
+        ''');
+        await db.execute('DROP TABLE ${TxtConstants.typeTableName}');
+        await db.execute(
+          'ALTER TABLE ${TxtConstants.typeTableName}_independent RENAME TO ${TxtConstants.typeTableName}',
+        );
+      }
+    } finally {
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
   }
 
   static Future<void> _ensureColumns(Database db, DbTableSpec tableSpec) async {
@@ -343,6 +481,37 @@ class DbSchemaMigrator {
         'Added missing column ${tableSpec.tableName}.${column.name}',
       );
     }
+  }
+
+  static Future<void> _ensureColumnIfMissing(
+    Database db,
+    String tableName,
+    String columnName,
+    String definition,
+  ) async {
+    final existingColumns = await _getExistingColumns(db, tableName);
+    if (existingColumns.contains(columnName)) {
+      return;
+    }
+    await db.execute(
+      'ALTER TABLE $tableName ADD COLUMN $columnName $definition',
+    );
+  }
+
+  static Future<bool> _isColumnRequired(
+    Database db,
+    String tableName,
+    String columnName,
+  ) async {
+    final List<Map<String, Object?>> rows = await db.rawQuery(
+      'PRAGMA table_info($tableName)',
+    );
+    for (final row in rows) {
+      if (row['name'] == columnName) {
+        return (row['notnull'] as int? ?? 0) == 1;
+      }
+    }
+    return false;
   }
 
   static Future<Set<String>> _getExistingColumns(

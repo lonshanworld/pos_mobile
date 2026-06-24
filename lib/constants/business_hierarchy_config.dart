@@ -22,9 +22,9 @@ class BusinessHierarchyConfig {
       HierarchyLevel.item: 'Item',
     },
     BusinessType.electronics: {
-      HierarchyLevel.category: 'Category',
-      HierarchyLevel.group: 'Sub-Category',
-      HierarchyLevel.type: 'Brand',
+      HierarchyLevel.category: 'Device Type',
+      HierarchyLevel.group: 'Brand',
+      HierarchyLevel.type: 'Model',
       HierarchyLevel.item: 'Item',
     },
     BusinessType.grocery: {
@@ -41,14 +41,14 @@ class BusinessHierarchyConfig {
     },
     BusinessType.basicPharmacy: {
       HierarchyLevel.category: 'Category',
-      HierarchyLevel.group: 'Condition',
-      HierarchyLevel.type: 'Type',
+      HierarchyLevel.group: 'Brand',
+      HierarchyLevel.type: 'Sub-Category',
       HierarchyLevel.item: 'Item',
     },
     BusinessType.phoneLaptopTablets: {
-      HierarchyLevel.category: 'Category',
-      HierarchyLevel.group: 'Brand',
-      HierarchyLevel.type: 'Model',
+      HierarchyLevel.category: 'Brand',
+      HierarchyLevel.group: 'Type',
+      HierarchyLevel.type: 'Series',
       HierarchyLevel.item: 'Item',
     },
     BusinessType.food: {
@@ -61,5 +61,37 @@ class BusinessHierarchyConfig {
 
   static String getLabel(BusinessType businessType, HierarchyLevel level) {
     return _config[businessType]?[level] ?? _config[BusinessType.general]![level]!;
+  }
+
+  static String getPluralLabel(BusinessType businessType, HierarchyLevel level) {
+    final singular = getLabel(businessType, level);
+    switch (singular) {
+      case 'Category':
+        return 'Categories';
+      case 'Sub-Category':
+        return 'Sub-Categories';
+      case 'Brand':
+        return 'Brands';
+      case 'Device Type':
+        return 'Device Types';
+      case 'Design':
+        return 'Designs';
+      case 'Condition':
+        return 'Conditions';
+      case 'Type':
+        return 'Types';
+      case 'Model':
+        return 'Models';
+      case 'Series':
+        return 'Series';
+      case 'Menu':
+        return 'Menus';
+      case 'Group':
+        return 'Groups';
+      case 'Item':
+        return 'Items';
+      default:
+        return '${singular}s';
+    }
   }
 }

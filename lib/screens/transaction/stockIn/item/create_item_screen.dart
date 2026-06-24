@@ -1,17 +1,16 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:collection/collection.dart";
 import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
+import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
-import "package:pos_mobile/controller/DB_helper.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/error_handlers/item_folder/no_selected_id_error_widget.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/category_model.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import "package:pos_mobile/utils/formula.dart";
@@ -24,12 +23,7 @@ import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 
 class CreateItemScreen extends StatefulWidget {
-  final TypeModel typeModel;
-
-  const CreateItemScreen({
-    super.key,
-    required this.typeModel,
-  });
+  const CreateItemScreen({super.key});
 
   @override
   State<CreateItemScreen> createState() => _CreateItemScreenState();
@@ -44,23 +38,25 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final GlobalKey<BusinessItemDetailFormState> _businessFormKey =
       GlobalKey<BusinessItemDetailFormState>();
 
+  int? _selectedCategoryId;
+  int? _selectedGroupId;
+  int? _selectedTypeId;
   double originalPrice = 0;
   double profitPrice = 0;
   double taxPercentage = 0;
   bool _needStock = true;
-  late final Future<_CreateItemParents?> _parentsFuture;
 
   @override
   void initState() {
     super.initState();
-    _parentsFuture = _loadParents();
 
     originalPriceController.addListener(() {
       setState(() {
         final double newOriginalPrice =
             double.tryParse(originalPriceController.text.trim()) ?? 0;
-        final double? sellPrice =
-            double.tryParse(sellPriceController.text.trim());
+        final double? sellPrice = double.tryParse(
+          sellPriceController.text.trim(),
+        );
         originalPrice = newOriginalPrice;
         profitPrice = sellPrice == null
             ? 0
@@ -90,19 +86,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     });
   }
 
-  Future<_CreateItemParents?> _loadParents() async {
-    final GroupModel? groupModel = await DBHelper.getGroupById(widget.typeModel.groupId);
-    if (groupModel == null) return null;
-
-    final CategoryModel? categoryModel = await DBHelper.getCategoryById(groupModel.categoryId);
-    if (categoryModel == null) return null;
-
-    return _CreateItemParents(
-      groupModel: groupModel,
-      categoryModel: categoryModel,
-    );
-  }
-
   @override
   void dispose() {
     itemNameController.dispose();
@@ -116,17 +99,38 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
-    final BusinessType businessType =
-        context.watch<ShopInfoCubit>().state.businessType;
+    final BusinessType businessType = context
+        .watch<ShopInfoCubit>()
+        .state
+        .businessType;
+    final bool allowExpiryTracking = businessType.allowsExpiryTracking;
+    final itemState = context.watch<ItemCubit>().state;
+    final categoryLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.category,
+    );
+    final groupLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.group,
+    );
+    final typeLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.type,
+    );
+    final TypeModel? selectedTypeModel = _selectedTypeId == null
+        ? null
+        : itemState.allActiveTypeList.firstWhereOrNull(
+            (type) => type.id == _selectedTypeId,
+          );
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -152,7 +156,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 txtStyle: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.mediumSpace),
+            uiController.sizedBox(
+              cusHeight: null,
+              cusWidth: UIConstants.mediumSpace,
+            ),
             CusTxtWidget(
               txtStyle: Theme.of(context).textTheme.bodyMedium!,
               txt: labelTxt,
@@ -192,244 +199,346 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       );
     }
 
-    return FutureBuilder<_CreateItemParents?>(
-      future: _parentsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    Widget buildCatalogDropdown({
+      required String label,
+      required int? value,
+      required List<DropdownMenuItem<int?>> items,
+      required ValueChanged<int?> onChanged,
+    }) {
+      return DropdownButtonFormField<int?>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        items: items,
+        onChanged: onChanged,
+      );
+    }
 
-        final _CreateItemParents? parents = snapshot.data;
-        if (parents == null) {
-          return Scaffold(
-            appBar: AppBar(
-              centerTitle: true,
-              leading: const CusLeadingBackIconBtn(),
-              title: const Text("Create Item"),
-            ),
-            body: NoSelectedIdErrorWidget(
-              txt: "This group has some error",
-              func: () => Navigator.of(context).pop(),
-            ),
-          );
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            centerTitle: true,
-            leading: const CusLeadingBackIconBtn(),
-            title: const Text("Create Item"),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                  CusTextFieldLogin(
-                    txtController: itemNameController,
-                    verticalPadding: UIConstants.mediumSpace,
-                    horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
-                    hintTxt: "Enter new Item name",
-                    txtInputType: TextInputType.text,
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        leading: const CusLeadingBackIconBtn(),
+        title: const Text("Create Item"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: categoryLabel,
+                value: _selectedCategoryId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("No $categoryLabel"),
                   ),
-                  uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
-                  Column(
-                    children: [
-                      CusTxtWidget(
-                        txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                              color: Colors.grey,
-                            ),
-                        txt: "You cannot change this value because it only shows its type has expired date or not.",
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          CusTxtWidget(
-                            txtStyle: Theme.of(context).textTheme.bodyMedium!,
-                            txt: "Has Expired Date ?",
-                          ),
-                          CusSwitchBtnWidget(
-                            boolValue: widget.typeModel.hasExpire,
-                            func: (bool value) {},
-                            clr: Colors.blue,
-                          ),
-                        ],
-                      ),
-                      if (businessType == BusinessType.food)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            CusTxtWidget(
-                              txtStyle: Theme.of(context).textTheme.bodyMedium!,
-                              txt: "Track Stock ?",
-                            ),
-                            CusSwitchBtnWidget(
-                              boolValue: _needStock,
-                              func: (bool value) {
-                                setState(() {
-                                  _needStock = value;
-                                });
-                              },
-                              clr: Colors.blue,
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  priceInputField(
-                    hintTxt: "Enter purchased price",
-                    labelTxt: "MMK",
-                    textEditingController: originalPriceController,
-                  ),
-                  priceInputField(
-                    hintTxt: "Enter sell price",
-                    labelTxt: "MMK",
-                    textEditingController: sellPriceController,
-                  ),
-                  priceInputField(
-                    hintTxt: "Enter tax percentage",
-                    labelTxt: "% percentage",
-                    textEditingController: taxController,
-                  ),
-                  uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: UIConstants.mediumSpace,
-                      horizontal: UIConstants.bigSpace,
-                    ),
-                    decoration: BoxDecoration(
-                      color: profitPrice < 0
-                          ? Colors.red.withValues(alpha: 0.4)
-                          : Colors.green.withValues(alpha: 0.4),
-                      borderRadius: UIConstants.mediumBorderRadius,
-                    ),
-                    child: Column(
-                      children: [
-                        resultRow("Profit", profitPrice.toString()),
-                        uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                        if (taxPercentage > 0)
-                          resultRow(
-                            "Tax",
-                            CalculationFormula.getPercentageToMMK(
-                              originalPrice + profitPrice,
-                              taxPercentage,
-                            ).toString(),
-                          ),
-                        uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                        resultRow(
-                          "Final Sell Price",
-                          CalculationFormula.getItemSellPrice(
-                            originalPrice: originalPrice,
-                            profitPrice: profitPrice,
-                            taxPercentage: taxPercentage,
-                          ).toString(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: CusTxtWidget(
-                      txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                            color: Colors.grey,
-                          ),
-                      txt: "Optional",
-                    ),
-                  ),
-                  uiController.sizedBox(cusHeight: UIConstants.smallSpace, cusWidth: null),
-                  CusTextArea(
-                    txtController: textAreaController,
-                    verticalPadding: UIConstants.mediumSpace,
-                    horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
-                    hintTxt: "Enter description",
-                    txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  BusinessItemDetailForm(
-                    key: _businessFormKey,
-                    businessType: businessType,
-                  ),
-                  uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: CusTxtOnlyBtn(
-                      textStyle: Theme.of(context).textTheme.titleSmall!,
-                      txt: "Create",
-                      clr: Colors.deepPurpleAccent,
-                      func: () async {
-                        if (itemNameController.text.trim().isEmpty) {
-                          showValidationMessage("Item name should not be empty");
-                        } else if (originalPrice < 1) {
-                          showValidationMessage("Original price must be greater than zero");
-                        } else if (double.tryParse(sellPriceController.text.trim()) == null ||
-                            double.tryParse(taxController.text.trim()) == null) {
-                          showValidationMessage("Sell price and tax must be valid numbers");
-                        } else {
-                          final businessError =
-                              _businessFormKey.currentState?.validate();
-                          if (businessError != null) {
-                            showValidationMessage(businessError);
-                            return;
-                          }
-
-                          final loadingCubit = context.read<LoadingCubit>();
-                          final itemCubit = context.read<ItemCubit>();
-                          final navigator = Navigator.of(context);
-
-                          loadingCubit.setLoading("Creating ...");
-                          final businessDetail = _businessFormKey.currentState
-                              ?.buildDetail(0);
-                          final value = await itemCubit.createNewItem(
-                            userModel: userModel,
-                            categoryModel: parents.categoryModel,
-                            groupModel: parents.groupModel,
-                            typeModel: widget.typeModel,
-                            name: itemNameController.text.trim(),
-                            description: textAreaController.text.trim().isEmpty
-                                ? null
-                                : textAreaController.text.trim(),
-                            hasExpire: widget.typeModel.hasExpire,
-                            profitPrice: profitPrice,
-                            originalPrice: originalPrice,
-                            taxPercentage: taxPercentage,
-                            needStock: businessType == BusinessType.food ? _needStock : true,
-                            businessDetail: businessDetail,
-                          );
-
-                          if (!mounted) return;
-                          if (value) {
-                            loadingCubit.setSuccess("Success !");
-                            navigator.pop();
-                          } else {
-                            loadingCubit.setFail("Fail !");
-                          }
-                        }
-                      },
+                  ...itemState.allActiveCategoryList.map(
+                    (category) => DropdownMenuItem<int?>(
+                      value: category.id,
+                      child: Text(category.name),
                     ),
                   ),
                 ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategoryId = value;
+                  });
+                },
               ),
-            ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: groupLabel,
+                value: _selectedGroupId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("No $groupLabel"),
+                  ),
+                  ...itemState.allActiveGroupList.map(
+                    (group) => DropdownMenuItem<int?>(
+                      value: group.id,
+                      child: Text(group.name),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGroupId = value;
+                  });
+                },
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: typeLabel,
+                value: _selectedTypeId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("Select $typeLabel"),
+                  ),
+                  ...itemState.allActiveTypeList.map(
+                    (type) => DropdownMenuItem<int?>(
+                      value: type.id,
+                      child: Text(type.name),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTypeId = value;
+                  });
+                },
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              CusTextFieldLogin(
+                txtController: itemNameController,
+                verticalPadding: UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
+                hintTxt: "Enter new Item name",
+                txtInputType: TextInputType.text,
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
+              Column(
+                children: [
+                  if (allowExpiryTracking) ...[
+                    CusTxtWidget(
+                      txtStyle: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
+                      txt: "Expire tracking follows the selected $typeLabel.",
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CusTxtWidget(
+                          txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                          txt: "Has Expired Date ?",
+                        ),
+                        CusSwitchBtnWidget(
+                          boolValue: selectedTypeModel?.hasExpire ?? false,
+                          func: (bool value) {},
+                          clr: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (businessType == BusinessType.food)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CusTxtWidget(
+                          txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                          txt: "Track Stock ?",
+                        ),
+                        CusSwitchBtnWidget(
+                          boolValue: _needStock,
+                          func: (bool value) {
+                            setState(() {
+                              _needStock = value;
+                            });
+                          },
+                          clr: Colors.blue,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              priceInputField(
+                hintTxt: "Enter purchased price",
+                labelTxt: "MMK",
+                textEditingController: originalPriceController,
+              ),
+              priceInputField(
+                hintTxt: "Enter sell price",
+                labelTxt: "MMK",
+                textEditingController: sellPriceController,
+              ),
+              priceInputField(
+                hintTxt: "Enter tax percentage",
+                labelTxt: "% percentage",
+                textEditingController: taxController,
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: UIConstants.mediumSpace,
+                  horizontal: UIConstants.bigSpace,
+                ),
+                decoration: BoxDecoration(
+                  color: profitPrice < 0
+                      ? Colors.red.withValues(alpha: 0.4)
+                      : Colors.green.withValues(alpha: 0.4),
+                  borderRadius: UIConstants.mediumBorderRadius,
+                ),
+                child: Column(
+                  children: [
+                    resultRow("Profit", profitPrice.toString()),
+                    uiController.sizedBox(
+                      cusHeight: UIConstants.mediumSpace,
+                      cusWidth: null,
+                    ),
+                    if (taxPercentage > 0)
+                      resultRow(
+                        "Tax",
+                        CalculationFormula.getPercentageToMMK(
+                          originalPrice + profitPrice,
+                          taxPercentage,
+                        ).toString(),
+                      ),
+                    uiController.sizedBox(
+                      cusHeight: UIConstants.mediumSpace,
+                      cusWidth: null,
+                    ),
+                    resultRow(
+                      "Final Sell Price",
+                      CalculationFormula.getItemSellPrice(
+                        originalPrice: originalPrice,
+                        profitPrice: profitPrice,
+                        taxPercentage: taxPercentage,
+                      ).toString(),
+                    ),
+                  ],
+                ),
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CusTxtWidget(
+                  txtStyle: Theme.of(
+                    context,
+                  ).textTheme.titleSmall!.copyWith(color: Colors.grey),
+                  txt: "Optional",
+                ),
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.smallSpace,
+                cusWidth: null,
+              ),
+              CusTextArea(
+                txtController: textAreaController,
+                verticalPadding: UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
+                hintTxt: "Enter description",
+                txtStyle: Theme.of(
+                  context,
+                ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
+              ),
+              BusinessItemDetailForm(
+                key: _businessFormKey,
+                businessType: businessType,
+                initialBarcode: null,
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: CusTxtOnlyBtn(
+                  textStyle: Theme.of(context).textTheme.titleSmall!,
+                  txt: "Create",
+                  clr: Colors.deepPurpleAccent,
+                  func: () async {
+                    if (selectedTypeModel == null) {
+                      showValidationMessage("Choose a $typeLabel first");
+                    } else if (itemNameController.text.trim().isEmpty) {
+                      showValidationMessage("Item name should not be empty");
+                    } else if (businessType != BusinessType.food && originalPrice < 1) {
+                      showValidationMessage(
+                        "Original price must be greater than zero",
+                      );
+                    } else if (double.tryParse(
+                              sellPriceController.text.trim(),
+                            ) ==
+                            null ||
+                        double.tryParse(taxController.text.trim()) == null) {
+                      showValidationMessage(
+                        "Sell price and tax must be valid numbers",
+                      );
+                    } else {
+                      final businessError = _businessFormKey.currentState
+                          ?.validate();
+                      if (businessError != null) {
+                        showValidationMessage(businessError);
+                        return;
+                      }
+
+                      final loadingCubit = context.read<LoadingCubit>();
+                      final itemCubit = context.read<ItemCubit>();
+                      final navigator = Navigator.of(context);
+
+                      loadingCubit.setLoading("Creating ...");
+                      final businessDetail = _businessFormKey.currentState
+                          ?.buildDetail(0);
+                      final itemBarcode = _businessFormKey.currentState
+                          ?.buildItemBarcode();
+                      final value = await itemCubit.createNewItem(
+                        userModel: userModel,
+                        categoryId: _selectedCategoryId,
+                        groupId: _selectedGroupId,
+                        typeModel: selectedTypeModel,
+                        name: itemNameController.text.trim(),
+                        description: textAreaController.text.trim().isEmpty
+                            ? null
+                            : textAreaController.text.trim(),
+                        hasExpire:
+                            allowExpiryTracking && selectedTypeModel.hasExpire,
+                        profitPrice: profitPrice,
+                        originalPrice: originalPrice,
+                        taxPercentage: taxPercentage,
+                        needStock: businessType == BusinessType.food
+                            ? _needStock
+                            : true,
+                        code: itemBarcode,
+                        businessDetail: businessDetail,
+                      );
+
+                      if (!mounted) return;
+                      if (value) {
+                        loadingCubit.setSuccess("Success !");
+                        navigator.pop();
+                      } else {
+                        loadingCubit.setFail("Fail !");
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: UIConstants.bigSpace * 2),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
-}
-
-class _CreateItemParents {
-  final GroupModel groupModel;
-  final CategoryModel categoryModel;
-
-  const _CreateItemParents({
-    required this.groupModel,
-    required this.categoryModel,
-  });
 }

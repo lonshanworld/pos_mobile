@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import "package:collection/collection.dart";
@@ -353,7 +354,7 @@ class ItemCubit extends Cubit<ItemState> {
 
   Future<bool>createNewGroup({
     required UserModel userModel,
-    required CategoryModel categoryModel,
+    CategoryModel? categoryModel,
     required String groupName,
     required String? description,
   })async{
@@ -369,8 +370,8 @@ class ItemCubit extends Cubit<ItemState> {
 
   Future<bool>createNewType({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
+    CategoryModel? categoryModel,
+    GroupModel? groupModel,
     required String typeName,
     required String? generalDescription,
     required bool hasExpire,
@@ -394,8 +395,8 @@ class ItemCubit extends Cubit<ItemState> {
 
   Future<bool>createNewItem({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
+    required int? categoryId,
+    required int? groupId,
     required TypeModel typeModel,
     required String name,
     required String? description,
@@ -404,13 +405,14 @@ class ItemCubit extends Cubit<ItemState> {
     required double originalPrice,
     required double taxPercentage,
     required bool needStock,
+    required String? code,
     ItemBusinessDetailModel? businessDetail,
   })async{
     try{
       final int itemId = await DBHelper.createNewItem(
           userModel: userModel,
-          categoryModel: categoryModel,
-          groupModel: groupModel,
+          categoryId: categoryId,
+          groupId: groupId,
           typeModel: typeModel,
           name: name,
           description: description,
@@ -419,6 +421,7 @@ class ItemCubit extends Cubit<ItemState> {
           originalPrice: originalPrice,
           taxPercentage: taxPercentage,
           needStock: needStock,
+          code: code,
       );
       if (itemId <= 0) return false;
       if (businessDetail != null && !businessDetail.isEmpty) {
@@ -440,7 +443,6 @@ class ItemCubit extends Cubit<ItemState> {
             weightValue: businessDetail.weightValue,
             weightUnit: businessDetail.weightUnit,
             packSize: businessDetail.packSize,
-            barcode: businessDetail.barcode,
             isOrganic: businessDetail.isOrganic,
             shelfLifeDays: businessDetail.shelfLifeDays,
             dosage: businessDetail.dosage,
@@ -485,6 +487,10 @@ class ItemCubit extends Cubit<ItemState> {
     return state.categoryGroupCountMap[categoryId] ?? 0;
   }
 
+  int getItemCountForCategory(int categoryId) {
+    return state.activeItemList.where((item) => item.categoryId == categoryId).length;
+  }
+
   int getTotalCategoryCount() {
     return state.totalCategoryCount;
   }
@@ -503,6 +509,14 @@ class ItemCubit extends Cubit<ItemState> {
     return state.groupTypeCountMap[groupId] ?? 0;
   }
 
+  int getItemCountForGroup(int groupId) {
+    return state.activeItemList.where((item) => item.groupId == groupId).length;
+  }
+
+  int getItemCountForType(int typeId) {
+    return state.activeItemList.where((item) => item.typeId == typeId).length;
+  }
+
   List<ItemModel>getSelectedItemList(int? id){
     List<ItemModel> newList = [];
     for(int a = 0; a < state.activeItemList.length; a++){
@@ -516,11 +530,43 @@ class ItemCubit extends Cubit<ItemState> {
   List<UniqueItemModel>getSelectedUniqueItemList(int itemId){
     List<UniqueItemModel> newList = [];
     for(int a = 0; a < state.activeUniqueItemList.length; a++){
-      if(itemId == state.activeUniqueItemList[a].itemId){
+      if(itemId == state.activeUniqueItemList[a].itemId &&
+          state.activeUniqueItemList[a].stockOutId == null){
         newList.add(state.activeUniqueItemList[a]);
       }
     }
     return newList;
+  }
+
+  bool _isMeasurementBasedClothingDetail(ItemBusinessDetailModel? detail) {
+    final length = detail?.measurementLength;
+    final width = detail?.measurementWidth;
+    final rate = detail?.pricePerMeasurementUnit;
+    return length != null &&
+        length > 0 &&
+        width != null &&
+        width > 0 &&
+        rate != null &&
+        rate > 0;
+  }
+
+  bool _matchesFullPieceSize(
+    UniqueItemModel unit,
+    ItemBusinessDetailModel detail,
+  ) {
+    const epsilon = 0.0001;
+    final targetLength = detail.measurementLength;
+    final targetWidth = detail.measurementWidth;
+    final unitLength = unit.instanceLength;
+    final unitWidth = unit.instanceWidth;
+    if (targetLength == null ||
+        targetWidth == null ||
+        unitLength == null ||
+        unitWidth == null) {
+      return false;
+    }
+    return (unitLength - targetLength).abs() < epsilon &&
+        (unitWidth - targetWidth).abs() < epsilon;
   }
 
   // List<UniqueItemModel>testinguniqueItemList(int itemId){
@@ -606,14 +652,41 @@ class ItemCubit extends Cubit<ItemState> {
     required UserModel userModel,
     required ItemModel itemModel,
     required String newName,
+    required BusinessType businessType,
+    required int? categoryId,
+    required int? groupId,
+    required int typeId,
     required double newOriginalPrice,
     required double newProfitPrice,
     required double newTaxPercentage,
     required bool needStock,
+    required String? newCode,
+    ItemBusinessDetailModel? existingBusinessDetail,
     ItemBusinessDetailModel? businessDetail,
   })async{
     List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(itemModel.id);
-    bool value = await DBHelper.editItem(userModel: userModel, itemModel: itemModel, uniqueItemList: uniqueItemList, newName: newName, newOriginalPrice: newOriginalPrice, newProfitPrice: newProfitPrice, newTaxPercentage: newTaxPercentage, needStock: needStock);
+    if (businessType == BusinessType.clothing &&
+        _isMeasurementBasedClothingDetail(existingBusinessDetail)) {
+      uniqueItemList = uniqueItemList
+          .where(
+            (unit) => _matchesFullPieceSize(unit, existingBusinessDetail!),
+          )
+          .toList();
+    }
+    bool value = await DBHelper.editItem(
+      userModel: userModel,
+      itemModel: itemModel,
+      uniqueItemList: uniqueItemList,
+      newName: newName,
+      categoryId: categoryId,
+      groupId: groupId,
+      typeId: typeId,
+      newOriginalPrice: newOriginalPrice,
+      newProfitPrice: newProfitPrice,
+      newTaxPercentage: newTaxPercentage,
+      needStock: needStock,
+      newCode: newCode,
+    );
     if (value && businessDetail != null) {
       await saveItemBusinessDetail(
         ItemBusinessDetailModel(
@@ -633,7 +706,6 @@ class ItemCubit extends Cubit<ItemState> {
           weightValue: businessDetail.weightValue,
           weightUnit: businessDetail.weightUnit,
           packSize: businessDetail.packSize,
-          barcode: businessDetail.barcode,
           isOrganic: businessDetail.isOrganic,
           shelfLifeDays: businessDetail.shelfLifeDays,
           dosage: businessDetail.dosage,

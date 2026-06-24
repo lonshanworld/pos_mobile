@@ -13,6 +13,7 @@ import "package:pos_mobile/routes/drawer_pagemodelList.dart";
 import "package:pos_mobile/screens/drawers/drawerinlarge_screen.dart";
 
 import "package:pos_mobile/screens/drawers/drawerinsmall_screen.dart";
+import "package:pos_mobile/screens/authenticaton/check_user_screen.dart";
 
 import "package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart";
 import "package:pos_mobile/widgets/cusAppbar_widget.dart";
@@ -20,7 +21,6 @@ import "package:pos_mobile/widgets/loading_widget.dart";
 
 import "../features/logout_feature.dart";
 import "../constants/txtconstants.dart";
-
 
 class HomeScreen extends StatefulWidget {
   static const String routeName = "/homescreen";
@@ -32,17 +32,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   int pageIndex = 0;
   late final PageController pageController;
 
   @override
   void initState() {
     super.initState();
-    pageController = PageController(
-      initialPage: pageIndex,
-      keepPage: true,
-    );
+    pageController = PageController(initialPage: pageIndex, keepPage: true);
   }
 
   @override
@@ -51,37 +47,60 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
+    final UserModel? userModel = context.select(
+      (UserDataCubit cubit) => cubit.state.userModel,
+    );
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
-    final BusinessType businessType =
-        context.select((ShopInfoCubit cubit) => cubit.state.businessType);
+    final ThemeModeType themeModeType = context.select(
+      (ThemeCubit cubit) => cubit.state.themeModeType,
+    );
+    final BusinessType businessType = context.select(
+      (ShopInfoCubit cubit) => cubit.state.businessType,
+    );
     final bool showThemeToggle = businessType.allowsThemeToggle;
+    final pages = PageList.getPages(userModel?.userLevel ?? UserLevel.merchant);
+    final int safePageIndex = pages.isEmpty
+        ? 0
+        : pageIndex.clamp(0, pages.length - 1);
 
-    void changePage(int value){
+    if (pageIndex != safePageIndex && pages.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          pageIndex = safePageIndex;
+        });
+        pageController.jumpToPage(safePageIndex);
+      });
+    }
+
+    void changePage(int value) {
       setState(() {
         pageIndex = value;
         pageController.jumpToPage(value);
       });
     }
 
-    void logoutFunc()async{
+    void logoutFunc() async {
       if (userModel == null) {
         Logout.forceLogout();
         return;
       }
 
       final bool isOwner =
-          userModel.userLevel == UserLevel.merchant || userModel.userLevel == UserLevel.superAdmin;
+          userModel.userLevel == UserLevel.merchant ||
+          userModel.userLevel == UserLevel.superAdmin;
 
       if (isOwner) {
+        final navigator = Navigator.of(context);
         bool value = await Logout.logout(context);
         if (value) {
-          Logout.forceLogout();
+          if (!mounted) return;
+          navigator.pushNamedAndRemoveUntil(
+            CheckUserScreen.routeName,
+            (route) => false,
+          );
         }
       } else {
         Logout.forceLogout();
@@ -97,20 +116,18 @@ class _HomeScreenState extends State<HomeScreen> {
         logoutFunc();
       },
       child: LayoutBuilder(
-        builder: (BuildContext ctx, BoxConstraints constraints){
-          if(userModel == null){
-            return const Center(
-              child: LoadingWidget(),
-            );
-          }else{
-            if(constraints.maxWidth > UIConstants.screenBreakPoint){
+        builder: (BuildContext ctx, BoxConstraints constraints) {
+          if (userModel == null) {
+            return const Center(child: LoadingWidget());
+          } else {
+            if (constraints.maxWidth > UIConstants.screenBreakPoint) {
               return Scaffold(
                 body: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
                       width: UIConstants.bigDrawerWidth,
-                      child:  DrawerInLargeScreen(
+                      child: DrawerInLargeScreen(
                         func: changePage,
                         currentIndex: pageIndex,
                       ),
@@ -131,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: PageView(
                               controller: pageController,
                               physics: const NeverScrollableScrollPhysics(),
-                              children: PageList.getPages(userModel.userLevel).map((e) => e.screen).toList(),
+                              children: pages.map((e) => e.screen).toList(),
                             ),
                           ),
                         ],
@@ -140,24 +157,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               );
-            }else{
+            } else {
               return Scaffold(
                 appBar: AppBar(
                   centerTitle: true,
-                  title: Text(
-                    PageList.getPages(userModel.userLevel)[pageIndex].title,
-                  ),
+                  title: Text(pages[safePageIndex].title),
                   leading: Builder(
-                      builder: (ctx) {
-                        return CusIconBtn(
-                          size: UIConstants.bigIcon,
-                          func: (){
-                            Scaffold.of(ctx).openDrawer();
-                          },
-                          clr: uiController.getpureOppositeClr(themeModeType),
-                          icon: Icons.menu_open_rounded,
-                        );
-                      }
+                    builder: (ctx) {
+                      return CusIconBtn(
+                        size: UIConstants.bigIcon,
+                        func: () {
+                          Scaffold.of(ctx).openDrawer();
+                        },
+                        clr: uiController.getpureOppositeClr(themeModeType),
+                        icon: Icons.menu_open_rounded,
+                      );
+                    },
                   ),
                   actions: [
                     if (showThemeToggle)
@@ -182,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 body: PageView(
                   controller: pageController,
                   physics: const NeverScrollableScrollPhysics(),
-                  children: PageList.getPages(userModel.userLevel).map((e) => e.screen).toList(),
+                  children: pages.map((e) => e.screen).toList(),
                 ),
               );
             }
@@ -190,6 +205,5 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
-
   }
 }

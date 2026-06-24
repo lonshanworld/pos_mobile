@@ -125,9 +125,9 @@ class TransactionDBService{
       Database db,
       {
         required UserModel userModel,
-        required CategoryModel categoryModel,
-        required GroupModel groupModel,
-        required TypeModel typeModel,
+        CategoryModel? categoryModel,
+        GroupModel? groupModel,
+        TypeModel? typeModel,
         required ItemModel itemModel,
         required String? code,
         required DateTime? itemManufactureDate,
@@ -141,46 +141,52 @@ class TransactionDBService{
     int stockInId = await insertStockIn(db, userModel, dateTime);
     if(stockInId == -1){
       return false;
-    }else{
-      int categoryValue = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-      if(categoryValue == -1){
-        return false;
-      }else{
-        int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-        if(groupValue == -1){
-          return false;
-        }else{
-          int typeValue = await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
-          if(typeValue == -1){
-            return false;
-          }else{
-            int itemValue = await ItemDbStorage.updateItemLastUpdateTime(db, dateTime, itemModel);
-            if(itemValue == -1){
-              return false;
-            }else{
-              List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(
-                db: db,
-                itemLength: itemLength,
-                userModel: userModel,
-                stockInId: stockInId,
-                dateTime: dateTime,
-                itemModel: itemModel,
-                itemManufactureDate: itemManufactureDate,
-                itemExpireDate: itemExpireDate,
-                getItemFromWhere: getItemFromWhere,
-                code: code,
-                unitSpecs: unitSpecs,
-              );
-              if(uniqueIdList.contains(-1)){
-                return false;
-              }else{
-                return true;
-              }
-            }
-          }
-        }
-      }
     }
+    if (categoryModel != null) {
+      final categoryValue = await CategoryDbStorage.updateCategoryLastUpdateTime(
+        db,
+        dateTime,
+        categoryModel,
+      );
+      if (categoryValue == -1) return false;
+    }
+    if (groupModel != null) {
+      final groupValue = await GroupDbStorage.updateGroupLastUpdateTime(
+        db,
+        dateTime,
+        groupModel,
+      );
+      if (groupValue == -1) return false;
+    }
+    if (typeModel != null) {
+      final typeValue = await TypeDbStorage.updateTypeLastUpdateTime(
+        db,
+        dateTime,
+        typeModel,
+      );
+      if (typeValue == -1) return false;
+    }
+    final int itemValue = await ItemDbStorage.updateItemLastUpdateTime(
+      db,
+      dateTime,
+      itemModel,
+    );
+    if (itemValue == -1) return false;
+
+    final List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(
+      db: db,
+      itemLength: itemLength,
+      userModel: userModel,
+      stockInId: stockInId,
+      dateTime: dateTime,
+      itemModel: itemModel,
+      itemManufactureDate: itemManufactureDate,
+      itemExpireDate: itemExpireDate,
+      getItemFromWhere: getItemFromWhere,
+      code: code,
+      unitSpecs: unitSpecs,
+    );
+    return !uniqueIdList.contains(-1);
   }
 
   static Future<bool>stockOutUniqueItemList(

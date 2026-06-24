@@ -1,373 +1,108 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
-import "package:collection/collection.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
-import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
-import "package:pos_mobile/constants/enums.dart";
-import "package:pos_mobile/constants/uiConstants.dart";
-import "package:pos_mobile/controller/DB_helper.dart";
-import "package:pos_mobile/controller/ui_controller.dart";
-import "package:pos_mobile/error_handlers/item_folder/no_selected_id_error_widget.dart";
-import "package:pos_mobile/features/cus_showmodelbottomsheet.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
-import "package:pos_mobile/models/item_model_folder/item_model.dart";
 import "package:pos_mobile/constants/business_hierarchy_config.dart";
-import "package:pos_mobile/screens/transaction/stockIn/item/create_item_screen.dart";
+import "package:pos_mobile/constants/uiConstants.dart";
+import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/screens/transaction/stockIn/type/create_type_screen.dart";
-import "package:pos_mobile/widgets/btns_folder/cusTxtIconBtn_widget.dart";
+import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/cusSelectTypeBtn_widget.dart";
-import "package:pos_mobile/widgets/itemBox/item_box_widget.dart";
-import "package:pos_mobile/widgets/itemBox/stockin_item_appbar_widget.dart";
-import "package:pos_mobile/models/item_model_folder/item_business_detail_model.dart";
+import "package:pos_mobile/widgets/noitem_widget.dart";
 
-class TypeScreen extends StatefulWidget {
-  final int? selectedGroupId;
-  final VoidCallback goBackFunc;
+class TypeScreen extends StatelessWidget {
   final bool isStorage;
 
   const TypeScreen({
     super.key,
-    required this.selectedGroupId,
-    required this.goBackFunc,
     required this.isStorage,
   });
 
   @override
-  State<TypeScreen> createState() => _TypeScreenState();
-}
-
-class _TypeScreenState extends State<TypeScreen> {
-  int selectedIndex = 0;
-  final TextEditingController searchController = TextEditingController();
-  String searchQuery = "";
-  String selectedColor = "All";
-  late final Future<GroupModel?> _groupFuture;
-  late final Future<List<ItemBusinessDetailModel>> _detailsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _groupFuture = _loadGroup();
-    _detailsFuture = DBHelper.getAllItemBusinessDetails();
-  }
-
-  Future<GroupModel?> _loadGroup() async {
-    final int? selectedGroupId = widget.selectedGroupId;
-    if (selectedGroupId == null) {
-      return null;
-    }
-
-    try {
-      final GroupModel? groupModel = await DBHelper.getGroupById(selectedGroupId);
-      if (groupModel == null) {
-        debugPrint('TypeScreen: missing group for groupId=$selectedGroupId');
-      }
-      return groupModel;
-    } catch (err, st) {
-      debugPrint('TypeScreen: failed to load group for groupId=$selectedGroupId');
-      debugPrint(err.toString());
-      debugPrint(st.toString());
-      return null;
-    }
-  }
-
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final CusShowSheet showSheet = CusShowSheet();
     final businessType = UIController.instance.businessType;
-    final groupLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.group);
-    final typeLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.type);
-    final itemLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.item);
+    final typeLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.type,
+    );
+    final itemCubit = context.read<ItemCubit>();
+    final typeList = context.select((ItemCubit cubit) => cubit.state.activeTypeList);
 
-    void startSelectedAgain() {
-      if (!mounted) return;
-      setState(() {
-        selectedIndex = 0;
-        searchController.clear();
-        searchQuery = "";
-        selectedColor = "All";
-      });
-    }
-
-    if (widget.selectedGroupId == null) {
-      return Scaffold(
-        body: NoSelectedIdErrorWidget(
-          txt: "This ${groupLabel.toLowerCase()} has some error",
-          func: widget.goBackFunc,
-        ),
-      );
-    }
-
-    return FutureBuilder<GroupModel?>(
-      future: _groupFuture,
-      builder: (context, groupSnapshot) {
-        if (groupSnapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final GroupModel? groupModel = groupSnapshot.data;
-        if (groupModel == null) {
-          return Scaffold(
-            body: NoSelectedIdErrorWidget(
-              txt: "This ${groupLabel.toLowerCase()} has some error",
-              func: widget.goBackFunc,
+    return Scaffold(
+      body: Stack(
+        children: [
+          if (typeList.isEmpty)
+            Positioned.fill(
+              child: NoItemWidget(
+                noItemTxt: "No ${typeLabel.toLowerCase()} found",
+              ),
             ),
-          );
-        }
-
-        return FutureBuilder<List<ItemBusinessDetailModel>>(
-          future: _detailsFuture,
-          builder: (context, detailsSnapshot) {
-            final List<ItemBusinessDetailModel> detailsList = detailsSnapshot.data ?? [];
-
-            return BlocBuilder<ItemCubit, ItemState>(
-              builder: (context, state) {
-                final itemCubit = context.read<ItemCubit>();
-                final List<TypeModel> typeList = itemCubit.getSelectedTypeList(widget.selectedGroupId!);
-                final TypeModel? typeModel = typeList.isEmpty
-                    ? null
-                    : itemCubit.state.activeTypeList.firstWhereOrNull((element) => element.id == typeList[selectedIndex].id);
-                final List<ItemModel> rawItemList = typeList.isEmpty
-                    ? []
-                    : itemCubit.getSelectedItemList(typeList[selectedIndex].id);
-
-                // Extract colors for the dropdown
-                final Set<String> colorSet = {"All"};
-                final isColorSupported = businessType == BusinessType.clothing || businessType == BusinessType.phoneLaptopTablets;
-                if (isColorSupported) {
-                  for (final item in rawItemList) {
-                    final detail = detailsList.firstWhereOrNull((d) => d.itemId == item.id);
-                    if (detail != null) {
-                      final c = businessType == BusinessType.clothing ? detail.clothingColor : detail.deviceColor;
-                      if (c != null && c.isNotEmpty) {
-                        colorSet.add(c);
-                      }
-                    }
-                  }
-                }
-                final availableColors = colorSet.toList();
-
-                final List<ItemModel> itemList = rawItemList.where((item) {
-                  bool matchesSearch = searchQuery.isEmpty || item.name.toLowerCase().contains(searchQuery.toLowerCase());
-                  bool matchesColor = true;
-                  if (selectedColor != "All" && isColorSupported) {
-                    final detail = detailsList.firstWhereOrNull((d) => d.itemId == item.id);
-                    final c = businessType == BusinessType.clothing ? detail?.clothingColor : detail?.deviceColor;
-                    matchesColor = c == selectedColor;
-                  }
-                  return matchesSearch && matchesColor;
-                }).toList();
-
-                final OutlineInputBorder outlineInputBorder = OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.grey, width: 1),
-                  borderRadius: BorderRadius.circular(50),
-                );
-
-            return Column(
-              children: [
-                StockInItemAppBar(
-                  txt: "From  ${groupModel.name}",
-                  func: widget.goBackFunc,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: UIConstants.bigSpace,
-                    vertical: UIConstants.mediumSpace,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: searchController,
-                          onChanged: (val) {
-                            setState(() {
-                              searchQuery = val.trim();
-                            });
-                          },
-                          decoration: InputDecoration(
-                            labelText: "Search Inventory...",
-                            labelStyle: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.grey),
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                            border: outlineInputBorder,
-                            focusedBorder: outlineInputBorder,
-                            enabledBorder: outlineInputBorder,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: UIConstants.bigSpace,
-                              vertical: UIConstants.smallSpace,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (isColorSupported && availableColors.length > 1) ...[
-                        const SizedBox(width: UIConstants.mediumSpace),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: availableColors.contains(selectedColor) ? selectedColor : "All",
-                              items: availableColors.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  selectedColor = newValue ?? "All";
-                                });
-                              },
-                            ),
-                          ),
+          if (typeList.isNotEmpty)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(UIConstants.bigSpace),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.label_outline_rounded, color: Colors.grey),
+                        const SizedBox(width: UIConstants.smallSpace),
+                        CusTxtWidget(
+                          txtStyle: Theme.of(context).textTheme.titleSmall!,
+                          txt: "${typeList.length} ${typeLabel.toLowerCase()}s",
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: UIConstants.smallSpace),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: uiController.getpureDirectClr(themeModeType),
-                            borderRadius: UIConstants.smallBorderRadius,
-                            border: Border.all(
-                              color: uiController.getpureOppositeClr(themeModeType).withValues(alpha: 0.1),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              if (widget.isStorage)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: UIConstants.mediumSpace,
-                                    vertical: UIConstants.smallSpace,
-                                  ),
-                                  child: CusTxtIconElevatedBtn(
-                                    txt: "Add $typeLabel",
-                                    verticalpadding: 5,
-                                    horizontalpadding: UIConstants.mediumSpace,
-                                    bdrRadius: UIConstants.mediumRadius,
-                                    bgClr: Colors.blueAccent,
-                                    txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                    txtClr: Colors.white,
-                                    func: () {
-                                      showSheet.showCusBottomSheet(CreateTypeScreen(selectedGroupModel: groupModel));
-                                    },
-                                    icon: Icons.add,
-                                    iconSize: UIConstants.normalsmallIconSize,
-                                  ),
-                                ),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      for (int i = 0; i < typeList.length; i++)
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 3.5),
-                                          child: CusSelectTypeBtnWidget(
-                                            isSelected: i == selectedIndex,
-                                            typeModel: typeList[i],
-                                            func: () {
-                                              setState(() {
-                                                selectedIndex = i;
-                                              });
-                                            },
-                                            isStorage: widget.isStorage,
-                                            afterDeleteFunc: startSelectedAgain,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.mediumSpace),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Stack(
-                          clipBehavior: Clip.none,
+                    ),
+                    const SizedBox(height: UIConstants.mediumSpace),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: UIConstants.mediumSpace,
+                          runSpacing: UIConstants.mediumSpace,
                           children: [
-                            Positioned.fill(
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final bool isWide = constraints.maxWidth >= 900;
-                                  final double bottomReservedSpace = (widget.isStorage && typeModel != null) ? 120 : UIConstants.bigSpace * 2;
-
-                                  return GridView.builder(
-                                    padding: EdgeInsets.only(
-                                      left: UIConstants.bigSpace,
-                                      right: UIConstants.bigSpace,
-                                      top: UIConstants.bigSpace,
-                                      bottom: bottomReservedSpace,
+                            for (final typeModel in typeList)
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CusSelectTypeBtnWidget(
+                                    isSelected: false,
+                                    typeModel: typeModel,
+                                    func: () {},
+                                    isStorage: isStorage,
+                                    afterDeleteFunc: () {},
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: UIConstants.smallSpace,
+                                      top: 4,
                                     ),
-                                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                                    itemCount: itemList.length,
-                                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                                      maxCrossAxisExtent: isWide ? 360 : 400,
-                                      mainAxisExtent: isWide ? 160 : 140,
-                                      mainAxisSpacing: UIConstants.bigSpace,
-                                      crossAxisSpacing: UIConstants.bigSpace,
+                                    child: Text(
+                                      "${itemCubit.getItemCountForType(typeModel.id)} items",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Colors.grey),
                                     ),
-                                    itemBuilder: (ctx, index) {
-                                      return ItemBoxWidget(
-                                        index: index + 1,
-                                        itemModel: itemList[index],
-                                        isStorage: widget.isStorage,
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            if (typeModel != null && widget.isStorage)
-                              CreateItemBtnWidget(
-                                txt: "Create $itemLabel",
-                                widget: CreateItemScreen(typeModel: typeModel),
+                                  ),
+                                ],
                               ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ),
+          if (isStorage)
+            CreateItemBtnWidget(
+              txt: "Create $typeLabel",
+              widget: const CreateTypeScreen(),
+            ),
+        ],
+      ),
     );
-  },
-);
   }
 }

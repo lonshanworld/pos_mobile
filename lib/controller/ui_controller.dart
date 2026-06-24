@@ -33,14 +33,8 @@ class UIController {
 
   Color accentColor() => _palette(ThemeModeType.light).accent;
 
-  SizedBox sizedBox({
-    required double? cusHeight,
-    required double? cusWidth,
-  }) {
-    return SizedBox(
-      width: cusWidth ?? 0,
-      height: cusHeight ?? 0,
-    );
+  SizedBox sizedBox({required double? cusHeight, required double? cusWidth}) {
+    return SizedBox(width: cusWidth ?? 0, height: cusHeight ?? 0);
   }
 
   ThemeData cusThemeData(ThemeModeType themeModeType) {
@@ -102,7 +96,10 @@ class UIController {
         color: palette.popupSurface,
         shape: RoundedRectangleBorder(
           borderRadius: UIConstants.mediumBorderRadius,
-          side: BorderSide(color: palette.accent.withValues(alpha: 0.5), width: 1),
+          side: BorderSide(
+            color: palette.accent.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
         elevation: 8,
         shadowColor: Colors.black.withValues(alpha: 0.25),
@@ -132,6 +129,26 @@ class UIController {
           ),
         ),
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.green.shade700;
+          }
+          return Colors.red.shade700;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.green.shade200;
+          }
+          return Colors.red.shade200;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.green.shade400;
+          }
+          return Colors.red.shade400;
+        }),
+      ),
     );
   }
 
@@ -158,24 +175,15 @@ class UIController {
   }
 
   TextStyle cusBodyMedium(ThemeModeType themeModeType) {
-    return TextStyle(
-      fontSize: 14,
-      color: getOppositeClr(themeModeType),
-    );
+    return TextStyle(fontSize: 14, color: getOppositeClr(themeModeType));
   }
 
   TextStyle cusBodyLarge(ThemeModeType themeModeType) {
-    return TextStyle(
-      fontSize: 18,
-      color: getOppositeClr(themeModeType),
-    );
+    return TextStyle(fontSize: 18, color: getOppositeClr(themeModeType));
   }
 
   TextStyle cusBodySmall(ThemeModeType themeModeType) {
-    return TextStyle(
-      fontSize: 12,
-      color: getOppositeClr(themeModeType),
-    );
+    return TextStyle(fontSize: 12, color: getOppositeClr(themeModeType));
   }
 
   TextStyle cusTitleLarge(ThemeModeType themeModeType) {
@@ -203,12 +211,13 @@ class UIController {
   }
 
   BoxShadow boxShadow(ThemeModeType themeModeType) => BoxShadow(
-        color: businessType == BusinessType.general &&
-                themeModeType == ThemeModeType.dark
-            ? Colors.transparent
-            : Colors.black.withValues(alpha: 0.18),
-        blurRadius: 4,
-        spreadRadius: 0.5,
-        offset: const Offset(0, 2),
-      );
+    color:
+        businessType == BusinessType.general &&
+            themeModeType == ThemeModeType.dark
+        ? Colors.transparent
+        : Colors.black.withValues(alpha: 0.18),
+    blurRadius: 4,
+    spreadRadius: 0.5,
+    offset: const Offset(0, 2),
+  );
 }

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/type_model.dart';
+import 'package:pos_mobile/screens/barcode_scanner_screen.dart';
 import 'package:pos_mobile/screens/transaction/stockOut/voucher_screen.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtIconBtn_widget.dart';
 import 'package:pos_mobile/widgets/itemBox/stockout_item_box_widget.dart';
@@ -84,48 +85,88 @@ class _StockOutScreenState extends State<StockOutScreen> {
     });
   }
 
+  String _searchHint(BusinessType businessType) {
+    switch (businessType) {
+      case BusinessType.clothing:
+        return "Search fabrics, designs, or colors";
+      case BusinessType.basicPharmacy:
+        return "Search medicines or treatments";
+      case BusinessType.grocery:
+        return "Search grocery items or produce";
+      case BusinessType.convenience:
+        return "Search items or snacks";
+      default:
+        return "Search items";
+    }
+  }
+
+  String _scanHint(BusinessType businessType) {
+    switch (businessType) {
+      case BusinessType.clothing:
+        return "Scan piece code or item barcode";
+      case BusinessType.basicPharmacy:
+        return "Scan batch label or item barcode";
+      case BusinessType.grocery:
+        return "Scan pack label or item barcode";
+      case BusinessType.convenience:
+        return "Scan barcode to add item";
+      default:
+        return "Scan barcode / batch label to add item";
+    }
+  }
+
+  String _emptyStateMessage(BusinessType businessType, bool hasFilters) {
+    if (hasFilters) {
+      switch (businessType) {
+        case BusinessType.clothing:
+          return "No fabrics or designs match the current search and filters";
+        case BusinessType.basicPharmacy:
+          return "No medicines match the current search and filters";
+        case BusinessType.grocery:
+          return "No grocery items match the current search and filters";
+        case BusinessType.convenience:
+          return "No convenience items match the current search and filters";
+        default:
+          return "No items match the current search and filters";
+      }
+    }
+
+    switch (businessType) {
+      case BusinessType.clothing:
+        return "No fabrics available";
+      case BusinessType.basicPharmacy:
+        return "No medicines available";
+      case BusinessType.grocery:
+        return "No grocery items available";
+      case BusinessType.convenience:
+        return "No convenience items available";
+      default:
+        return "No items available";
+    }
+  }
+
   List<ItemModel> _buildFilteredItems({
     required List<ItemModel> activeItemList,
-    required List<CategoryModel> categoryList,
-    required List<GroupModel> groupList,
-    required List<TypeModel> typeList,
     required Map<int, dynamic> detailByItemId,
     required BusinessType businessType,
   }) {
     final String query = searchController.text.trim().toLowerCase();
-    final Map<int, CategoryModel> categoryById = {
-      for (final category in categoryList) category.id: category,
-    };
-    final Map<int, GroupModel> groupById = {
-      for (final group in groupList) group.id: group,
-    };
-    final Map<int, TypeModel> typeById = {
-      for (final type in typeList) type.id: type,
-    };
 
     return activeItemList.where((item) {
       if (query.isNotEmpty && !item.name.toLowerCase().contains(query)) {
         return false;
       }
 
-      final TypeModel? typeModel = typeById[item.typeId];
-      final GroupModel? groupModel = typeModel == null
-          ? null
-          : groupById[typeModel.groupId];
-      final CategoryModel? categoryModel = groupModel == null
-          ? null
-          : categoryById[groupModel.categoryId];
-
       if (selectedCategoryId != null &&
-          categoryModel?.id != selectedCategoryId) {
+          item.categoryId != selectedCategoryId) {
         return false;
       }
 
-      if (selectedGroupId != null && groupModel?.id != selectedGroupId) {
+      if (selectedGroupId != null && item.groupId != selectedGroupId) {
         return false;
       }
 
-      if (selectedTypeId != null && typeModel?.id != selectedTypeId) {
+      if (selectedTypeId != null && item.typeId != selectedTypeId) {
         return false;
       }
 
@@ -333,16 +374,8 @@ class _StockOutScreenState extends State<StockOutScreen> {
     );
 
     final List<CategoryModel> categoryOptions = allActiveCategoryList;
-    final List<GroupModel> groupOptions = selectedCategoryId == null
-        ? allActiveGroupList
-        : allActiveGroupList
-              .where((group) => group.categoryId == selectedCategoryId)
-              .toList();
-    final List<TypeModel> typeOptions = selectedGroupId == null
-        ? allActiveTypeList
-        : allActiveTypeList
-              .where((type) => type.groupId == selectedGroupId)
-              .toList();
+    final List<GroupModel> groupOptions = allActiveGroupList;
+    final List<TypeModel> typeOptions = allActiveTypeList;
 
     final ItemCubit itemCubit = context.read<ItemCubit>();
     final detailByItemId = {
@@ -372,9 +405,6 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
     final List<ItemModel> filteredItems = _buildFilteredItems(
       activeItemList: activeItemList,
-      categoryList: allActiveCategoryList,
-      groupList: allActiveGroupList,
-      typeList: allActiveTypeList,
       detailByItemId: detailByItemId,
       businessType: businessType,
     );
@@ -468,14 +498,30 @@ class _StockOutScreenState extends State<StockOutScreen> {
           .state
           .businessType;
       final ItemCubit itemCubit = context.read<ItemCubit>();
-      final detailByItemId = {
-        for (final item in activeItemList)
-          item.id: itemCubit.getBusinessDetail(item.id),
-      };
+      final String query = code.toLowerCase();
+      final matchedUnit = itemState.activeUniqueItemList
+          .where((unit) => !sellUniqueItemModelList.any((e) => e.id == unit.id))
+          .firstWhereOrNull((unit) {
+            final unitCode = unit.code?.trim().toLowerCase();
+            final batchCode = unit.instanceBatchNumber?.trim().toLowerCase();
+            return unitCode == query || batchCode == query;
+          });
+
+      if (matchedUnit != null) {
+        addSellUniqueItemList(matchedUnit);
+        _showInfoSnack(
+          'Scanned unit code: ${itemCubit.getItem(matchedUnit.itemId)?.name ?? "item"} added to checkout.',
+        );
+        barcodeController
+          ..text = code
+          ..selection = TextSelection.collapsed(offset: code.length);
+        barcodeController.clear();
+        return;
+      }
+
       final matches = CheckoutHelpers.findItemsByBarcode(
         code,
         activeItemList,
-        detailByItemId,
       );
 
       if (matches.isEmpty) {
@@ -520,7 +566,19 @@ class _StockOutScreenState extends State<StockOutScreen> {
       }
 
       addSellUniqueItemList(next);
+      _showInfoSnack('Scanned item barcode: ${item.name} added to checkout.');
       barcodeController.clear();
+    }
+
+    Future<void> openBarcodeScanner() async {
+      final scanned = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerScreen(),
+        ),
+      );
+      if (!mounted || scanned == null || scanned.trim().isEmpty) return;
+      barcodeController.text = scanned;
+      handleBarcodeScan(scanned);
     }
 
     void removeSellUniqueItemList(ItemModel data) {
@@ -627,7 +685,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                             onChanged: (value) => _setSearchValue(value),
                             decoration: InputDecoration(
-                              labelText: "Search Items ...",
+                              labelText: _searchHint(businessType),
                               labelStyle: Theme.of(context)
                                   .textTheme
                                   .bodyMedium!
@@ -660,10 +718,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                             onSubmitted: handleBarcodeScan,
                             decoration: InputDecoration(
-                              labelText:
-                                  businessType == BusinessType.convenience
-                                  ? 'Scan barcode to add item'
-                                  : 'Scan barcode / batch label to add item',
+                              labelText: _scanHint(businessType),
                               labelStyle: Theme.of(context)
                                   .textTheme
                                   .bodyMedium!
@@ -672,6 +727,14 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                 Icons.qr_code_scanner,
                                 size: UIConstants.mediumIcon,
                                 color: Colors.grey,
+                              ),
+                              suffixIcon: IconButton(
+                                tooltip: "Open scanner",
+                                icon: const Icon(
+                                  Icons.qr_code_scanner,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: openBarcodeScanner,
                               ),
                               border: outlineInputBorder,
                               focusedBorder: outlineInputBorder,
@@ -694,14 +757,29 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                   businessType,
                                   HierarchyLevel.category,
                                 );
+                            final categoryPluralLabel =
+                                BusinessHierarchyConfig.getPluralLabel(
+                                  businessType,
+                                  HierarchyLevel.category,
+                                );
                             final groupLabel = BusinessHierarchyConfig.getLabel(
                               businessType,
                               HierarchyLevel.group,
                             );
+                            final groupPluralLabel =
+                                BusinessHierarchyConfig.getPluralLabel(
+                                  businessType,
+                                  HierarchyLevel.group,
+                                );
                             final typeLabel = BusinessHierarchyConfig.getLabel(
                               businessType,
                               HierarchyLevel.type,
                             );
+                            final typePluralLabel =
+                                BusinessHierarchyConfig.getPluralLabel(
+                                  businessType,
+                                  HierarchyLevel.type,
+                                );
                             final showColorFilter =
                                 businessType == BusinessType.clothing ||
                                 businessType == BusinessType.phoneLaptopTablets;
@@ -714,7 +792,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                 items: [
                                   DropdownMenuItem<int?>(
                                     value: null,
-                                    child: Text("All ${categoryLabel}s"),
+                                    child: Text("All $categoryPluralLabel"),
                                   ),
                                   ...categoryOptions.map(
                                     (category) => DropdownMenuItem<int?>(
@@ -726,8 +804,6 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                 onChanged: (value) {
                                   setState(() {
                                     selectedCategoryId = value;
-                                    selectedGroupId = null;
-                                    selectedTypeId = null;
                                     currentPage = 1;
                                   });
                                 },
@@ -739,7 +815,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                 items: [
                                   DropdownMenuItem<int?>(
                                     value: null,
-                                    child: Text("All ${groupLabel}s"),
+                                    child: Text("All $groupPluralLabel"),
                                   ),
                                   ...groupOptions.map(
                                     (group) => DropdownMenuItem<int?>(
@@ -748,38 +824,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                     ),
                                   ),
                                 ],
-                                onChanged: (value) async {
+                                onChanged: (value) {
                                   setState(() {
                                     selectedGroupId = value;
-                                    selectedTypeId = null;
                                     currentPage = 1;
                                   });
-
-                                  if (value == null) {
-                                    return;
-                                  }
-
-                                  try {
-                                    final GroupModel? groupModel =
-                                        await DBHelper.getGroupById(value);
-                                    if (!mounted) return;
-                                    if (groupModel == null) {
-                                      debugPrint(
-                                        'StockOutScreen: selected group not found in DB for id=$value',
-                                      );
-                                      return;
-                                    }
-                                    setState(() {
-                                      selectedCategoryId =
-                                          groupModel.categoryId;
-                                    });
-                                  } catch (err, st) {
-                                    debugPrint(
-                                      'StockOutScreen: failed to resolve group filter for id=$value',
-                                    );
-                                    debugPrint(err.toString());
-                                    debugPrint(st.toString());
-                                  }
                                 },
                               ),
                               _buildFilterDropdown(
@@ -789,7 +838,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                 items: [
                                   DropdownMenuItem<int?>(
                                     value: null,
-                                    child: Text("All ${typeLabel}s"),
+                                    child: Text("All $typePluralLabel"),
                                   ),
                                   ...typeOptions.map(
                                     (type) => DropdownMenuItem<int?>(
@@ -798,51 +847,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                     ),
                                   ),
                                 ],
-                                onChanged: (value) async {
+                                onChanged: (value) {
                                   setState(() {
                                     selectedTypeId = value;
                                     currentPage = 1;
                                   });
-
-                                  if (value == null) {
-                                    return;
-                                  }
-
-                                  try {
-                                    final TypeModel? typeModel =
-                                        await DBHelper.getTypeById(value);
-                                    if (!mounted) return;
-                                    if (typeModel == null) {
-                                      debugPrint(
-                                        'StockOutScreen: selected type not found in DB for id=$value',
-                                      );
-                                      return;
-                                    }
-
-                                    final GroupModel? groupModel =
-                                        await DBHelper.getGroupById(
-                                          typeModel.groupId,
-                                        );
-                                    if (!mounted) return;
-                                    if (groupModel == null) {
-                                      debugPrint(
-                                        'StockOutScreen: selected type has missing group in DB for groupId=${typeModel.groupId}',
-                                      );
-                                      return;
-                                    }
-
-                                    setState(() {
-                                      selectedGroupId = typeModel.groupId;
-                                      selectedCategoryId =
-                                          groupModel.categoryId;
-                                    });
-                                  } catch (err, st) {
-                                    debugPrint(
-                                      'StockOutScreen: failed to resolve type filter for id=$value',
-                                    );
-                                    debugPrint(err.toString());
-                                    debugPrint(st.toString());
-                                  }
                                 },
                               ),
                             ];
@@ -964,16 +973,14 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                             ),
                                             const SizedBox(height: 16),
                                             Text(
-                                              searchController.text
-                                                          .trim()
-                                                          .isNotEmpty ||
-                                                      selectedCategoryId !=
-                                                          null ||
-                                                      selectedGroupId != null ||
-                                                      selectedTypeId != null ||
-                                                      selectedColor != null
-                                                  ? "No items match the current search and filters"
-                                                  : "No items available",
+                                              _emptyStateMessage(
+                                                businessType,
+                                                searchController.text.trim().isNotEmpty ||
+                                                    selectedCategoryId != null ||
+                                                    selectedGroupId != null ||
+                                                    selectedTypeId != null ||
+                                                    selectedColor != null,
+                                              ),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleMedium

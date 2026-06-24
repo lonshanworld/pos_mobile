@@ -113,22 +113,23 @@ class ItemBoxWidget extends StatelessWidget {
                     child: const SizedBox.shrink(),
                     itemBuilder: (BuildContext context) {
                       return [
-                        cusPopUpMenuItem(
-                          func: (){
-                            showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: true));
-                          },
-                          txt: "Batch Stock-In",
-                          context : context,
-                          isImportant: false,
-                        ),
-                        cusPopUpMenuItem(
-                          func: (){
-                            showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: false));
-                          },
-                          txt: "Single Stock-In",
-                          context : context,
-                          isImportant: false,
-                        ),
+                        if (itemModel.needStock)
+                          cusPopUpMenuItem(
+                            func: (){
+                              showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: true));
+                            },
+                            txt: "Batch Stock-In",
+                            context : context,
+                            isImportant: false,
+                          ),
+                        // cusPopUpMenuItem(
+                        //   func: (){
+                        //     showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: false));
+                        //   },
+                        //   txt: "Single Stock-In",
+                        //   context : context,
+                        //   isImportant: false,
+                        // ),
                         if(userModel != null && userModel.userLevel == UserLevel.merchant && isStorage == true)cusPopUpMenuItem(
                           func: (){
                             Navigator.of(context).pushNamed(
@@ -246,7 +247,11 @@ class ItemBoxWidget extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  outOfStock ? "Out of Stock" : "$stockCount in Stock",
+                                  !itemModel.needStock
+                                      ? "Made to Order"
+                                      : outOfStock
+                                          ? "Out of Stock"
+                                          : "$stockCount in Stock",
                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                 ),
                               ),

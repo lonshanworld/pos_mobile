@@ -132,8 +132,9 @@ class GeneralSettingsScreen extends StatelessWidget {
               TextField(
                 controller: currentController,
                 obscureText: true,
-                decoration:
-                    const InputDecoration(labelText: 'Current password'),
+                decoration: const InputDecoration(
+                  labelText: 'Current password',
+                ),
               ),
               const SizedBox(height: UIConstants.mediumSpace),
               TextField(
@@ -145,8 +146,9 @@ class GeneralSettingsScreen extends StatelessWidget {
               TextField(
                 controller: confirmController,
                 obscureText: true,
-                decoration:
-                    const InputDecoration(labelText: 'Confirm new password'),
+                decoration: const InputDecoration(
+                  labelText: 'Confirm new password',
+                ),
               ),
             ],
           ),
@@ -157,12 +159,13 @@ class GeneralSettingsScreen extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () async {
-                final msg =
-                    await context.read<UserDataCubit>().changeOwnerPassword(
-                          currentPassword: currentController.text.trim(),
-                          newPassword: newController.text.trim(),
-                          confirmPassword: confirmController.text.trim(),
-                        );
+                final msg = await context
+                    .read<UserDataCubit>()
+                    .changeOwnerPassword(
+                      currentPassword: currentController.text.trim(),
+                      newPassword: newController.text.trim(),
+                      confirmPassword: confirmController.text.trim(),
+                    );
 
                 if (!context.mounted) return;
                 Navigator.of(ctx).pop();
@@ -170,7 +173,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        msg ?? 'Owner password updated successfully.'),
+                      msg ?? 'Owner password updated successfully.',
+                    ),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -193,16 +197,18 @@ class GeneralSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
     final currentUser = context.watch<UserDataCubit>().state.userModel;
-    final bool isOwner = currentUser?.userLevel == UserLevel.merchant ||
+    final bool isOwner =
+        currentUser?.userLevel == UserLevel.merchant ||
         currentUser?.userLevel == UserLevel.superAdmin;
-    final ShopInfoState shopInfoState =
-        context.watch<ShopInfoCubit>().state;
+    final ShopInfoState shopInfoState = context.watch<ShopInfoCubit>().state;
     final accent = uiController.accentColor();
 
     Widget sectionHeader(String title, IconData icon) {
       return Padding(
         padding: const EdgeInsets.only(
-            top: UIConstants.bigSpace, bottom: UIConstants.mediumSpace),
+          top: UIConstants.bigSpace,
+          bottom: UIConstants.mediumSpace,
+        ),
         child: Row(
           children: [
             Icon(icon, color: accent, size: UIConstants.bigIcon),
@@ -210,9 +216,9 @@ class GeneralSettingsScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      color: accent,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium!.copyWith(color: accent),
               ),
             ),
           ],
@@ -238,13 +244,13 @@ class GeneralSettingsScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () =>
-                        _showChangeOwnerPasswordDialog(context),
+                    onPressed: () => _showChangeOwnerPasswordDialog(context),
                     icon: const Icon(Icons.key_outlined),
                     label: const Text('Change Owner Password'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          vertical: UIConstants.mediumSpace),
+                        vertical: UIConstants.mediumSpace,
+                      ),
                     ),
                   ),
                 ),
@@ -260,7 +266,6 @@ class GeneralSettingsScreen extends StatelessWidget {
                     'Print a QR code on receipts when available',
                   ),
                   value: shopInfoState.includeQrCode,
-                  activeThumbColor: accent,
                   onChanged: (val) =>
                       context.read<ShopInfoCubit>().updateIncludeQrCode(val),
                 ),
@@ -271,7 +276,6 @@ class GeneralSettingsScreen extends StatelessWidget {
                     'Print shop logo on receipts if configured',
                   ),
                   value: shopInfoState.includeLogo,
-                  activeThumbColor: accent,
                   onChanged: (val) =>
                       context.read<ShopInfoCubit>().updateIncludeLogo(val),
                 ),
@@ -280,9 +284,7 @@ class GeneralSettingsScreen extends StatelessWidget {
 
                 // ── Business Type ──
                 sectionHeader('Business Type', Icons.category_outlined),
-                BusinessTypeInfoCard(
-                  businessType: shopInfoState.businessType,
-                ),
+                BusinessTypeInfoCard(businessType: shopInfoState.businessType),
                 const SizedBox(height: UIConstants.mediumSpace),
                 BusinessTypeSelector(
                   selected: shopInfoState.businessType,
@@ -308,9 +310,9 @@ class GeneralSettingsScreen extends StatelessWidget {
                       ),
                     );
                     if (confirmed == true && context.mounted) {
-                      await context
-                          .read<ShopInfoCubit>()
-                          .updateBusinessType(type);
+                      await context.read<ShopInfoCubit>().updateBusinessType(
+                        type,
+                      );
                     }
                   },
                 ),
@@ -323,25 +325,37 @@ class GeneralSettingsScreen extends StatelessWidget {
                   label: 'Shop Name',
                   value: shopInfoState.shopName,
                   onEdit: () => _showEditShopInfoDialog(
-                      context, 'shopName', shopInfoState.shopName),
+                    context,
+                    'shopName',
+                    shopInfoState.shopName,
+                  ),
                 ),
                 _InfoTile(
                   label: 'Address',
                   value: shopInfoState.shopAddress,
                   onEdit: () => _showEditShopInfoDialog(
-                      context, 'shopAddress', shopInfoState.shopAddress),
+                    context,
+                    'shopAddress',
+                    shopInfoState.shopAddress,
+                  ),
                 ),
                 _InfoTile(
                   label: 'Phone',
                   value: shopInfoState.phNum,
                   onEdit: () => _showEditShopInfoDialog(
-                      context, 'phNum', shopInfoState.phNum),
+                    context,
+                    'phNum',
+                    shopInfoState.phNum,
+                  ),
                 ),
                 _InfoTile(
                   label: 'No Return Note',
                   value: shopInfoState.noReturnNote,
                   onEdit: () => _showEditShopInfoDialog(
-                      context, 'noReturnNote', shopInfoState.noReturnNote),
+                    context,
+                    'noReturnNote',
+                    shopInfoState.noReturnNote,
+                  ),
                 ),
                 const SizedBox(height: UIConstants.mediumSpace),
                 const CusDividerWidget(clr: Colors.grey),
@@ -369,12 +383,14 @@ class GeneralSettingsScreen extends StatelessWidget {
                             onPressed: () => context
                                 .read<ShopInfoCubit>()
                                 .updateLogoPath(null),
-                            icon: Icon(Icons.restore,
-                                color: Colors.grey.shade600, size: 18),
+                            icon: Icon(
+                              Icons.restore,
+                              color: Colors.grey.shade600,
+                              size: 18,
+                            ),
                             label: Text(
                               'Reset to Default',
-                              style:
-                                  TextStyle(color: Colors.grey.shade600),
+                              style: TextStyle(color: Colors.grey.shade600),
                             ),
                           ),
                       ],
@@ -388,10 +404,9 @@ class GeneralSettingsScreen extends StatelessWidget {
                     const SizedBox(width: UIConstants.smallSpace),
                     Text(
                       shopInfoState.logoSizeRatio.toStringAsFixed(1),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium!
-                          .copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -402,9 +417,7 @@ class GeneralSettingsScreen extends StatelessWidget {
                   value: shopInfoState.logoSizeRatio.clamp(0.5, 3.0),
                   label: shopInfoState.logoSizeRatio.toStringAsFixed(1),
                   onChanged: (val) {
-                    context
-                        .read<ShopInfoCubit>()
-                        .updateLogoSizeRatio(val);
+                    context.read<ShopInfoCubit>().updateLogoSizeRatio(val);
                   },
                 ),
                 const SizedBox(height: UIConstants.bigSpace),
@@ -413,7 +426,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 sectionHeader('Shop Information', Icons.store_outlined),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      vertical: UIConstants.mediumSpace),
+                    vertical: UIConstants.mediumSpace,
+                  ),
                   child: Text(
                     'Shop Name: ${shopInfoState.shopName}',
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -421,7 +435,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      vertical: UIConstants.mediumSpace),
+                    vertical: UIConstants.mediumSpace,
+                  ),
                   child: Text(
                     'Address: ${shopInfoState.shopAddress}',
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -429,7 +444,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      vertical: UIConstants.mediumSpace),
+                    vertical: UIConstants.mediumSpace,
+                  ),
                   child: Text(
                     'Phone: ${shopInfoState.phNum}',
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -467,17 +483,13 @@ class _InfoTile extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium!
-                  .copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 18),

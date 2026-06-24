@@ -17,7 +17,6 @@ class ItemBusinessDetailModel {
   final double? weightValue;
   final String? weightUnit;
   final String? packSize;
-  final String? barcode;
   final bool isOrganic;
   final int? shelfLifeDays;
   final String? dosage;
@@ -41,7 +40,6 @@ class ItemBusinessDetailModel {
     this.weightValue,
     this.weightUnit,
     this.packSize,
-    this.barcode,
     this.isOrganic = false,
     this.shelfLifeDays,
     this.dosage,
@@ -64,7 +62,6 @@ class ItemBusinessDetailModel {
         weightValue == null &&
         weightUnit == null &&
         packSize == null &&
-        barcode == null &&
         !isOrganic &&
         shelfLifeDays == null &&
         dosage == null &&
@@ -90,7 +87,6 @@ class ItemBusinessDetailModel {
       weightValue: weightValue,
       weightUnit: weightUnit,
       packSize: packSize,
-      barcode: barcode,
       isOrganic: isOrganic,
       shelfLifeDays: shelfLifeDays,
       dosage: dosage,
@@ -117,7 +113,6 @@ class ItemBusinessDetailModel {
       weightValue: (json['weightValue'] as num?)?.toDouble(),
       weightUnit: json['weightUnit'] as String?,
       packSize: json['packSize'] as String?,
-      barcode: json['barcode'] as String?,
       isOrganic: json['isOrganic'] == 1,
       shelfLifeDays: json['shelfLifeDays'] as int?,
       dosage: json['dosage'] as String?,
@@ -144,7 +139,6 @@ class ItemBusinessDetailModel {
       'weightValue': weightValue,
       'weightUnit': weightUnit,
       'packSize': packSize,
-      'barcode': barcode,
       'isOrganic': isOrganic ? 1 : 0,
       'shelfLifeDays': shelfLifeDays,
       'dosage': dosage,
@@ -168,23 +162,24 @@ class ItemBusinessDetailModel {
           lines.add('${pricePerMeasurementUnit!.toStringAsFixed(0)} MMK/$measurementUnit²');
         }
       case BusinessType.electronics:
-        if (brand != null && brand!.isNotEmpty) lines.add('Brand: $brand');
-        if (deviceCategory != null && deviceCategory!.isNotEmpty) {
-          lines.add(deviceCategory!);
-        }
-        if (ram != null && ram!.isNotEmpty) lines.add('RAM: $ram');
-        if (rom != null && rom!.isNotEmpty) lines.add('Storage: $rom');
         if (deviceColor != null && deviceColor!.isNotEmpty) {
           lines.add('Color: $deviceColor');
         }
-      case BusinessType.grocery:
-        if (weightValue != null) {
-          lines.add('${weightValue!.toStringAsFixed(2)} ${weightUnit ?? 'kg'}');
+        if (modelNumber != null && modelNumber!.isNotEmpty) {
+          lines.add('Model: $modelNumber');
         }
+      case BusinessType.grocery:
+        // if (weightValue != null) {
+        //   lines.add('${weightValue!.toStringAsFixed(2)} ${weightUnit ?? 'kg'}');
+        // }
+        // if (pricePerMeasurementUnit != null) {
+        //   lines.add(
+        //     '${pricePerMeasurementUnit!.toStringAsFixed(0)} MMK/${weightUnit ?? 'kg'}',
+        //   );
+        // }
         if (isOrganic) lines.add('Organic');
         if (shelfLifeDays != null) lines.add('Shelf life: $shelfLifeDays days');
       case BusinessType.convenience:
-        if (barcode != null && barcode!.isNotEmpty) lines.add('Barcode: $barcode');
         if (packSize != null && packSize!.isNotEmpty) lines.add('Pack: $packSize');
       case BusinessType.basicPharmacy:
         if (dosage != null && dosage!.isNotEmpty) lines.add('Dosage: $dosage');
@@ -195,13 +190,19 @@ class ItemBusinessDetailModel {
           lines.add(manufacturer!);
         }
       case BusinessType.phoneLaptopTablets:
+        if (brand != null && brand!.isNotEmpty) lines.add('Brand: $brand');
+        if (ram != null && ram!.isNotEmpty) lines.add('RAM: $ram');
+        if (rom != null && rom!.isNotEmpty) lines.add('Storage: $rom');
+        if (deviceColor != null && deviceColor!.isNotEmpty) {
+          lines.add('Color: $deviceColor');
+        }
         if (modelNumber != null && modelNumber!.isNotEmpty) {
           lines.add('Model: $modelNumber');
         }
       case BusinessType.food:
-        if (brand != null && brand!.isNotEmpty) {
-          lines.add('Cuisine: $brand');
-        }
+        // if (brand != null && brand!.isNotEmpty) {
+        //   lines.add('Cuisine: $brand');
+        // }
         if (activeIngredient != null && activeIngredient!.isNotEmpty) {
           lines.add('Allergen: $activeIngredient');
         }

@@ -165,13 +165,11 @@ class CheckoutHelpers {
   static List<ItemModel> findItemsByBarcode(
     String barcode,
     List<ItemModel> items,
-    Map<int, ItemBusinessDetailModel?> detailByItemId,
   ) {
     final query = barcode.trim().toLowerCase();
     if (query.isEmpty) return [];
     return items.where((item) {
-      final detail = detailByItemId[item.id];
-      final code = detail?.barcode?.toLowerCase();
+      final code = item.code?.trim().toLowerCase();
       return code != null && code == query;
     }).toList();
   }

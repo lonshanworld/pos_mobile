@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 
 class CusSwitchBtnWidget extends StatelessWidget {
-
   final bool boolValue;
   final Function(bool value) func;
   final Color clr;
@@ -15,10 +14,10 @@ class CusSwitchBtnWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Switch(
-      activeThumbColor: clr,
-      activeTrackColor: clr.withValues(alpha: 0.3),
-      inactiveThumbColor: Colors.grey.withValues(alpha: 0.7),
-      inactiveTrackColor: Colors.grey.withValues(alpha: 0.2),
+      activeThumbColor: Colors.green.shade700,
+      activeTrackColor: Colors.green.shade200,
+      inactiveThumbColor: Colors.red.shade700,
+      inactiveTrackColor: Colors.red.shade200,
       value: boolValue,
       onChanged: func,
     );

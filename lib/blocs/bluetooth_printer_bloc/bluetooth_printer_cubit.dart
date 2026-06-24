@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -236,18 +235,12 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       // Print image
       bytes += generator.imageRaster(resized, align: PosAlign.center);
 
-      // Feed paper and cut
+      // Keep the printer motion as simple as possible for this test.
       // bytes += generator.feed(1);
       bytes += generator.cut();
 
-      // Send to Bluetooth printer in chunks to reduce transport overflow.
-      final payload = Uint8List.fromList(bytes);
-      const chunkSize = 512;
-      for (int i = 0; i < payload.length; i += chunkSize) {
-        final end = math.min(i + chunkSize, payload.length);
-        await _bluetooth.writeBytes(payload.sublist(i, end));
-        await Future.delayed(const Duration(milliseconds: 30));
-      }
+      // Send the full job in one write to avoid stop-start transport jitter.
+      await _bluetooth.writeBytes(Uint8List.fromList(bytes));
       
       cusDebugPrint("Print command sent successfully to ${state.printerName}");
       return true;

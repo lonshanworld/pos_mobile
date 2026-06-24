@@ -130,9 +130,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
               itemCount: widget.historyModel.stockOutList.length,
               separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16),
               itemBuilder: (context, index) {
-                // We show newest first within the day
-                final reversedIndex = widget.historyModel.stockOutList.length - 1 - index;
-                final transaction = widget.historyModel.stockOutList[reversedIndex];
+                final transaction = widget.historyModel.stockOutList[index];
                 
                 final UserModel? seller = context.read<UserDataCubit>().getSingleUser(transaction.createPersonId);
                 final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(transaction.id);
@@ -241,7 +239,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
                       txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600),
                     ),
                     subtitle: CusTxtWidget(
-                      txt: "${TextFormatters.getDateTime(transaction.createTime).split(' ')[1]} • $totalItemsCount items",
+                      txt: "${TextFormatters.getTime24(transaction.createTime)} • $totalItemsCount items",
                       txtStyle: Theme.of(context).textTheme.bodySmall!,
                     ),
                     trailing: Column(

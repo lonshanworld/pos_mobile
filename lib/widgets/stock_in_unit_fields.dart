@@ -12,13 +12,11 @@ class StockInPieceEntry {
   final TextEditingController lengthController = TextEditingController();
   final TextEditingController widthController = TextEditingController();
   final TextEditingController batchController = TextEditingController();
-  final TextEditingController costController = TextEditingController();
 
   void dispose() {
     lengthController.dispose();
     widthController.dispose();
     batchController.dispose();
-    costController.dispose();
   }
 }
 
@@ -29,42 +27,25 @@ class StockInUnitBuilder {
     required ItemModel itemModel,
     required ItemBusinessDetailModel? businessDetail,
   }) {
-    final rate = businessDetail?.pricePerMeasurementUnit;
-    if (rate == null || rate <= 0) {
-      throw ArgumentError('Price per measurement unit is not set or invalid for clothing.');
-    }
-
     final specs = <StockInUnitSpec>[];
     for (final piece in pieces) {
       final length = double.tryParse(piece.lengthController.text.trim());
       final width = double.tryParse(piece.widthController.text.trim());
-      final costOverride = double.tryParse(piece.costController.text.trim());
 
-      if (length == null ||
-          width == null ||
-          length <= 0 ||
-          width <= 0) {
-        throw ArgumentError('Invalid measurements (Length and Width must be positive numbers).');
+      if (length == null || width == null || length <= 0 || width <= 0) {
+        throw ArgumentError(
+          'Invalid measurements (Length and Width must be positive numbers).',
+        );
       }
 
-      final sellBase = CalculationFormula.clothingPieceSellBase(
-        length: length,
-        width: width,
-        pricePerMeasurementUnit: rate,
+      specs.add(
+        StockInUnitSpec(
+          instanceLength: length,
+          instanceWidth: width,
+          originalPrice: itemModel.originalPrice,
+          profitPrice: itemModel.profitPrice,
+        ),
       );
-      final prices = CalculationFormula.clothingPiecePrices(
-        sellBase: sellBase,
-        itemOriginalPrice: itemModel.originalPrice,
-        itemProfitPrice: itemModel.profitPrice,
-        purchaseCostOverride: costOverride,
-      );
-
-      specs.add(StockInUnitSpec(
-        instanceLength: length,
-        instanceWidth: width,
-        originalPrice: prices.originalPrice,
-        profitPrice: prices.profitPrice,
-      ));
     }
     return specs;
   }
@@ -126,6 +107,20 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
   final List<StockInPieceEntry> _pieces = [StockInPieceEntry()];
 
   @override
+  void initState() {
+    super.initState();
+    _applyDefaultMeasurementsIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant StockInPieceListForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.businessDetail != widget.businessDetail) {
+      _applyDefaultMeasurementsIfNeeded();
+    }
+  }
+
+  @override
   void dispose() {
     for (final piece in _pieces) {
       piece.dispose();
@@ -135,8 +130,33 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
 
   List<StockInPieceEntry> get pieces => _pieces;
 
+  void _applyDefaultMeasurementsIfNeeded() {
+    if (!widget.showMeasurements || _pieces.isEmpty) return;
+    final firstPiece = _pieces.first;
+    final detail = widget.businessDetail;
+    final defaultLength = detail?.measurementLength;
+    final defaultWidth = detail?.measurementWidth;
+
+    if (firstPiece.lengthController.text.trim().isEmpty &&
+        defaultLength != null &&
+        defaultLength > 0) {
+      firstPiece.lengthController.text = defaultLength.toString();
+    }
+
+    if (firstPiece.widthController.text.trim().isEmpty &&
+        defaultWidth != null &&
+        defaultWidth > 0) {
+      firstPiece.widthController.text = defaultWidth.toString();
+    }
+  }
+
   void addPiece() {
     setState(() => _pieces.add(StockInPieceEntry()));
+  }
+
+  void removeLastPiece() {
+    if (_pieces.length <= 1) return;
+    removePiece(_pieces.length - 1);
   }
 
   void removePiece(int index) {
@@ -179,7 +199,7 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
               border: Border.all(color: accent.withValues(alpha: 0.2)),
             ),
             child: Text(
-              'Pricing: ${rate.toStringAsFixed(0)} MMK per $unit² — enter length × width per piece',
+              'Pricing: ${rate.toStringAsFixed(0)} MMK per square $unit. Enter length x width per piece.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -258,15 +278,6 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
                     },
                   ),
                   const SizedBox(height: UIConstants.smallSpace),
-                  CusTextFieldLogin(
-                    txtController: _pieces[index].costController,
-                    verticalPadding: UIConstants.mediumSpace,
-                    horizontalPadding: UIConstants.mediumSpace,
-                    hintTxt: 'Purchase cost (MMK, optional)',
-                    txtInputType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                  ),
                   if (sellPreview != null) ...[
                     const SizedBox(height: UIConstants.smallSpace),
                     CusTxtWidget(

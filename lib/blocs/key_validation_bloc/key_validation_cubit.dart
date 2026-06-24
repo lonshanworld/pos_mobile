@@ -61,7 +61,13 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
   Future<void> _checkIfAlreadyValidated() async {
     try {
       if (appEnv != 'production') {
-        emit(state.copyWith(isKeyValidated: true, isFirstTimeSetup: true));
+        final isFirstTime = _storage.read(_firstTimeSetupKey) ?? true;
+        emit(
+          state.copyWith(
+            isKeyValidated: true,
+            isFirstTimeSetup: isFirstTime,
+          ),
+        );
         return;
       }
 

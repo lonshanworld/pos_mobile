@@ -13,6 +13,11 @@ BusinessType businessTypeFromStorage(String? value) {
 extension BusinessTypeExtension on BusinessType {
   bool get allowsThemeToggle => this == BusinessType.general;
 
+  bool get allowsExpiryTracking =>
+      this != BusinessType.clothing &&
+      this != BusinessType.electronics &&
+      this != BusinessType.phoneLaptopTablets;
+
   String get displayName {
     switch (this) {
       case BusinessType.general:

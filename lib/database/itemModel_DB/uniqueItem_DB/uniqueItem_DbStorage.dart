@@ -29,7 +29,8 @@ class UniqueItemDbStorage{
           deletePersonId INTEGER REFERENCES ${TxtConstants.userTableName}(id),
           activeStatus INTEGER NOT NULL DEFAULT 1,
           getItemFromWhere TEXT,
-          moduleCount INTEGER
+          moduleCount INTEGER,
+          instanceImei TEXT
         )
       """
     );
@@ -101,6 +102,7 @@ class UniqueItemDbStorage{
           unitSpecs != null && i < unitSpecs.length ? unitSpecs[i] : null;
       final double originalPrice = spec?.originalPrice ?? itemModel.originalPrice;
       final double profitPrice = spec?.profitPrice ?? itemModel.profitPrice;
+      final String? unitCode = spec?.code ?? code;
 
       batch.rawInsert(
         """
@@ -119,9 +121,10 @@ class UniqueItemDbStorage{
             getItemFromWhere,
             instanceLength,
             instanceWidth,
-            instanceBatchNumber
+            instanceBatchNumber,
+            instanceImei
           )
-          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         [
           itemModel.id,
@@ -133,11 +136,12 @@ class UniqueItemDbStorage{
           originalPrice,
           profitPrice,
           itemModel.taxPercentage,
-          code,
+          unitCode,
           getItemFromWhere,
           spec?.instanceLength,
           spec?.instanceWidth,
           spec?.instanceBatchNumber,
+          spec?.instanceImei,
         ],
       );
     }
@@ -158,6 +162,12 @@ class UniqueItemDbStorage{
     final List<int> results = [];
     for(int a = 0; a < uniqueItemList.length; a++){
       final UniqueItemModel cartUnit = uniqueItemList[a];
+
+      if (cartUnit.id < 0) {
+        results.add(0);
+        continue;
+      }
+
       final List<Map<String, dynamic>> dbRows = await db.query(
         TxtConstants.uniqueItemTableName,
         where: 'id = ?',
@@ -176,12 +186,15 @@ class UniqueItemDbStorage{
         final double remainingLength = dbLength - cartLength;
         final double originalDbOriginalPrice = (dbRow['originalPrice'] as num).toDouble();
         final double originalDbProfitPrice = (dbRow['profitPrice'] as num).toDouble();
-
-        final double remainingOriginalPrice = originalDbOriginalPrice * (remainingLength / dbLength);
-        final double remainingProfitPrice = originalDbProfitPrice * (remainingLength / dbLength);
-
-        final double soldOriginalPrice = originalDbOriginalPrice - remainingOriginalPrice;
-        final double soldProfitPrice = originalDbProfitPrice - remainingProfitPrice;
+        final double soldOriginalPrice = cartUnit.originalPrice;
+        final double soldProfitPrice = cartUnit.profitPrice;
+        final double remainingOriginalPrice =
+            (originalDbOriginalPrice - soldOriginalPrice).clamp(
+              0,
+              double.infinity,
+            ).toDouble();
+        final double remainingProfitPrice =
+            (originalDbProfitPrice - soldProfitPrice).toDouble();
 
         // Update the original piece in place with the remaining length and scaled prices
         final int updateCount = await db.rawUpdate(
@@ -334,7 +347,7 @@ class UniqueItemDbStorage{
             originalPrice = ?,
             profitPrice = ?,
             taxPercentage = ?
-            WHERE id = ? AND activeStatus = ?
+            WHERE id = ? AND activeStatus = ? AND stockOutId IS NULL
           """,
           [
             dateTime.toString(),

@@ -27,6 +27,8 @@ class DrawerWidget extends StatelessWidget {
         return Icons.inventory_2_rounded;
       case 'storage':
         return Icons.warehouse_rounded;
+      case 'catalogs':
+        return Icons.category_rounded;
       case 'transaction history':
         return Icons.receipt_long_rounded;
       case 'history':

@@ -6,6 +6,7 @@ import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
+import 'package:pos_mobile/constants/business_type_utils.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
@@ -19,9 +20,10 @@ import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
 import 'package:pos_mobile/models/stock_in_unit_spec.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
+import 'package:pos_mobile/screens/barcode_scanner_screen.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart';
-import 'package:pos_mobile/widgets/btns_folder/cusTextOnlyBtn_widget.dart';
+import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
@@ -51,6 +53,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   final TextEditingController pharmacyBatchController = TextEditingController();
   final GlobalKey<StockInPieceListFormState> _pieceFormKey =
       GlobalKey<StockInPieceListFormState>();
+  final List<TextEditingController> _unitCodeControllers = [];
+  final List<TextEditingController> _imeiControllers = [];
 
   int moreItem = 0;
   DateTime? expiredDate;
@@ -62,30 +66,55 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   bool get _isClothing => _businessType == BusinessType.clothing;
 
   bool get _isPharmacy => _businessType == BusinessType.basicPharmacy;
+  bool get _isPhoneTablets =>
+      _businessType == BusinessType.phoneLaptopTablets;
+
+  bool get _supportsUniqueCodeForm =>
+      _businessType != null &&
+      _businessType != BusinessType.clothing &&
+      _businessType != BusinessType.food;
+
+  bool get _isMeasurementBasedClothing {
+    if (!_isClothing) return false;
+    final detail = _businessDetail;
+    final length = detail?.measurementLength;
+    final width = detail?.measurementWidth;
+    final rate = detail?.pricePerMeasurementUnit;
+    return length != null &&
+        length > 0 &&
+        width != null &&
+        width > 0 &&
+        rate != null &&
+        rate > 0;
+  }
+
+  bool get _canTrackExpiry =>
+      (_businessType?.allowsExpiryTracking ?? true) &&
+      widget.itemModel.hasExpire;
 
   /// Clothing always uses per-piece sizes; pharmacy uses per-piece batch on single stock-in.
   bool get _usesPieceForm =>
-      _isClothing || (_isPharmacy && !widget.batchStockIn);
+      _isMeasurementBasedClothing || (_isPharmacy && !widget.batchStockIn);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _businessType ??= context.read<ShopInfoCubit>().state.businessType;
+    if (_supportsUniqueCodeForm && !_usesPieceForm && _unitCodeControllers.isEmpty) {
+      _ensureUnitCodeControllers(widget.batchStockIn ? moreItem : 1);
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    if (!widget.batchStockIn) {
-      moreItem = 1;
-    }
+    moreItem = 0;
     _parentsFuture = _loadParents();
     _loadBusinessDetail();
   }
 
   Future<void> _loadBusinessDetail() async {
-    final detail =
-        await DBHelper.getItemBusinessDetail(widget.itemModel.id);
+    final detail = await DBHelper.getItemBusinessDetail(widget.itemModel.id);
     if (mounted) {
       setState(() {
         _businessDetail = detail;
@@ -99,7 +128,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         _businessType != BusinessType.convenience) {
       return;
     }
-    if (!widget.itemModel.hasExpire) {
+    if (!_canTrackExpiry) {
       return;
     }
     final days = detail?.shelfLifeDays;
@@ -116,17 +145,22 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
 
   Future<_UniqueItemParents?> _loadParents() async {
     try {
-      final TypeModel? typeModel =
-          await DBHelper.getTypeById(widget.itemModel.typeId);
+      final TypeModel? typeModel = await DBHelper.getTypeById(
+        widget.itemModel.typeId,
+      );
       if (typeModel == null) return null;
 
-      final GroupModel? groupModel =
-          await DBHelper.getGroupById(typeModel.groupId);
-      if (groupModel == null) return null;
+      final int? resolvedGroupId =
+          widget.itemModel.groupId ?? typeModel.groupId;
+      final GroupModel? groupModel = resolvedGroupId == null
+          ? null
+          : await DBHelper.getGroupById(resolvedGroupId);
 
-      final CategoryModel? categoryModel =
-          await DBHelper.getCategoryById(groupModel.categoryId);
-      if (categoryModel == null) return null;
+      final int? resolvedCategoryId =
+          widget.itemModel.categoryId ?? groupModel?.categoryId;
+      final CategoryModel? categoryModel = resolvedCategoryId == null
+          ? null
+          : await DBHelper.getCategoryById(resolvedCategoryId);
 
       return _UniqueItemParents(
         typeModel: typeModel,
@@ -149,72 +183,151 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
     manufactureDateController.dispose();
     placeController.dispose();
     pharmacyBatchController.dispose();
+    for (final controller in _unitCodeControllers) {
+      controller.dispose();
+    }
+    for (final controller in _imeiControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
+  void _ensureUnitCodeControllers(int targetCount) {
+    while (_unitCodeControllers.length < targetCount) {
+      _unitCodeControllers.add(TextEditingController());
+      if (_isPhoneTablets) {
+        _imeiControllers.add(TextEditingController());
+      }
+    }
+    while (_unitCodeControllers.length > targetCount) {
+      _unitCodeControllers.removeLast().dispose();
+      if (_isPhoneTablets && _imeiControllers.isNotEmpty) {
+        _imeiControllers.removeLast().dispose();
+      }
+    }
+  }
+
+  Future<void> _scanUniqueCodeInto(TextEditingController controller) async {
+    final scanned = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (!mounted || scanned == null || scanned.trim().isEmpty) return;
+    setState(() {
+      controller.text = scanned.trim();
+    });
+  }
+
   List<StockInUnitSpec>? _buildUnitSpecs() {
-    if (_isClothing) {
+    if (_isMeasurementBasedClothing) {
       final pieces = _pieceFormKey.currentState?.pieces ?? [];
       if (pieces.isEmpty) return null;
-      return StockInUnitBuilder.fromClothingPieces(
+      final specs = StockInUnitBuilder.fromClothingPieces(
         pieces: pieces,
         itemModel: widget.itemModel,
         businessDetail: _businessDetail,
       );
+      if (specs == null || !widget.batchStockIn) return specs;
+      return List.generate(
+        specs.length * moreItem,
+        (index) {
+          final spec = specs[index % specs.length];
+          return StockInUnitSpec(
+            instanceLength: spec.instanceLength,
+            instanceWidth: spec.instanceWidth,
+            instanceBatchNumber: spec.instanceBatchNumber,
+            originalPrice: spec.originalPrice,
+            profitPrice: spec.profitPrice,
+          );
+        },
+      );
     }
 
     if (_isPharmacy) {
-      if (widget.batchStockIn) {
-        final batch = pharmacyBatchController.text.trim();
-        if (batch.isEmpty) return null;
-        return StockInUnitBuilder.fromPharmacyBatch(
-          batchNumber: batch,
-          count: moreItem,
+      // if (widget.batchStockIn) {
+      //   final batch = pharmacyBatchController.text.trim();
+      //   if (batch.isEmpty) return null;
+      //   final specs = StockInUnitBuilder.fromPharmacyBatch(
+      //     batchNumber: batch,
+      //     count: moreItem,
+      //     itemModel: widget.itemModel,
+      //   );
+      //   return _attachOptionalCodes(specs);
+      // }
+      if (!widget.batchStockIn) {
+        final pieces = _pieceFormKey.currentState?.pieces ?? [];
+        if (pieces.isEmpty) return null;
+        final specs = StockInUnitBuilder.fromPharmacyPieces(
+          pieces: pieces,
           itemModel: widget.itemModel,
         );
+        return _attachOptionalCodes(specs);
       }
-      final pieces = _pieceFormKey.currentState?.pieces ?? [];
-      if (pieces.isEmpty) return null;
-      return StockInUnitBuilder.fromPharmacyPieces(
-        pieces: pieces,
-        itemModel: widget.itemModel,
+    }
+
+    if (_supportsUniqueCodeForm) {
+      return List.generate(
+        _unitCodeControllers.length,
+        (index) {
+          final code = _unitCodeControllers[index].text.trim();
+          final imei = _isPhoneTablets && index < _imeiControllers.length
+              ? _imeiControllers[index].text.trim()
+              : null;
+          return StockInUnitSpec(
+            code: code.isEmpty ? null : code,
+            instanceImei: imei?.isEmpty == true ? null : imei,
+          );
+        },
       );
     }
 
     return null;
   }
 
+  List<StockInUnitSpec> _attachOptionalCodes(List<StockInUnitSpec> specs) {
+    return List.generate(specs.length, (index) {
+      final spec = specs[index];
+      final code = index < _unitCodeControllers.length
+          ? _unitCodeControllers[index].text.trim()
+          : '';
+      return StockInUnitSpec(
+        code: code.isEmpty ? null : code,
+        instanceLength: spec.instanceLength,
+        instanceWidth: spec.instanceWidth,
+        instanceBatchNumber: spec.instanceBatchNumber,
+        originalPrice: spec.originalPrice,
+        profitPrice: spec.profitPrice,
+      );
+    });
+  }
+
   String? _validateBeforeSubmit() {
-    if (widget.itemModel.hasExpire && expiredDate == null) {
+    if (_canTrackExpiry && expiredDate == null &&
+        _businessType != BusinessType.grocery &&
+        _businessType != BusinessType.convenience) {
       return 'Please add expired date';
     }
 
-    if (_isClothing) {
+    if (_isMeasurementBasedClothing) {
       final pieces = _pieceFormKey.currentState?.pieces ?? [];
       if (pieces.isEmpty) return 'Add at least one piece';
       for (int i = 0; i < pieces.length; i++) {
-        final length =
-            double.tryParse(pieces[i].lengthController.text.trim());
+        final length = double.tryParse(pieces[i].lengthController.text.trim());
         final width = double.tryParse(pieces[i].widthController.text.trim());
         if (length == null || length <= 0 || width == null || width <= 0) {
           return 'Enter valid length and width for piece ${i + 1}';
         }
       }
-      final rate = _businessDetail?.pricePerMeasurementUnit;
-      if (rate == null || rate <= 0) {
-        return 'Set price per measurement unit on the item first (edit item)';
-      }
       return null;
     }
 
     if (_isPharmacy) {
-      if (widget.batchStockIn) {
-        if (pharmacyBatchController.text.trim().isEmpty) {
-          return 'Enter batch / lot number';
-        }
-        if (moreItem < 1) return 'Please add stock quantity';
-        return null;
-      }
+      // if (widget.batchStockIn) {
+      //   if (pharmacyBatchController.text.trim().isEmpty) {
+      //     return 'Enter batch / lot number';
+      //   }
+      //   if (moreItem < 1) return 'Please add stock quantity';
+      //   return null;
+      // }
       final pieces = _pieceFormKey.currentState?.pieces ?? [];
       if (pieces.isEmpty) return 'Add at least one unit';
       for (int i = 0; i < pieces.length; i++) {
@@ -225,7 +338,22 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       return null;
     }
 
-    if (widget.batchStockIn && moreItem < 1) {
+    if (_supportsUniqueCodeForm && !_usesPieceForm) {
+      if (_unitCodeControllers.isEmpty) {
+        return 'Please add stock';
+      }
+      final seenCodes = <String>{};
+      for (int i = 0; i < _unitCodeControllers.length; i++) {
+        final code = _unitCodeControllers[i].text.trim();
+        if (code.isEmpty) continue;
+        final normalized = code.toLowerCase();
+        if (!seenCodes.add(normalized)) {
+          return 'Duplicate code found for unit ${i + 1}';
+        }
+      }
+    }
+
+    if (widget.batchStockIn && moreItem < 1 && !_usesPieceForm) {
       return 'Please add stock';
     }
 
@@ -234,20 +362,20 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<UniqueItemModel> uniqueItemList =
-        context.read<ItemCubit>().getSelectedUniqueItemList(widget.itemModel.id);
+    final List<UniqueItemModel> uniqueItemList = context
+        .read<ItemCubit>()
+        .getSelectedUniqueItemList(widget.itemModel.id);
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
     final accent = uiController.accentColor();
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -268,13 +396,14 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         return;
       }
 
-      if (_isClothing && (unitSpecs == null || unitSpecs.isEmpty)) {
+      if (_isMeasurementBasedClothing &&
+          (unitSpecs == null || unitSpecs.isEmpty)) {
         showValidationMessage('Invalid clothing piece measurements.');
         return;
       }
 
-      final int itemLength = unitSpecs?.length ??
-          (widget.batchStockIn ? moreItem : 1);
+      final int itemLength =
+          unitSpecs?.length ?? (widget.batchStockIn ? moreItem : 1);
 
       try {
         loadingCubit.setLoading('Adding ...');
@@ -286,9 +415,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
           typeModel: parents.typeModel,
           itemModel: widget.itemModel,
           code: null,
-          itemManufactureDate:
-              widget.itemModel.hasExpire ? manufactureDate : null,
-          itemExpireDate: widget.itemModel.hasExpire ? expiredDate : null,
+          itemManufactureDate: _canTrackExpiry ? manufactureDate : null,
+          itemExpireDate: _canTrackExpiry ? expiredDate : null,
           getItemFromWhere: placeController.text.trim().isEmpty
               ? null
               : placeController.text.trim(),
@@ -315,9 +443,23 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       }
     }
 
-    Widget buildForm(_UniqueItemParents parents) {
+    Widget buildForm(_UniqueItemParents formParents) {
       final pieceCount = _pieceFormKey.currentState?.pieces.length ?? 1;
-      final addingCount = _usesPieceForm ? pieceCount : moreItem;
+      final expectedCodeCount = _usesPieceForm
+          ? pieceCount
+          : widget.batchStockIn
+          ? moreItem
+          : 1;
+      if (_supportsUniqueCodeForm) {
+        _ensureUnitCodeControllers(expectedCodeCount);
+      }
+      final addingCount = _usesPieceForm
+          ? (_isMeasurementBasedClothing && widget.batchStockIn
+              ? pieceCount * moreItem
+              : pieceCount)
+          : _supportsUniqueCodeForm
+          ? _unitCodeControllers.length
+          : moreItem;
 
       return SingleChildScrollView(
         child: Padding(
@@ -348,11 +490,10 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                     ),
                     child: CusTxtWidget(
                       txt: uniqueItemList.length.toString(),
-                      txtStyle:
-                          Theme.of(context).textTheme.titleMedium!.copyWith(
-                                color:
-                                    uiController.getpureDirectClr(themeModeType),
-                              ),
+                      txtStyle: Theme.of(context).textTheme.titleMedium!
+                          .copyWith(
+                            color: uiController.getpureDirectClr(themeModeType),
+                          ),
                     ),
                   ),
                   CusTxtWidget(
@@ -362,7 +503,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                 ],
               ),
               const SizedBox(height: UIConstants.mediumSpace),
-              if (widget.batchStockIn && !_usesPieceForm)
+              if (widget.batchStockIn)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -371,7 +512,19 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                       hasBorder: true,
                       func: () {
                         setState(() {
-                          if (moreItem < 999) moreItem++;
+                          if (moreItem < 999) {
+                            moreItem++;
+                            if (_supportsUniqueCodeForm) {
+                              _unitCodeControllers.add(
+                                TextEditingController(),
+                              );
+                              if (_isPhoneTablets) {
+                                _imeiControllers.add(
+                                  TextEditingController(),
+                                );
+                              }
+                            }
+                          }
                         });
                       },
                       clr: Colors.green,
@@ -386,7 +539,17 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                       hasBorder: true,
                       func: () {
                         setState(() {
-                          if (moreItem > 0) moreItem--;
+                          if (moreItem > 0) {
+                            moreItem--;
+                            if (_supportsUniqueCodeForm &&
+                                _unitCodeControllers.isNotEmpty) {
+                              _unitCodeControllers.removeLast().dispose();
+                              if (_isPhoneTablets &&
+                                  _imeiControllers.isNotEmpty) {
+                                _imeiControllers.removeLast().dispose();
+                              }
+                            }
+                          }
                         });
                       },
                       clr: Colors.red,
@@ -394,19 +557,19 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                     ),
                   ],
                 ),
-              if (_isPharmacy && widget.batchStockIn) ...[
-                uiController.sizedBox(
-                  cusHeight: UIConstants.mediumSpace,
-                  cusWidth: null,
-                ),
-                CusTextFieldLogin(
-                  txtController: pharmacyBatchController,
-                  verticalPadding: UIConstants.mediumSpace,
-                  horizontalPadding: UIConstants.bigSpace,
-                  hintTxt: 'Batch / lot number (all units)',
-                  txtInputType: TextInputType.text,
-                ),
-              ],
+              // if (_isPharmacy && widget.batchStockIn) ...[
+              //   uiController.sizedBox(
+              //     cusHeight: UIConstants.mediumSpace,
+              //     cusWidth: null,
+              //   ),
+              //   CusTextFieldLogin(
+              //     txtController: pharmacyBatchController,
+              //     verticalPadding: UIConstants.mediumSpace,
+              //     horizontalPadding: UIConstants.bigSpace,
+              //     hintTxt: 'Batch / lot number (all units)',
+              //     txtInputType: TextInputType.text,
+              //   ),
+              // ],
               if (_usesPieceForm) ...[
                 uiController.sizedBox(
                   cusHeight: UIConstants.bigSpace,
@@ -414,18 +577,95 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                 ),
                 StockInPieceListForm(
                   key: _pieceFormKey,
-                  showMeasurements: _isClothing,
+                  showMeasurements: _isMeasurementBasedClothing,
                   showBatchNumber: _isPharmacy,
-                  allowMultiplePieces: widget.batchStockIn || _isClothing,
+                  allowMultiplePieces:
+                      widget.batchStockIn || _isMeasurementBasedClothing,
                   businessDetail: _businessDetail,
                   itemModel: widget.itemModel,
                 ),
+              ],
+              if (_supportsUniqueCodeForm) ...[
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace,
+                  cusWidth: null,
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: CusTxtWidget(
+                    txt: 'Unique item barcode / serial (Optional)',
+                    txtStyle: Theme.of(context).textTheme.titleSmall!,
+                  ),
+                ),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.smallSpace,
+                  cusWidth: null,
+                ),
+                CusTxtWidget(
+                  txt:
+                      'You can scan or type a unique barcode / serial for each physical unit. Leave blank if not needed.',
+                  txtStyle: Theme.of(
+                    context,
+                  ).textTheme.bodySmall!.copyWith(color: Colors.grey),
+                ),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.mediumSpace,
+                  cusWidth: null,
+                ),
+                ...List.generate(_unitCodeControllers.length, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: UIConstants.mediumSpace,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CusTxtWidget(
+                          txt: 'Unit ${index + 1}',
+                          txtStyle: Theme.of(context).textTheme.bodyMedium!
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: UIConstants.smallSpace),
+                          CusTextFieldLogin(
+                            txtController: _unitCodeControllers[index],
+                            verticalPadding: UIConstants.mediumSpace,
+                            horizontalPadding: UIConstants.bigSpace,
+                            hintTxt:
+                                'Scan or enter unique barcode / serial',
+                            txtInputType: TextInputType.text,
+                            suffixIcon: IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_scanner,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () =>
+                                  _scanUniqueCodeInto(
+                                _unitCodeControllers[index],
+                              ),
+                            ),
+                          ),
+                          if (_isPhoneTablets) ...[
+                            const SizedBox(
+                              height: UIConstants.smallSpace,
+                            ),
+                            CusTextFieldLogin(
+                              txtController: _imeiControllers[index],
+                              verticalPadding: UIConstants.mediumSpace,
+                              horizontalPadding: UIConstants.bigSpace,
+                              hintTxt: 'IMEI number (Optional)',
+                              txtInputType: TextInputType.text,
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                }),
               ],
               uiController.sizedBox(
                 cusHeight: UIConstants.bigSpace,
                 cusWidth: null,
               ),
-              if (widget.itemModel.hasExpire)
+              if (_canTrackExpiry)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     vertical: UIConstants.mediumSpace,
@@ -437,28 +677,31 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                       textEditingController: expireDateController,
                       clr: accent,
                       func: (DateTime dateTime) {
-                        expireDateController.text =
-                            TextFormatters.getDate(dateTime);
+                        expireDateController.text = TextFormatters.getDate(
+                          dateTime,
+                        );
                         expiredDate = dateTime;
                       },
                     ),
                   ),
                 ),
-              if (widget.itemModel.hasExpire &&
+              if (_canTrackExpiry &&
                   (_businessType == BusinessType.grocery ||
                       _businessType == BusinessType.convenience) &&
                   _businessDetail?.shelfLifeDays != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: UIConstants.smallSpace),
+                  padding: const EdgeInsets.only(
+                    bottom: UIConstants.smallSpace,
+                  ),
                   child: CusTxtWidget(
                     txt:
                         'Default expiry from shelf life (${_businessDetail!.shelfLifeDays} days). You can change it above.',
-                    txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Colors.grey,
-                        ),
+                    txtStyle: Theme.of(
+                      context,
+                    ).textTheme.bodySmall!.copyWith(color: Colors.grey),
                   ),
                 ),
-              if (widget.itemModel.hasExpire)
+              if (_canTrackExpiry)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     vertical: UIConstants.mediumSpace,
@@ -470,14 +713,15 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                       textEditingController: manufactureDateController,
                       clr: accent,
                       func: (DateTime dateTime) {
-                        manufactureDateController.text =
-                            TextFormatters.getDate(dateTime);
+                        manufactureDateController.text = TextFormatters.getDate(
+                          dateTime,
+                        );
                         manufactureDate = dateTime;
                       },
                     ),
                   ),
                 ),
-              if (widget.itemModel.hasExpire)
+              if (_canTrackExpiry)
                 uiController.sizedBox(
                   cusHeight: UIConstants.bigSpace,
                   cusWidth: null,
@@ -485,10 +729,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: CusTxtWidget(
-                  txtStyle: Theme.of(context)
-                      .textTheme
-                      .titleSmall!
-                      .copyWith(color: Colors.grey),
+                  txtStyle: Theme.of(
+                    context,
+                  ).textTheme.titleSmall!.copyWith(color: Colors.grey),
                   txt: 'Optional',
                 ),
               ),
@@ -499,38 +742,15 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
               CusTextFieldLogin(
                 txtController: placeController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: 'Get item from where ?',
-                txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: Colors.grey,
-                    ),
+                txtStyle: Theme.of(
+                  context,
+                ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
                 txtInputType: TextInputType.text,
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: CusTxtOnlyBtn(
-                  textStyle: Theme.of(context).textTheme.titleSmall!,
-                  txt: 'Create',
-                  clr: accent,
-                  func: () async {
-                    try {
-                      final validationError = _validateBeforeSubmit();
-                      if (validationError != null) {
-                        showValidationMessage(validationError);
-                        return;
-                      }
-                      await createNewItemList(parents);
-                    } catch (err, st) {
-                      debugPrint(
-                        'CreateUniqueStockInScreen: submit failed itemId=${widget.itemModel.id}',
-                      );
-                      debugPrint(err.toString());
-                      debugPrint(st.toString());
-                      rethrow;
-                    }
-                  },
-                ),
-              ),
+              
             ],
           ),
         ),
@@ -547,15 +767,46 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
             centerTitle: true,
             leading: const CusLeadingBackIconBtn(),
             title: Text('Add Stock in ${widget.itemModel.name}'),
+            actions: [
+              CusTxtElevatedBtn(
+                verticalpadding: 0,
+                horizontalpadding: UIConstants.smallSpace,
+                bdrRadius: UIConstants.mediumRadius,
+                bgClr: Colors.green,
+              
+                txtStyle: Theme.of(context).textTheme.titleSmall!,
+                txtClr: Theme.of(context).textTheme.titleSmall!.color!,
+                  txt: 'Create',
+                  func: () async {
+                    try {
+                      final validationError = _validateBeforeSubmit();
+                      if (validationError != null) {
+                        showValidationMessage(validationError);
+                        return;
+                      }
+                      await createNewItemList(parents!);
+                    } catch (err, st) {
+                      debugPrint(
+                        'CreateUniqueStockInScreen: submit failed itemId=${widget.itemModel.id}',
+                      );
+                      debugPrint(err.toString());
+                      debugPrint(st.toString());
+                      rethrow;
+                    }
+                  },
+                ),
+
+              const SizedBox(width: UIConstants.mediumSpace),
+            ],
           ),
           body: snapshot.connectionState != ConnectionState.done
               ? const Center(child: CircularProgressIndicator())
               : parents == null
-                  ? NoSelectedIdErrorWidget(
-                      txt: 'This item has some missing group data',
-                      func: () => Navigator.of(context).pop(),
-                    )
-                  : buildForm(parents),
+              ? NoSelectedIdErrorWidget(
+                  txt: 'This item has some missing group data',
+                  func: () => Navigator.of(context).pop(),
+                )
+               : buildForm(parents),
         );
       },
     );
@@ -564,8 +815,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
 
 class _UniqueItemParents {
   final TypeModel typeModel;
-  final GroupModel groupModel;
-  final CategoryModel categoryModel;
+  final GroupModel? groupModel;
+  final CategoryModel? categoryModel;
 
   const _UniqueItemParents({
     required this.typeModel,

@@ -139,69 +139,53 @@ class GroupingItemDbService{
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
+      CategoryModel? categoryModel,
       required String groupName,
       required String? description,
     }  
   )async{
-    DateTime dateTime = DateTime.now();
-    int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-    if(value == -1){
-      return false;
-    }else{
-      int groupId = await GroupDbStorage.insertNewGroup(db, userModel: userModel, categoryModel: categoryModel, groupName: groupName, description: description, dateTime: dateTime);
-      if(groupId == -1){
-        return false;
-      }else{
-        return true;
-      }
-    }
+    final DateTime dateTime = DateTime.now();
+    final int groupId = await GroupDbStorage.insertNewGroup(
+      db,
+      userModel: userModel,
+      categoryModel: categoryModel,
+      groupName: groupName,
+      description: description,
+      dateTime: dateTime,
+    );
+    return groupId != -1;
   }
 
   static Future<bool>createNewType(
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
-      required GroupModel groupModel,
+      CategoryModel? categoryModel,
+      GroupModel? groupModel,
       required String typeName,
       required String? generalDescription,
       required bool hasExpire
     }
   )async{
-    DateTime dateTime = DateTime.now();
-    int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-    if(value == -1){
-      return false;
-    }else{
-      int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-      if(groupValue == -1){
-        return false;
-      }else{
-        int typeId = await TypeDbStorage.insertNewType(
-          db,
-          name: typeName,
-          generalDescription: generalDescription,
-          groupModel: groupModel,
-          dateTime: dateTime,
-          userModel: userModel,
-          hasExpire: hasExpire,
-        );
-        if(typeId == -1){
-          return false;
-        }else{
-          return true;
-        }
-      }
-    }
+    final DateTime dateTime = DateTime.now();
+    final int typeId = await TypeDbStorage.insertNewType(
+      db,
+      name: typeName,
+      generalDescription: generalDescription,
+      groupModel: groupModel,
+      dateTime: dateTime,
+      userModel: userModel,
+      hasExpire: hasExpire,
+    );
+    return typeId != -1;
   }
 
   static Future<int>createNewItem(
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
-      required GroupModel groupModel,
+      required int? categoryId,
+      required int? groupId,
       required TypeModel typeModel,
       required String name,
       required String? description,
@@ -210,29 +194,44 @@ class GroupingItemDbService{
       required double originalPrice,
       required double taxPercentage,
       required bool needStock,
+      required String? code,
     }
   )async{
     try{
-      DateTime dateTime = DateTime.now();
-      int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-      int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-      int typeValue = await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
-      int itemId = await ItemDbStorage.insertNewItem(
-          db,
-          userModel: userModel,
-          name: name,
-          typeModel: typeModel,
-          dateTime: dateTime,
-          hasExpire: hasExpire,
-          description: description,
-          profitPrice: profitPrice,
-          originalPrice: originalPrice,
-          taxPercentage: taxPercentage,
-          needStock: needStock,
-      );
-      if (value == -1 || groupValue == -1 || typeValue == -1 || itemId == -1) {
-        return -1;
+      final DateTime dateTime = DateTime.now();
+      if (categoryId != null) {
+        final category = await CategoryDbStorage.getCategoryById(db, categoryId);
+        if (category != null) {
+          await CategoryDbStorage.updateCategoryLastUpdateTime(
+            db,
+            dateTime,
+            category,
+          );
+        }
       }
+      if (groupId != null) {
+        final group = await GroupDbStorage.getGroupById(db, groupId);
+        if (group != null) {
+          await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, group);
+        }
+      }
+      await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
+      final int itemId = await ItemDbStorage.insertNewItem(
+        db,
+        userModel: userModel,
+        name: name,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeModel: typeModel,
+        dateTime: dateTime,
+        hasExpire: hasExpire,
+        description: description,
+        profitPrice: profitPrice,
+        originalPrice: originalPrice,
+        taxPercentage: taxPercentage,
+        needStock: needStock,
+        code: code,
+      );
       return itemId;
     }catch(e){
       cusDebugPrint(e);
@@ -412,10 +411,14 @@ class GroupingItemDbService{
       required ItemModel itemModel,
       required List<UniqueItemModel> uniqueItemList,
       required String newName,
+      required int? categoryId,
+      required int? groupId,
+      required int typeId,
       required double newOriginalPrice,
       required double newProfitPrice,
       required double newTaxPercentage,
       required bool needStock,
+      required String? newCode,
     }
   )async{
     try{
@@ -428,10 +431,14 @@ class GroupingItemDbService{
         dateTime: dateTime,
         itemModel: itemModel,
         newName: newName,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeId: typeId,
         originalPrice: newOriginalPrice,
         profitPrice: newProfitPrice,
         taxPercentage: newTaxPercentage,
         needStock: needStock,
+        code: newCode,
       );
       if(value == -1) return false;
 

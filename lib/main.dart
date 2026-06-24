@@ -262,7 +262,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                                                   child: const Row(
                                                     mainAxisSize:
                                                         MainAxisSize.min,
-                                                    children: const [
+                                                    children: [
                                                       Icon(
                                                         Icons.lock,
                                                         color: Colors.redAccent,

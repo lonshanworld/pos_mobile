@@ -3,6 +3,7 @@ import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
@@ -47,8 +48,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-          "Create Category"
+        title: Text(
+          "Create ${BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.category)}",
         ),
       ),
       body: Padding(

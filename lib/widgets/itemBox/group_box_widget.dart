@@ -21,14 +21,14 @@ import '../cusTxt_widget.dart';
 
 class GroupBoxWidget extends StatelessWidget {
   final GroupModel groupModel;
-  final int typeCount;
+  final int itemCount;
   final VoidCallback func;
 
   final bool isStorage;
   const GroupBoxWidget({
     super.key,
     required this.groupModel,
-    required this.typeCount,
+    required this.itemCount,
     required this.func,
     required this.isStorage,
   });
@@ -42,7 +42,7 @@ class GroupBoxWidget extends StatelessWidget {
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
     final groupLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group);
-    final typeLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.type);
+    final itemLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.item);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -58,10 +58,10 @@ class GroupBoxWidget extends StatelessWidget {
           ),
           cusPopUpMenuItem(
             func: (){
-              if(typeCount > 0){
+              if(itemCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $typeCount ${typeLabel}s in this $groupLabel. You can delete only if there is no $typeLabel left.",
+                  txt: "There are $itemCount ${itemLabel}s using this $groupLabel. You can delete it only when nothing references it.",
                 );
               }else{
                 showSheet.showCusDialogScreen( ConfirmScreen(
@@ -146,7 +146,7 @@ class GroupBoxWidget extends StatelessWidget {
                       color: Colors.blueAccent,
                       fontWeight: FontWeight.w600,
                     ),
-                    txt: "$typeCount ${typeCount == 1 ? typeLabel.toLowerCase() : '${typeLabel.toLowerCase()}s'}",
+                    txt: "$itemCount ${itemCount == 1 ? itemLabel.toLowerCase() : '${itemLabel.toLowerCase()}s'}",
                   ),
                 ),
                 Flexible(

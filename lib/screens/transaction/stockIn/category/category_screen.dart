@@ -12,11 +12,9 @@ import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 
 class CategoryScreen extends StatefulWidget {
-  final Function(int value) setSelectedCategoryId;
   final bool isStorage;
   const CategoryScreen({
     super.key,
-    required this.setSelectedCategoryId,
     required this.isStorage,
   });
 
@@ -53,6 +51,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
     
     final businessType = UIController.instance.businessType;
     final categoryLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.category);
+    final categoryPluralLabel = BusinessHierarchyConfig.getPluralLabel(
+      businessType,
+      HierarchyLevel.category,
+    );
 
     return Scaffold(
       body: Column(
@@ -68,7 +70,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 const SizedBox(width: UIConstants.smallSpace),
                 CusTxtWidget(
                   txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(color: Colors.grey),
-                  txt: "$totalCategoryCount ${totalCategoryCount == 1 ? categoryLabel : '${categoryLabel}s'}",
+                  txt: "$totalCategoryCount ${totalCategoryCount == 1 ? categoryLabel : categoryPluralLabel}",
                 ),
               ],
             ),
@@ -106,10 +108,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       }
                       return CategoryBoxWidget(
                         categoryModel: categoryList[index],
-                        groupCount: context.read<ItemCubit>().getGroupCountForCategory(categoryList[index].id),
-                        func: (){
-                          widget.setSelectedCategoryId(categoryList[index].id);
-                        },
+                        itemCount: context.read<ItemCubit>().getItemCountForCategory(categoryList[index].id),
+                        func: () {},
                         isStorage : widget.isStorage,
                       );
                     },

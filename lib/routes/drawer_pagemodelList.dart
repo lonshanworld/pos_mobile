@@ -1,7 +1,9 @@
+import 'package:pos_mobile/controller/ui_controller.dart';
+import 'package:pos_mobile/constants/business_type_utils.dart';
 import '../constants/enums.dart';
 import '../screens/accounts/account_screen.dart';
+import '../screens/catalogs_screen.dart';
 import '../screens/promotion/main_promotion_screen.dart';
-
 
 import '../models/page_model.dart';
 
@@ -15,16 +17,17 @@ import '../screens/transaction/stockOut/stockout_screen.dart';
 import '../screens/reportAndAlerts/item_expiry_screen.dart';
 
 //  NOTE ::  Please do in order to change the page using index
-class PageList{
+class PageList {
   static const List<PageModel> pages = [
     PageModel(screen: DashBoardForTodayScreen(), title: "Dashboard"),
     PageModel(screen: StockOutScreen(), title: "Check out"),
-    PageModel(screen: StockInScreen(isStorage: true,), title: "Stock in"),
+    PageModel(screen: StockInScreen(isStorage: true), title: "Stock in"),
     PageModel(screen: StorageScreen(), title: "Storage"),
+    PageModel(screen: CatalogsScreen(), title: "Catalogs"),
     PageModel(screen: TransactionHistoryScreen(), title: "Transaction history"),
+
     // PageModel(screen: MyActivityScreen(), title: "My activity"),
     // PageModel(screen: HistoryScreen(), title: "History"),
-
     PageModel(screen: TableAndChartScreen(), title: "Reports"),
     PageModel(screen: ItemExpiryScreen(), title: "Item Expiry Tracker"),
     PageModel(screen: MainPromotionScreen(), title: "Promotions"),
@@ -35,26 +38,21 @@ class PageList{
     PageModel(screen: AccountScreen(), title: "Accounts"),
   ];
 
+  static List<PageModel> getPages(UserLevel userLevel) {
+    final businessType = UIController.instance.businessType;
 
-  static List<PageModel> getPages(UserLevel userLevel){
-    switch(userLevel){
-      case UserLevel.staff :
-        return [
-          pages[0],
-          pages[1],
-          pages[3],
-          pages[7],
-          pages[8],
-        ];
-      case UserLevel.merchant:
-        return pages;
+    List<PageModel> visiblePages = switch (userLevel) {
+      UserLevel.staff => [pages[0], pages[1], pages[3], pages[7], pages[8],pages[9]],
+      UserLevel.merchant => pages,
+      UserLevel.superAdmin => [pages.last],
+    };
 
-      case UserLevel.superAdmin :
-        return [
-          pages.last,
-        ];
-
-
+    if (!businessType.allowsExpiryTracking) {
+      visiblePages = visiblePages
+          .where((page) => page.screen is! ItemExpiryScreen)
+          .toList();
     }
+
+    return visiblePages;
   }
 }

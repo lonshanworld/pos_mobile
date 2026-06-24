@@ -271,8 +271,8 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   //stockin
   Future<bool> createNewUniqueItemList({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
+    CategoryModel? categoryModel,
+    GroupModel? groupModel,
     required TypeModel typeModel,
     required ItemModel itemModel,
     required String? code,

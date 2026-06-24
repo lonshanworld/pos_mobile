@@ -43,6 +43,16 @@ class StockOutItemBoxWidget extends StatefulWidget {
 class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
   late final Future<_StockOutItemParents?> _parentsFuture;
 
+  bool _supportsPartialMeasurementSale(ItemBusinessDetailModel? itemDetail) {
+    final rate = itemDetail?.pricePerMeasurementUnit;
+    return rate != null &&
+        rate > 0 &&
+        itemDetail?.measurementLength != null &&
+        itemDetail!.measurementLength! > 0 &&
+        itemDetail.measurementWidth != null &&
+        itemDetail.measurementWidth! > 0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,17 +67,16 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
         return null;
       }
 
-      final GroupModel? groupModel = await DBHelper.getGroupById(typeModel.groupId);
-      if (groupModel == null) {
-        debugPrint('StockOutItemBoxWidget: missing group for itemId=${widget.itemModel.id}, groupId=${typeModel.groupId}');
-        return null;
-      }
+      final int? resolvedGroupId = widget.itemModel.groupId ?? typeModel.groupId;
+      final GroupModel? groupModel = resolvedGroupId == null
+          ? null
+          : await DBHelper.getGroupById(resolvedGroupId);
 
-      final CategoryModel? categoryModel = await DBHelper.getCategoryById(groupModel.categoryId);
-      if (categoryModel == null) {
-        debugPrint('StockOutItemBoxWidget: missing category for itemId=${widget.itemModel.id}, categoryId=${groupModel.categoryId}');
-        return null;
-      }
+      final int? resolvedCategoryId =
+          widget.itemModel.categoryId ?? groupModel?.categoryId;
+      final CategoryModel? categoryModel = resolvedCategoryId == null
+          ? null
+          : await DBHelper.getCategoryById(resolvedCategoryId);
 
       return _StockOutItemParents(
         typeModel: typeModel,
@@ -99,6 +108,15 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
     final accent = UIController.instance.accentColor();
     final double rate = itemDetail?.pricePerMeasurementUnit ?? 0.0;
 
+    if (!_supportsPartialMeasurementSale(itemDetail)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This item is not configured for measurement sale.'),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -110,6 +128,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
         final formKey = GlobalKey<FormState>();
         final lengthController = TextEditingController();
+        final widthController = TextEditingController();
         double calculatedPrice = 0.0;
         double calculatedArea = 0.0;
 
@@ -118,6 +137,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
           if (existing != null) {
             lengthController.text = existing.instanceLength?.toString() ?? '';
           }
+          widthController.text = selectedPiece.instanceWidth?.toString() ?? '';
         }
 
         return StatefulBuilder(
@@ -126,6 +146,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
               final len = double.tryParse(val) ?? 0.0;
               final width = selectedPiece?.instanceWidth ?? 1.0;
               setStateDialog(() {
+                widthController.text = width.toString();
                 calculatedArea = len * width;
                 calculatedPrice = calculatedArea * rate;
               });
@@ -166,7 +187,8 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           child: ListView.separated(
                             shrinkWrap: true,
                             itemCount: pool.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            separatorBuilder: (_, index) =>
+                                const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final piece = pool[index];
                               final existing = cartUnits.firstWhereOrNull((u) => u.id == piece.id);
@@ -190,6 +212,8 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                 onTap: () {
                                   setStateDialog(() {
                                     selectedPiece = piece;
+                                    widthController.text =
+                                        piece.instanceWidth?.toString() ?? '';
                                     if (isInCart) {
                                       lengthController.text = existing.instanceLength?.toString() ?? '';
                                     } else {
@@ -220,6 +244,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                   setStateDialog(() {
                                     selectedPiece = null;
                                     lengthController.clear();
+                                    widthController.clear();
                                     calculatedPrice = 0.0;
                                     calculatedArea = 0.0;
                                   });
@@ -232,9 +257,11 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: accent.withOpacity(0.08),
+                            color: accent.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: accent.withOpacity(0.2)),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,6 +298,29 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: widthController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText:
+                                'Width used for price (${itemDetail?.measurementUnit ?? 'ft'})',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: accent, width: 2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Width is shown here because cut-piece stock split is currently tracked by length only.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[700],
+                              ),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -326,9 +376,17 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                       if (formKey.currentState!.validate()) {
                         final inputLength = double.parse(lengthController.text);
                         final double originalLength = selectedPiece!.instanceLength ?? 1.0;
-
-                        final double cloneOriginalPrice = selectedPiece!.originalPrice * (inputLength / originalLength);
-                        final double cloneProfitPrice = selectedPiece!.profitPrice * (inputLength / originalLength);
+                        final double originalWidth = selectedPiece!.instanceWidth ?? 1.0;
+                        final double sourceArea = originalLength * originalWidth;
+                        final double soldArea = inputLength * originalWidth;
+                        final double sourceOriginalPrice =
+                            selectedPiece!.originalPrice;
+                        final double cloneOriginalPrice = sourceArea <= 0
+                            ? sourceOriginalPrice
+                            : sourceOriginalPrice * (soldArea / sourceArea);
+                        final double cutSellPrice = soldArea * rate;
+                        final double cloneProfitPrice =
+                            cutSellPrice - cloneOriginalPrice;
 
                         final clone = UniqueItemModel(
                           id: selectedPiece!.id,
@@ -412,6 +470,67 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
       ).toInt()} MMK';
     }
 
+    String stockStatusLabel(int availableStock, bool outOfStock) {
+      if (!widget.itemModel.needStock) {
+        return businessType == BusinessType.food ? "Made to order" : "Ready";
+      }
+
+      if (outOfStock) {
+        switch (businessType) {
+          case BusinessType.clothing:
+            return "No pieces left";
+          case BusinessType.basicPharmacy:
+            return "Out of medicine";
+          case BusinessType.convenience:
+            return "Sold out";
+          default:
+            return "Out of Stock";
+        }
+      }
+
+      switch (businessType) {
+        case BusinessType.clothing:
+          return "$availableStock pieces";
+        case BusinessType.basicPharmacy:
+          return "$availableStock units";
+        case BusinessType.grocery:
+          return "$availableStock packs";
+        case BusinessType.convenience:
+          return "$availableStock ready";
+        default:
+          return "$availableStock left";
+      }
+    }
+
+    String availableToAddLabel(int availableStock, bool outOfStock) {
+      if (!widget.itemModel.needStock) {
+        return "Tap + to add";
+      }
+      if (outOfStock) {
+        switch (businessType) {
+          case BusinessType.clothing:
+            return "No sellable pieces left";
+          case BusinessType.basicPharmacy:
+            return "No sellable units left";
+          default:
+            return "No stock left";
+        }
+      }
+
+      switch (businessType) {
+        case BusinessType.clothing:
+          return "$availableStock pieces ready to add";
+        case BusinessType.basicPharmacy:
+          return "$availableStock units ready to add";
+        case BusinessType.grocery:
+          return "$availableStock packs ready to add";
+        case BusinessType.convenience:
+          return "$availableStock items ready to add";
+        default:
+          return "$availableStock units ready to add";
+      }
+    }
+
     int sellableCount() {
       final inCart = widget.selectedUniqueItemList.map((e) => e.id).toSet();
       return uniqueItemList
@@ -445,6 +564,14 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
+            final String topLabel =
+                parents.categoryModel?.name ??
+                parents.groupModel?.name ??
+                parents.typeModel.name;
+            final String relationLabel = [
+              if (parents.groupModel != null) parents.groupModel!.name,
+              parents.typeModel.name,
+            ].join(" > ");
             final double width = constraints.maxWidth;
             final bool compact = width < 220;
             final bool tablet = width >= 220 && width < 290;
@@ -490,7 +617,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
             return GestureDetector(
               onLongPress: () {
-                if (businessType == BusinessType.clothing && !outOfStock) {
+                if (businessType == BusinessType.clothing &&
+                    !outOfStock &&
+                    _supportsPartialMeasurementSale(itemDetail)) {
                   _showPartialMeasurementDialog(
                     context: context,
                     availableUnits: uniqueItemList,
@@ -540,7 +669,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  parents.categoryModel.name,
+                                  topLabel,
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: TextStyle(
@@ -564,9 +693,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  widget.itemModel.needStock
-                                      ? (outOfStock ? "Out of Stock" : "$availableStock left")
-                                      : "∞",
+                                  stockStatusLabel(availableStock, outOfStock),
                                   style: TextStyle(
                                     color: outOfStock ? Colors.white : Colors.black,
                                     fontSize: titleFontSize,
@@ -584,7 +711,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                   color: Colors.amber.withValues(alpha: 0.9),
                                   padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
                                   child: Text(
-                                    "PROMO",
+                                    "PROMO APPLIED",
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Colors.black,
@@ -621,7 +748,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        "${parents.groupModel.name} > ${parents.typeModel.name}",
+                                        relationLabel,
                                         maxLines: desktop ? 2 : 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
@@ -651,7 +778,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                             const SizedBox(width: 4),
                                             Expanded(
                                               child: Text(
-                                                outOfStock ? "No stock left" : "$availableStock units ready to add",
+                                                availableToAddLabel(availableStock, outOfStock),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
@@ -751,8 +878,8 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
 class _StockOutItemParents {
   final TypeModel typeModel;
-  final GroupModel groupModel;
-  final CategoryModel categoryModel;
+  final GroupModel? groupModel;
+  final CategoryModel? categoryModel;
 
   const _StockOutItemParents({
     required this.typeModel,

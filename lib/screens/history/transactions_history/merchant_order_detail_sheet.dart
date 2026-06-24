@@ -82,12 +82,17 @@ class MerchantOrderDetailSheet extends StatelessWidget {
     }
 
     double orderPromoAmount = 0;
+    String? orderPromotionValue;
     if (orderPromotion != null) {
       if (orderPromotion.promotionPercentage != null) {
+        orderPromotionValue =
+            '${orderPromotion.promotionPercentage!.toStringAsFixed(0)}%';
         orderPromoAmount = CalculationFormula.getPercentageToMMK(
             totalItemFinalSellPrices + orderTax,
             orderPromotion.promotionPercentage!);
       } else if (orderPromotion.promotionPrice != null) {
+        orderPromotionValue =
+            '${orderPromotion.promotionPrice!.toStringAsFixed(0)} MMK';
         orderPromoAmount = orderPromotion.promotionPrice!;
       }
     }
@@ -174,6 +179,11 @@ class MerchantOrderDetailSheet extends StatelessWidget {
                       '$totalItemFinalSellPrices MMK'),
                   dataRow('Checkout Tax', '$orderTax MMK'),
                   dataRow('Delivery Charges', '$deliCharges MMK'),
+                  if (orderPromotion != null) ...[
+                    dataRow('Order Promotion', orderPromotion.promotionName),
+                    if (orderPromotionValue != null)
+                      dataRow('Promotion Value', orderPromotionValue),
+                  ],
                   if (orderPromoAmount > 0)
                     dataRow('Order Promotion applied',
                         '-${orderPromoAmount.toStringAsFixed(0)} MMK',

@@ -11,7 +11,7 @@ class TypeDbStorage{
       """
         CREATE TABLE IF NOT EXISTS ${TxtConstants.typeTableName}(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          groupId INTEGER REFERENCES ${TxtConstants.groupTableName}(id) NOT NULL,
+          groupId INTEGER REFERENCES ${TxtConstants.groupTableName}(id),
           name TEXT NOT NULL,
           createTime TEXT NOT NULL,
           lastUpdateTime TEXT,
@@ -69,7 +69,7 @@ class TypeDbStorage{
     {
       required String name,
       required String? generalDescription,
-      required GroupModel groupModel,
+      required GroupModel? groupModel,
       required DateTime dateTime,
       required UserModel userModel,
       required bool hasExpire,
@@ -88,7 +88,7 @@ class TypeDbStorage{
           )
           VALUES(?,?,?,?,?,?)
         """,
-        [name, groupModel.id, dateTime.toString(), userModel.id, generalDescription, hasExpire ? 1 : 0]
+        [name, groupModel?.id, dateTime.toString(), userModel.id, generalDescription, hasExpire ? 1 : 0]
     );
   }
 

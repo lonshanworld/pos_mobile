@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
+import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/models/deliver_model_folder/delivery_model.dart';
 import 'package:pos_mobile/models/deliver_model_folder/delivery_person_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
+import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
@@ -16,17 +19,12 @@ import '../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../constants/enums.dart';
 import '../../../error_handlers/error_handler.dart';
 import '../../../models/customer_model.dart';
-import '../../../widgets/cusTxt_widget.dart';
 import '../../../widgets/voucher_box_widget.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
 
 class HistoryVoucherScreen extends StatefulWidget {
-  
   final StockOutModel stockOutModel;
-  const HistoryVoucherScreen({
-    super.key,
-    required this.stockOutModel,
-  });
+  const HistoryVoucherScreen({super.key, required this.stockOutModel});
 
   @override
   State<HistoryVoucherScreen> createState() => _HistoryVoucherScreenState();
@@ -69,14 +67,19 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
     }
 
     loadingCubit.setLoading("Printing ...");
-    final success = await context.read<BluetoothPrinterCubit>().printVoucher(printKey);
+    final success = await context.read<BluetoothPrinterCubit>().printVoucher(
+      printKey,
+    );
     if (!mounted) return;
 
     if (success) {
       loadingCubit.setSuccess("Print command sent !");
     } else {
       loadingCubit.setFail("Print failed.");
-      await CrashReporter.reportError("Print failed for voucher: ${widget.stockOutModel.code}", errorType: "PrintFailure");
+      await CrashReporter.reportError(
+        "Print failed for voucher: ${widget.stockOutModel.code}",
+        errorType: "PrintFailure",
+      );
     }
   }
 
@@ -87,10 +90,12 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
     final loadingCubit = context.read<LoadingCubit>();
 
     loadingCubit.setLoading("Generating PDF ...");
-    final savedPath = await context.read<BluetoothPrinterCubit>().downloadVoucherPdf(
-      printKey,
-      fileName: 'voucher_${widget.stockOutModel.code}',
-    );
+    final savedPath = await context
+        .read<BluetoothPrinterCubit>()
+        .downloadVoucherPdf(
+          printKey,
+          fileName: 'voucher_${widget.stockOutModel.code}',
+        );
 
     if (!mounted) return;
     if (savedPath != null) {
@@ -103,12 +108,43 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final BluetoothConnection? bluetoothConnection = context.select((BluetoothPrinterCubit cubit) => cubit.state.bluetoothConnection);
-    final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemFromStockOutId(widget.stockOutModel.id);
-    final List<ItemModel> itemList = context.read<ItemCubit>().getItemListFromSelectedUniqueItemList(uniqueItemList);
-    final CustomerModel? customerModel = widget.stockOutModel.customerId == null ? null : context.read<TransactionsCubit>().getCustomerModel(widget.stockOutModel.customerId!);
-    final DeliveryModel? deliveryModel = widget.stockOutModel.deliveryModelId == null ? null : context.read<TransactionsCubit>().getDeliveryModel(widget.stockOutModel.deliveryModelId!);
-    final DeliveryPersonModel? deliveryPersonModel = widget.stockOutModel.deliveryPersonId == null ? null : context.read<TransactionsCubit>().getDeliveryPerson(widget.stockOutModel.deliveryPersonId!);
+    final BluetoothConnection? bluetoothConnection = context.select(
+      (BluetoothPrinterCubit cubit) => cubit.state.bluetoothConnection,
+    );
+    final List<UniqueItemModel> uniqueItemList = context
+        .read<ItemCubit>()
+        .getSelectedUniqueItemFromStockOutId(widget.stockOutModel.id);
+    final List<ItemModel> itemList = context
+        .read<ItemCubit>()
+        .getItemListFromSelectedUniqueItemList(uniqueItemList);
+    final CustomerModel? customerModel = widget.stockOutModel.customerId == null
+        ? null
+        : context.read<TransactionsCubit>().getCustomerModel(
+            widget.stockOutModel.customerId!,
+          );
+    final DeliveryModel? deliveryModel =
+        widget.stockOutModel.deliveryModelId == null
+        ? null
+        : context.read<TransactionsCubit>().getDeliveryModel(
+            widget.stockOutModel.deliveryModelId!,
+          );
+    final DeliveryPersonModel? deliveryPersonModel =
+        widget.stockOutModel.deliveryPersonId == null
+        ? null
+        : context.read<TransactionsCubit>().getDeliveryPerson(
+            widget.stockOutModel.deliveryPersonId!,
+          );
+    final promotionCubit = context.read<PromotionCubit>();
+    final stockOutPromotion = promotionCubit.state.stockOutPromotionList
+        .firstWhereOrNull((element) => element.stockOutId == widget.stockOutModel.id);
+    final PromotionModel? promotionModel = stockOutPromotion == null
+        ? null
+        : promotionCubit.state.activePromotionList.firstWhereOrNull(
+              (element) => element.id == stockOutPromotion.promotionId,
+            ) ??
+            promotionCubit.state.inActivePromotionList.firstWhereOrNull(
+              (element) => element.id == stockOutPromotion.promotionId,
+            );
 
     return Scaffold(
       appBar: AppBar(
@@ -118,39 +154,37 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: UIConstants.mediumSpace,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  txt: "Show additional Promotion",
-                ),
-                SizedBox(
-                  child: Transform.scale(
-                    scale: 0.6,
-                    child: Switch.adaptive(
-                      activeThumbColor: Colors.green.shade700,
-                      activeTrackColor: Colors.green.shade200,
-                      value: showAdditionalPromotion,
-                      onChanged: (bool data){
-                        if(mounted){
-                          setState(() {
-                            showAdditionalPromotion = data;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.symmetric(
+          //     vertical: UIConstants.mediumSpace,
+          //   ),
+          //   child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.center,
+          //     children: [
+          //       CusTxtWidget(
+          //         txtStyle: Theme.of(
+          //           context,
+          //         ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
+          //         txt: "Show additional Promotion",
+          //       ),
+          //       SizedBox(
+          //         child: Transform.scale(
+          //           scale: 0.6,
+          //           child: Switch.adaptive(
+          //             value: showAdditionalPromotion,
+          //             onChanged: (bool data) {
+          //               if (mounted) {
+          //                 setState(() {
+          //                   showAdditionalPromotion = data;
+          //                 });
+          //               }
+          //             },
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           Padding(
             padding: const EdgeInsets.only(bottom: UIConstants.mediumSpace),
             child: Row(
@@ -161,8 +195,11 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
                   verticalpadding: UIConstants.smallSpace,
                   horizontalpadding: UIConstants.mediumSpace,
                   bdrRadius: UIConstants.smallRadius,
-                  bgClr: bluetoothConnection == BluetoothConnection.connected ? Colors.blue : Colors.grey,
-                  func: () => _handlePrint(context, _printKey, bluetoothConnection),
+                  bgClr: bluetoothConnection == BluetoothConnection.connected
+                      ? Colors.blue
+                      : Colors.grey,
+                  func: () =>
+                      _handlePrint(context, _printKey, bluetoothConnection),
                   txtStyle: Theme.of(context).textTheme.titleSmall!,
                   txtClr: Colors.white,
                 ),
@@ -191,12 +228,14 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
                   selectedItemModelList: itemList,
                   shoppingType: widget.stockOutModel.shoppingType,
                   paymentMethod: widget.stockOutModel.paymentMethod,
-                  additionalPromotionAmount: widget.stockOutModel.additionalPromotionAmount,
+                  additionalPromotionAmount:
+                      widget.stockOutModel.additionalPromotionAmount,
                   deliCharges: deliveryModel?.deliveryCharges,
                   description: widget.stockOutModel.description,
                   barCode: widget.stockOutModel.code,
                   taxPercentage: widget.stockOutModel.taxPercentage ?? 0,
-                  promotionModel: null,
+                  promotionModel: promotionModel,
+                  orderDateTime: widget.stockOutModel.createTime,
 
                   showAdditionalPromotion: showAdditionalPromotion,
                 ),

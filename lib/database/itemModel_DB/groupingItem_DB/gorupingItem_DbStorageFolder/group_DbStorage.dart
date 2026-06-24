@@ -13,7 +13,7 @@ class GroupDbStorage{
         CREATE TABLE IF NOT EXISTS ${TxtConstants.groupTableName}(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
-          categoryId INTEGER REFERENCES ${TxtConstants.categoryTableName}(id) NOT NULL,
+          categoryId INTEGER REFERENCES ${TxtConstants.categoryTableName}(id),
           createTime TEXT NOT NULL,
           lastUpdateTime TEXT,
           deleteTime TEXT,
@@ -66,7 +66,7 @@ class GroupDbStorage{
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
+      required CategoryModel? categoryModel,
       required String groupName,
       required String? description,
       required DateTime dateTime,
@@ -84,7 +84,7 @@ class GroupDbStorage{
           )
           VALUES(?,?,?,?,?)
         """,
-        [groupName, categoryModel.id, dateTime.toString(), description, userModel.id]
+        [groupName, categoryModel?.id, dateTime.toString(), description, userModel.id]
     );
   }
 

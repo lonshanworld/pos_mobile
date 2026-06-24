@@ -20,14 +20,14 @@ import "../../features/cus_showmodelbottomsheet.dart";
 class CategoryBoxWidget extends StatelessWidget {
 
   final CategoryModel categoryModel;
-  final int groupCount;
+  final int itemCount;
   final VoidCallback func;
   // final DateTime lastUpdateTime;
   final bool isStorage;
   const CategoryBoxWidget({
     super.key,
     required this.categoryModel,
-    required this.groupCount,
+    required this.itemCount,
     required this.func,
     // required this.lastUpdateTime,
     required this.isStorage,
@@ -42,7 +42,7 @@ class CategoryBoxWidget extends StatelessWidget {
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
     final categoryLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.category);
-    final groupLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group);
+    final itemLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.item);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -58,10 +58,10 @@ class CategoryBoxWidget extends StatelessWidget {
           ),
           cusPopUpMenuItem(
             func: (){
-              if(groupCount > 0){
+              if(itemCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $groupCount ${groupLabel}s in this $categoryLabel. You can delete only if there is no $groupLabel left.",
+                  txt: "There are $itemCount ${itemLabel}s using this $categoryLabel. You can delete it only when nothing references it.",
                 );
               }else{
 
@@ -173,7 +173,7 @@ class CategoryBoxWidget extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "$groupCount ${groupCount == 1 ? groupLabel.toLowerCase() : '${groupLabel.toLowerCase()}s'}",
+                          "$itemCount ${itemCount == 1 ? itemLabel.toLowerCase() : '${itemLabel.toLowerCase()}s'}",
                           style: Theme.of(context).textTheme.bodySmall!.copyWith(
                             color: Colors.grey,
                           ),

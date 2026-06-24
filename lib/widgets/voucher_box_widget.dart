@@ -33,6 +33,7 @@ class VoucherBox extends StatelessWidget {
   final String? barCode;
   final double taxPercentage;
   final PromotionModel? promotionModel;
+  final DateTime? orderDateTime;
 
   final bool showAdditionalPromotion;
   const VoucherBox({
@@ -49,6 +50,7 @@ class VoucherBox extends StatelessWidget {
     required this.barCode,
     required this.taxPercentage,
     required this.promotionModel,
+    this.orderDateTime,
     // required this.showItem,
     required this.showAdditionalPromotion,
   });
@@ -165,7 +167,7 @@ class VoucherBox extends StatelessWidget {
                 color: Colors.black,
                 fontSize: printerFontChanger.printerFontSize,
               ),
-              txt: TextFormatters.getDateTime(DateTime.now()),
+              txt: TextFormatters.getDateTime(orderDateTime ?? DateTime.now()),
             ),
           ),
           if(customerName != null && customerName != "")Align(
@@ -268,6 +270,7 @@ class VoucherBox extends StatelessWidget {
               txt: "Thank you for your purchase",
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           if(description != null && description != "")uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
           if(description != null && description != "")Align(
             alignment: Alignment.center,

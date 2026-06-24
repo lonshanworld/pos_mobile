@@ -3,7 +3,7 @@ import 'package:pos_mobile/models/abstract_models_folder/item_info_model.dart';
 
 class GroupModel extends ItemInfoSkeletalModel{
   // final int id;
-  final int categoryId; // NOTE : foreign key
+  final int? categoryId; // Legacy optional link. Groups are now independent catalogs.
   final String name;
   // final DateTime createTime;
   // final DateTime? lastUpdateTime;

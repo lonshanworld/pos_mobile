@@ -22,6 +22,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
   final double? instanceLength;
   final double? instanceWidth;
   final String? instanceBatchNumber;
+  final String? instanceImei;
 
   // final DateTime? lastUpdateTime;
   // final bool activeStatus;
@@ -49,6 +50,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     this.instanceLength,
     this.instanceWidth,
     this.instanceBatchNumber,
+    this.instanceImei,
   });
   
   @override
@@ -74,6 +76,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     instanceLength = (jsonData["instanceLength"] as num?)?.toDouble(),
     instanceWidth = (jsonData["instanceWidth"] as num?)?.toDouble(),
     instanceBatchNumber = jsonData["instanceBatchNumber"] as String?,
+    instanceImei = jsonData["instanceImei"] as String?,
     super.fromJson();
   
   @override
@@ -93,6 +96,7 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     jsonData["instanceLength"] = instanceLength;
     jsonData["instanceWidth"] = instanceWidth;
     jsonData["instanceBatchNumber"] = instanceBatchNumber;
+    jsonData["instanceImei"] = instanceImei;
     return jsonData;
   }
 }

@@ -31,21 +31,29 @@ class UserDataCubit extends Cubit<UserDataState> {
   // final List<UserModel> _activeUserModelList = [];
   // final DBHelper dbHelper = DBHelper.instance;
 
-  UserDataCubit() : super(const UserData(userModel: null, allUserModelList: [],activeUserModelList: [])){
+  UserDataCubit()
+    : super(
+        const UserData(
+          userModel: null,
+          allUserModelList: [],
+          activeUserModelList: [],
+          isInitialized: false,
+        ),
+      ) {
     _initializeUserModelList();
   }
 
-  Future<void> _initializeUserModelList()async{
-    try{
+  Future<void> _initializeUserModelList({bool preserveCurrentUser = true}) async {
+    try {
       final List<UserModel> allUserModelList = await DBHelper.getAllUsersFromDB();
       final List<UserModel> activeUserModelList = [];
-      UserModel? currentUserModel = state.userModel;
+      UserModel? currentUserModel = preserveCurrentUser ? state.userModel : null;
 
-      for(final data in allUserModelList){
-        if(data.activeStatus){
+      for (final data in allUserModelList) {
+        if (data.activeStatus) {
           activeUserModelList.add(data);
         }
-        if(state.userModel != null && state.userModel!.id == data.id){
+        if (currentUserModel != null && currentUserModel.id == data.id) {
           currentUserModel = data;
         }
       }
@@ -54,16 +62,17 @@ class UserDataCubit extends Cubit<UserDataState> {
         userModel: currentUserModel,
         allUserModelList: allUserModelList,
         activeUserModelList: activeUserModelList,
+        isInitialized: true,
       ));
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to initialize users: $e');
       emit(const UserData(
         userModel: null,
         allUserModelList: [],
         activeUserModelList: [],
+        isInitialized: true,
       ));
     }
-
   }
   //
   Future<void>initData()async{
@@ -187,6 +196,7 @@ class UserDataCubit extends Cubit<UserDataState> {
       userModel: userModel,
       allUserModelList: state.allUserModelList,
       activeUserModelList: state.activeUserModelList,
+      isInitialized: state.isInitialized,
     ));
     return true;
   }
@@ -203,7 +213,12 @@ class UserDataCubit extends Cubit<UserDataState> {
 
 
   Future<void> clearAllData()async{
-    emit(const UserData(userModel: null, allUserModelList: [], activeUserModelList: []));
+    emit(const UserData(
+      userModel: null,
+      allUserModelList: [],
+      activeUserModelList: [],
+      isInitialized: false,
+    ));
   }
 
   Future<bool>logout()async{
@@ -215,9 +230,9 @@ class UserDataCubit extends Cubit<UserDataState> {
       userModel: state.userModel!,
       isLogin : false,
     );
-    if(value){
+    if (value) {
       _clearOwnerSessionMarker();
-      await clearAllData();
+      await _initializeUserModelList(preserveCurrentUser: false);
     }
     return value;
   }

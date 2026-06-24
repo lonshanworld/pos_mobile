@@ -11,6 +11,7 @@ import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/screens/authenticaton/login_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/merchant_setup_screen.dart';
 import 'package:pos_mobile/screens/authenticaton/key_validation_screen.dart';
+import 'package:pos_mobile/widgets/loading_widget.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 
@@ -33,6 +34,7 @@ class CheckUserScreen extends StatelessWidget {
     final KeyValidationState keyValidationState = context
         .watch<KeyValidationCubit>()
         .state;
+    final userDataState = context.watch<UserDataCubit>().state;
     Timer? timer;
 
     // If key is not validated, show key validation screen
@@ -40,12 +42,18 @@ class CheckUserScreen extends StatelessWidget {
       return const KeyValidationScreen();
     }
 
+    if (!userDataState.isInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: LoadingWidget(),
+        ),
+      );
+    }
+
     // If it's first time setup and key is validated, go to merchant setup
-    final bool hasMerchant = context
-        .watch<UserDataCubit>()
-        .state
-        .allUserModelList
-        .any((u) => u.userLevel == UserLevel.merchant);
+    final bool hasMerchant = userDataState.allUserModelList.any(
+      (u) => u.userLevel == UserLevel.merchant,
+    );
 
     if (keyValidationState.isFirstTimeSetup && !hasMerchant) {
       return const MerchantSetupScreen();
