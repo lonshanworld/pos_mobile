@@ -168,7 +168,6 @@ class Database:
             await db.execute('DELETE FROM crash_reports WHERE id = ?', (report_id,))
             await db.commit()
             return True
-                by_platform = {row['platform']: row['count'] for row in await cursor.fetchall()}
             
             # Recent reports (last 24 hours)
             async with db.execute('''
