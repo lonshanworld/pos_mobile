@@ -7,9 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pos_mobile/mobile-crash-backend
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,24 +17,33 @@ jobs:
         with:
           python-version: "3.11"
 
-      # BUILD STEP (temporary inside GitHub runner)
+      # =========================
+      # BUILD STEP
+      # =========================
       - name: Build package
         run: |
+          APP_PATH=pos_mobile/mobile-crash-backend
+
           mkdir release
-          pip install -r requirements.txt -t release
 
-          cp main.py release/
-          cp database.py release/
-          cp auth.py release/
-          cp config.py release/
+          pip install -r $APP_PATH/requirements.txt -t release
 
-          cp -r templates release/
+          cp $APP_PATH/main.py release/
+          cp $APP_PATH/database.py release/
+          cp $APP_PATH/auth.py release/
+          cp $APP_PATH/config.py release/
 
-      # COMPRESS
-      - name: Create tar
+          cp -r $APP_PATH/templates release/
+
+      # =========================
+      # PACKAGE
+      # =========================
+      - name: Create archive
         run: tar -czf release.tar.gz release
 
+      # =========================
       # UPLOAD TO VPS
+      # =========================
       - name: Upload to VPS
         uses: appleboy/scp-action@master
         with:
@@ -47,7 +54,9 @@ jobs:
           source: "release.tar.gz"
           target: "/opt/crash-backend"
 
+      # =========================
       # DEPLOY ON VPS
+      # =========================
       - name: Deploy on VPS
         uses: appleboy/ssh-action@master
         with:
