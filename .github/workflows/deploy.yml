@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -18,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # BUILD STEP (LOCAL ON GITHUB RUNNER)
+      # BUILD STEP
       # =========================
       - name: Build package
         run: |
@@ -36,7 +37,7 @@ jobs:
           cp -r $APP_PATH/templates release/
 
       # =========================
-      # PACKAGE
+      # ARCHIVE
       # =========================
       - name: Create tar archive
         run: tar -czf release.tar.gz release
@@ -55,7 +56,7 @@ jobs:
           target: "/opt/crash-backend"
 
       # =========================
-      # DEPLOY ON VPS (FIXED FOR OPENVZ + LOW RAM)
+      # DEPLOY ON VPS (FIXED FOR OPENVZ)
       # =========================
       - name: Deploy on VPS
         uses: appleboy/ssh-action@master
@@ -77,10 +78,14 @@ jobs:
 
             cd current/release
 
-            # safer kill (avoid blocking on OpenVZ VPS)
-            pkill -f "uvicorn main:app" || true
+            # SAFE STOP (no pkill, avoids OpenVZ freeze)
+            PID=$(pgrep -f "uvicorn main:app" || true)
+            if [ ! -z "$PID" ]; then
+              kill $PID || true
+              sleep 1
+            fi
 
-            # start FastAPI in fully detached mode
+            # START APP (fully detached)
             nohup python3 -m uvicorn main:app \
               --host 0.0.0.0 \
               --port 12500 \
@@ -89,4 +94,4 @@ jobs:
 
             disown
 
-            echo "Deployment completed successfully"
+            echo "✅ Deployment completed successfully"
