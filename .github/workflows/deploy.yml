@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # BUILD STEP
+      # BUILD PACKAGE
       # =========================
       - name: Build package
         run: |
@@ -56,7 +56,7 @@ jobs:
           target: "/opt/crash-backend"
 
       # =========================
-      # DEPLOY ON VPS (FIXED FOR OPENVZ)
+      # DEPLOY (OPENVZ SAFE - NO PROCESS SCAN)
       # =========================
       - name: Deploy on VPS
         uses: appleboy/ssh-action@master
@@ -78,14 +78,10 @@ jobs:
 
             cd current/release
 
-            # SAFE STOP (no pkill, avoids OpenVZ freeze)
-            PID=$(pgrep -f "uvicorn main:app" || true)
-            if [ ! -z "$PID" ]; then
-              kill $PID || true
-              sleep 1
-            fi
+            # FAST SAFE RESTART (no pgrep, no pkill, no hang)
+            killall -9 uvicorn || true
 
-            # START APP (fully detached)
+            # START APP (fully detached, VPS-safe)
             nohup python3 -m uvicorn main:app \
               --host 0.0.0.0 \
               --port 12500 \
@@ -94,4 +90,4 @@ jobs:
 
             disown
 
-            echo "✅ Deployment completed successfully"
+            echo "✅ Deployment successful"
