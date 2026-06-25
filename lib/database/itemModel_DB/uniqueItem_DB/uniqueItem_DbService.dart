@@ -59,8 +59,7 @@ class UniqueItemDbService{
       List<UniqueItemModel> formattedOldDataList = oldDataList.map((e) => UniqueItemModel.fromJson(e)).toList();
       List<int> updateValueList = [];
       for(int x =0; x < formattedOldDataList.length; x++){
-        ItemModel item = itemModelList.firstWhere((element) => element.id == formattedOldDataList[x].itemId);
-        int updateValue = await UniqueItemDbStorage.reInStockUniqueItemList(db, stockOutId: stockOutId, originalPrice: item.originalPrice, profitPrice: item.profitPrice, taxPercentage: item.taxPercentage ?? 0, dateTime: dateTime);
+        int updateValue = await UniqueItemDbStorage.reInStockUniqueItem(db, uniqueItemId: formattedOldDataList[x].id, dateTime: dateTime);
         updateValueList.add(updateValue);
       }
       if(updateValueList.contains(-1)) return false;

@@ -15,6 +15,8 @@ import '../../models/groupingItem_models_folders/type_model.dart';
 import '../../models/item_model_folder/item_model.dart';
 import '../../models/user_model_folder/user_model.dart';
 import '../../screens/confirm_screens_folder/comfirm_screen.dart';
+import '../../controller/ui_controller.dart';
+import '../../constants/business_hierarchy_config.dart';
 
 class CusSelectTypeBtnWidget extends StatelessWidget {
 
@@ -35,12 +37,15 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    // final UIController uiController = UIController.instance;
+    final UIController uiController = UIController.instance;
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
     final GlobalKey<PopupMenuButtonState> popupMenu = GlobalKey<PopupMenuButtonState>();
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
     final List<ItemModel> itemList = context.read<ItemCubit>().getSelectedItemList(typeModel.id);
+    
+    final typeLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.type);
+    final itemLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.item);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -59,11 +64,11 @@ class CusSelectTypeBtnWidget extends StatelessWidget {
               if(itemList.isNotEmpty){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are ${itemList.length} items in this type. You can delete only if there is no item left.",
+                  txt: "There are ${itemList.length} ${itemLabel}s in this $typeLabel. You can delete only if there is no $itemLabel left.",
                 );
               }else{
                 showSheet.showCusDialogScreen(ConfirmScreen(
-                  txt: "Are you sure want to delete this type?",
+                  txt: "Are you sure want to delete this $typeLabel?",
                   title: "Delete",
                   acceptBtnTxt: "Yes, delete",
                   cancelBtnTxt: "Cancel",

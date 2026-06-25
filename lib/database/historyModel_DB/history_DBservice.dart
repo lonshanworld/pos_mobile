@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:pos_mobile/constants/enums.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBstorage.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/type_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
@@ -26,7 +27,7 @@ class HistoryDBService{
     await HistoryDbStorage.onDelete(db);
   }
 
-  static Future<List<dynamic>>getAllHistory(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllHistory(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await HistoryDbStorage.getAllHistoryList(db, limit: limit, offset: offset);
   }
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -14,6 +13,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/models/papersize_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
+import 'package:pos_mobile/utils/crash_reporter.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
@@ -105,6 +105,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       ));
     } catch (e) {
       cusDebugPrint("Scan error: $e");
+      await CrashReporter.reportError("Bluetooth scan error: $e", errorType: "BluetoothError");
     }
   }
 
@@ -136,6 +137,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       ));
     } catch (e) {
       cusDebugPrint("Connect error: $e");
+      await CrashReporter.reportError("Bluetooth connect error: $e", errorType: "BluetoothError");
       emit(BluetoothPrinterData(
         bluetoothOpened: state.bluetoothOpened,
         bluetoothConnection: BluetoothConnection.disconnected,
@@ -152,6 +154,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       await _bluetooth.disconnect();
     } catch (e) {
       cusDebugPrint("Disconnect error: $e");
+      await CrashReporter.reportError("Bluetooth disconnect error: $e", errorType: "BluetoothError");
     }
     emit(BluetoothPrinterData(
       bluetoothOpened: state.bluetoothOpened,
@@ -232,18 +235,12 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       // Print image
       bytes += generator.imageRaster(resized, align: PosAlign.center);
 
-      // Feed paper and cut
+      // Keep the printer motion as simple as possible for this test.
       // bytes += generator.feed(1);
       bytes += generator.cut();
 
-      // Send to Bluetooth printer in chunks to reduce transport overflow.
-      final payload = Uint8List.fromList(bytes);
-      const chunkSize = 512;
-      for (int i = 0; i < payload.length; i += chunkSize) {
-        final end = math.min(i + chunkSize, payload.length);
-        await _bluetooth.writeBytes(payload.sublist(i, end));
-        await Future.delayed(const Duration(milliseconds: 30));
-      }
+      // Send the full job in one write to avoid stop-start transport jitter.
+      await _bluetooth.writeBytes(Uint8List.fromList(bytes));
       
       cusDebugPrint("Print command sent successfully to ${state.printerName}");
       return true;
@@ -277,7 +274,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       doc.addPage(
         pw.Page(
           pageFormat: PdfPageFormat(pageWidth, imageHeight + (6 * PdfPageFormat.mm)),
-          margin: pw.EdgeInsets.all(3 * PdfPageFormat.mm),
+          margin: const pw.EdgeInsets.all(3 * PdfPageFormat.mm),
           build: (_) {
             return pw.Center(
               child: pw.Image(
@@ -359,8 +356,4 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     return cleaned;
   }
 
-  @override
-  Future<void> close() {
-    return super.close();
-  }
 }

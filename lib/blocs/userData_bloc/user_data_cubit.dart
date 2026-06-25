@@ -7,12 +7,12 @@ import 'package:get_storage/get_storage.dart';
 
 
 import 'package:pos_mobile/constants/enums.dart';
-import 'package:pos_mobile/constants/txtconstants.dart';
 import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/error_handlers/error_handler.dart';
 
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/auth_security.dart';
+import 'package:pos_mobile/utils/debug_print.dart';
 
 import '../../constants/uiConstants.dart';
 import '../../screens/loading_screen.dart';
@@ -31,27 +31,48 @@ class UserDataCubit extends Cubit<UserDataState> {
   // final List<UserModel> _activeUserModelList = [];
   // final DBHelper dbHelper = DBHelper.instance;
 
-  UserDataCubit() : super(const UserData(userModel: null, allUserModelList: [],activeUserModelList: [])){
+  UserDataCubit()
+    : super(
+        const UserData(
+          userModel: null,
+          allUserModelList: [],
+          activeUserModelList: [],
+          isInitialized: false,
+        ),
+      ) {
     _initializeUserModelList();
   }
 
-  Future<void> _initializeUserModelList()async{
-    final List<UserModel> allUserModelList = await DBHelper.getAllUsersFromDB();
-    final List<UserModel> activeUserModelList = [];
-    UserModel? currentUserModel = state.userModel;
+  Future<void> _initializeUserModelList({bool preserveCurrentUser = true}) async {
+    try {
+      final List<UserModel> allUserModelList = await DBHelper.getAllUsersFromDB();
+      final List<UserModel> activeUserModelList = [];
+      UserModel? currentUserModel = preserveCurrentUser ? state.userModel : null;
 
-    for(UserModel data in allUserModelList){
-      if(data.activeStatus){
-        activeUserModelList.add(data);
-      }
-      if(state.userModel != null){
-        if(state.userModel!.id == data.id){
+      for (final data in allUserModelList) {
+        if (data.activeStatus) {
+          activeUserModelList.add(data);
+        }
+        if (currentUserModel != null && currentUserModel.id == data.id) {
           currentUserModel = data;
         }
       }
-    }
-    emit(UserData(userModel: currentUserModel, allUserModelList: allUserModelList, activeUserModelList: activeUserModelList));
 
+      emit(UserData(
+        userModel: currentUserModel,
+        allUserModelList: allUserModelList,
+        activeUserModelList: activeUserModelList,
+        isInitialized: true,
+      ));
+    } catch (e) {
+      cusDebugPrint('Failed to initialize users: $e');
+      emit(const UserData(
+        userModel: null,
+        allUserModelList: [],
+        activeUserModelList: [],
+        isInitialized: true,
+      ));
+    }
   }
   //
   Future<void>initData()async{
@@ -86,30 +107,23 @@ class UserDataCubit extends Cubit<UserDataState> {
       },
     );
 
-    final lockDuration = _getRemainingLockDuration(userName, userLevel);
-    if (lockDuration != null) {
-      if (buildContext.mounted) {
-        Navigator.of(buildContext).pop();
-      }
-      _errorHandler.showErrorWithBtn(
-        title: null,
-        txt: "Too many failed attempts. Try again in ${_formatDuration(lockDuration)}.",
-      );
-      return false;
-    }
-
-    bool value = await isAuthenticated(userName,password,userLevel);
-    if(value){
-      _clearLoginFailureState(userName, userLevel);
-
-      if(userLevel == UserLevel.superAdmin){
-        _markOwnerSession();
+    try{
+      final lockDuration = _getRemainingLockDuration(userName, userLevel);
+      if (lockDuration != null) {
         if (buildContext.mounted) {
           Navigator.of(buildContext).pop();
         }
-        await _initializeUserModelList();
-        return true;
-      }else{
+        _errorHandler.showErrorWithBtn(
+          title: null,
+          txt: "Too many failed attempts. Try again in ${_formatDuration(lockDuration)}.",
+        );
+        return false;
+      }
+
+      final bool value = await isAuthenticated(userName,password,userLevel);
+      if(value){
+        _clearLoginFailureState(userName, userLevel);
+
         final historySuccess = await DBHelper.loginAndLogOut(
           userModel: state.userModel!,
           isLogin : true,
@@ -126,12 +140,18 @@ class UserDataCubit extends Cubit<UserDataState> {
         return historySuccess;
       }
 
-    }else{
       final failMessage = _registerFailedAttemptAndGetMessage(userName, userLevel);
       if (buildContext.mounted) {
         Navigator.of(buildContext).pop();
       }
       _errorHandler.showErrorWithBtn(title: null, txt: failMessage);
+      return false;
+    }catch(e){
+      if (buildContext.mounted) {
+        Navigator.of(buildContext).pop();
+      }
+      cusDebugPrint('Login failed: $e');
+      _errorHandler.showErrorWithBtn(title: null, txt: "Login failed. Please try again.");
       return false;
     }
 
@@ -141,59 +161,31 @@ class UserDataCubit extends Cubit<UserDataState> {
   Future<bool> isAuthenticated(String userName, String password, UserLevel userLevel) async {
     UserModel? userModel;
 
-    if (userLevel == UserLevel.superAdmin) {
-      final storedSuperAdminPassword = _storage.read<String>(_superAdminPasswordKey) ??
-          TxtConstants.superAdminModelData.password;
-      final isUserMatched = userName == TxtConstants.superAdminModelData.userName;
-      final isPasswordMatched = AuthSecurity.verifyPassword(
-        storedPassword: storedSuperAdminPassword,
+    for (final element in state.activeUserModelList) {
+      if (element.userName != userName || element.userLevel != userLevel) {
+        continue;
+      }
+
+      final isMatched = AuthSecurity.verifyPassword(
+        storedPassword: element.password,
         inputPassword: password,
       );
 
-      if (isUserMatched && isPasswordMatched) {
-        if (!AuthSecurity.isHashed(storedSuperAdminPassword)) {
-          _storage.write(_superAdminPasswordKey, AuthSecurity.hashPassword(password));
-        }
-
-        userModel = UserModel(
-          id: TxtConstants.superAdminModelData.id,
-          userName: TxtConstants.superAdminModelData.userName,
-          password: _storage.read<String>(_superAdminPasswordKey) ?? storedSuperAdminPassword,
-          userLevel: TxtConstants.superAdminModelData.userLevel,
-          userCreatedTime: TxtConstants.superAdminModelData.userCreatedTime,
-          userLoginTime: TxtConstants.superAdminModelData.userLoginTime,
-          userLogoutTime: TxtConstants.superAdminModelData.userLogoutTime,
-          activeStatus: TxtConstants.superAdminModelData.activeStatus,
-          imageId: TxtConstants.superAdminModelData.imageId,
-        );
+      if (!isMatched) {
+        continue;
       }
-    } else {
-      for (final element in state.activeUserModelList) {
-        if (element.userName != userName || element.userLevel != userLevel) {
-          continue;
-        }
 
-        final isMatched = AuthSecurity.verifyPassword(
-          storedPassword: element.password,
-          inputPassword: password,
+      if (!AuthSecurity.isHashed(element.password)) {
+        await DBHelper.changeUserPassword(
+          userId: element.id,
+          newPassword: password,
         );
-
-        if (!isMatched) {
-          continue;
-        }
-
-        if (!AuthSecurity.isHashed(element.password)) {
-          await DBHelper.changeUserPassword(
-            userId: element.id,
-            newPassword: password,
-          );
-          await _initializeUserModelList();
-          userModel = state.activeUserModelList.firstWhereOrNull((e) => e.id == element.id) ?? element;
-        } else {
-          userModel = element;
-        }
-        break;
+        await _initializeUserModelList();
+        userModel = state.activeUserModelList.firstWhereOrNull((e) => e.id == element.id) ?? element;
+      } else {
+        userModel = element;
       }
+      break;
     }
 
     if (userModel == null) {
@@ -204,6 +196,7 @@ class UserDataCubit extends Cubit<UserDataState> {
       userModel: userModel,
       allUserModelList: state.allUserModelList,
       activeUserModelList: state.activeUserModelList,
+      isInitialized: state.isInitialized,
     ));
     return true;
   }
@@ -220,7 +213,12 @@ class UserDataCubit extends Cubit<UserDataState> {
 
 
   Future<void> clearAllData()async{
-    emit(const UserData(userModel: null, allUserModelList: [], activeUserModelList: []));
+    emit(const UserData(
+      userModel: null,
+      allUserModelList: [],
+      activeUserModelList: [],
+      isInitialized: false,
+    ));
   }
 
   Future<bool>logout()async{
@@ -228,21 +226,15 @@ class UserDataCubit extends Cubit<UserDataState> {
       return true;
     }
 
-    if(state.userModel!.userLevel == UserLevel.superAdmin){
+    final bool value = await DBHelper.loginAndLogOut(
+      userModel: state.userModel!,
+      isLogin : false,
+    );
+    if (value) {
       _clearOwnerSessionMarker();
-      await clearAllData();
-      return true;
-    }else{
-      bool value = await DBHelper.loginAndLogOut(
-        userModel: state.userModel!,
-        isLogin : false,
-      );
-      if(value){
-        _clearOwnerSessionMarker();
-        await clearAllData();
-      }
-      return value;
+      await _initializeUserModelList(preserveCurrentUser: false);
     }
+    return value;
   }
 
   Future<void> onAppDetached() async {
@@ -253,12 +245,10 @@ class UserDataCubit extends Cubit<UserDataState> {
     _storage.write(_ownerExitPendingKey, true);
     _storage.write(_lastOwnerUserIdKey, user.id);
 
-    if (user.userLevel != UserLevel.superAdmin) {
-      await DBHelper.loginAndLogOut(
-        userModel: user,
-        isLogin: false,
-      );
-    }
+    await DBHelper.loginAndLogOut(
+      userModel: user,
+      isLogin: false,
+    );
 
     await clearAllData();
   }
@@ -287,27 +277,6 @@ class UserDataCubit extends Cubit<UserDataState> {
 
     if (!_verifyPassword(user: user, inputPassword: currentPassword)) {
       return "Current password is incorrect.";
-    }
-
-    if (user.userLevel == UserLevel.superAdmin) {
-      final hashedPassword = AuthSecurity.hashPassword(newPassword);
-      _storage.write(_superAdminPasswordKey, hashedPassword);
-      emit(UserData(
-        userModel: UserModel(
-          id: user.id,
-          userName: user.userName,
-          password: hashedPassword,
-          userLevel: user.userLevel,
-          userCreatedTime: user.userCreatedTime,
-          userLoginTime: user.userLoginTime,
-          userLogoutTime: user.userLogoutTime,
-          activeStatus: user.activeStatus,
-          imageId: user.imageId,
-        ),
-        allUserModelList: state.allUserModelList,
-        activeUserModelList: state.activeUserModelList,
-      ));
-      return null;
     }
 
     final bool value = await DBHelper.changeUserPassword(
@@ -371,20 +340,10 @@ class UserDataCubit extends Cubit<UserDataState> {
     return userLevel == UserLevel.merchant || userLevel == UserLevel.superAdmin;
   }
 
-  static const String _superAdminPasswordKey = 'super_admin_password';
-
   bool _verifyPassword({
     required UserModel user,
     required String inputPassword,
   }) {
-    if (user.userLevel == UserLevel.superAdmin) {
-      final stored = _storage.read<String>(_superAdminPasswordKey) ??
-          TxtConstants.superAdminModelData.password;
-      return AuthSecurity.verifyPassword(
-        storedPassword: stored,
-        inputPassword: inputPassword,
-      );
-    }
     return AuthSecurity.verifyPassword(
       storedPassword: user.password,
       inputPassword: inputPassword,

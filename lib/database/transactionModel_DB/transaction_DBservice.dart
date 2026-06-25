@@ -9,6 +9,7 @@ import 'package:pos_mobile/database/transactionModel_DB/transaction_DbStorages/t
 import 'package:pos_mobile/database/transactionModel_DB/transaction_DbStorages/transaction_stockOut_DbStorage.dart';
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
+import 'package:pos_mobile/models/stock_in_unit_spec.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
@@ -124,49 +125,68 @@ class TransactionDBService{
       Database db,
       {
         required UserModel userModel,
-        required CategoryModel categoryModel,
-        required GroupModel groupModel,
-        required TypeModel typeModel,
+        CategoryModel? categoryModel,
+        GroupModel? groupModel,
+        TypeModel? typeModel,
         required ItemModel itemModel,
         required String? code,
         required DateTime? itemManufactureDate,
         required DateTime? itemExpireDate,
         required String? getItemFromWhere,
         required int itemLength,
+        List<StockInUnitSpec>? unitSpecs,
       }
       )async{
     DateTime dateTime = DateTime.now();
     int stockInId = await insertStockIn(db, userModel, dateTime);
     if(stockInId == -1){
       return false;
-    }else{
-      int categoryValue = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-      if(categoryValue == -1){
-        return false;
-      }else{
-        int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-        if(groupValue == -1){
-          return false;
-        }else{
-          int typeValue = await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
-          if(typeValue == -1){
-            return false;
-          }else{
-            int itemValue = await ItemDbStorage.updateItemLastUpdateTime(db, dateTime, itemModel);
-            if(itemValue == -1){
-              return false;
-            }else{
-              List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(db: db, itemLength: itemLength, userModel: userModel, stockInId: stockInId, dateTime: dateTime, itemModel: itemModel, itemManufactureDate: itemManufactureDate, itemExpireDate: itemExpireDate, getItemFromWhere: getItemFromWhere, code: code);
-              if(uniqueIdList.contains(-1)){
-                return false;
-              }else{
-                return true;
-              }
-            }
-          }
-        }
-      }
     }
+    if (categoryModel != null) {
+      final categoryValue = await CategoryDbStorage.updateCategoryLastUpdateTime(
+        db,
+        dateTime,
+        categoryModel,
+      );
+      if (categoryValue == -1) return false;
+    }
+    if (groupModel != null) {
+      final groupValue = await GroupDbStorage.updateGroupLastUpdateTime(
+        db,
+        dateTime,
+        groupModel,
+      );
+      if (groupValue == -1) return false;
+    }
+    if (typeModel != null) {
+      final typeValue = await TypeDbStorage.updateTypeLastUpdateTime(
+        db,
+        dateTime,
+        typeModel,
+      );
+      if (typeValue == -1) return false;
+    }
+    final int itemValue = await ItemDbStorage.updateItemLastUpdateTime(
+      db,
+      dateTime,
+      itemModel,
+    );
+    if (itemValue == -1) return false;
+
+    final List<int> uniqueIdList = await UniqueItemDbStorage.insertNewDataList(
+      db: db,
+      itemLength: itemLength,
+      userModel: userModel,
+      stockInId: stockInId,
+      dateTime: dateTime,
+      itemModel: itemModel,
+      itemManufactureDate: itemManufactureDate,
+      itemExpireDate: itemExpireDate,
+      getItemFromWhere: getItemFromWhere,
+      code: code,
+      unitSpecs: unitSpecs,
+    );
+    return !uniqueIdList.contains(-1);
   }
 
   static Future<bool>stockOutUniqueItemList(

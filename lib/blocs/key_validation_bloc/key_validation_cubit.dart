@@ -44,7 +44,7 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
       final installDateStr = _storage.read(_installDateKey);
       if (installDateStr != null) {
         final installDate = DateTime.parse(installDateStr);
-        if (DateTime.now().difference(installDate).inDays >= 7) {
+        if (DateTime.now().difference(installDate).inDays >= 3) {
           emit(
             state.copyWith(
               isAppLocked: true,
@@ -61,7 +61,13 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
   Future<void> _checkIfAlreadyValidated() async {
     try {
       if (appEnv != 'production') {
-        emit(state.copyWith(isKeyValidated: true, isFirstTimeSetup: true));
+        final isFirstTime = _storage.read(_firstTimeSetupKey) ?? true;
+        emit(
+          state.copyWith(
+            isKeyValidated: true,
+            isFirstTimeSetup: isFirstTime,
+          ),
+        );
         return;
       }
 

@@ -13,20 +13,21 @@ import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import 'package:pos_mobile/screens/confirm_screens_folder/comfirm_screen.dart';
 import "package:pos_mobile/screens/transaction/stockIn/category/edit_category_screen.dart";
 import "package:pos_mobile/widgets/cusPopMenuItem_widget.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
 
 import "../../features/cus_showmodelbottomsheet.dart";
 
 class CategoryBoxWidget extends StatelessWidget {
 
   final CategoryModel categoryModel;
-  final int groupCount;
+  final int itemCount;
   final VoidCallback func;
   // final DateTime lastUpdateTime;
   final bool isStorage;
   const CategoryBoxWidget({
     super.key,
     required this.categoryModel,
-    required this.groupCount,
+    required this.itemCount,
     required this.func,
     // required this.lastUpdateTime,
     required this.isStorage,
@@ -40,6 +41,8 @@ class CategoryBoxWidget extends StatelessWidget {
     final GlobalKey<PopupMenuButtonState> popupMenu = GlobalKey<PopupMenuButtonState>();
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
+    final categoryLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.category);
+    final itemLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.item);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -55,16 +58,16 @@ class CategoryBoxWidget extends StatelessWidget {
           ),
           cusPopUpMenuItem(
             func: (){
-              if(groupCount > 0){
+              if(itemCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $groupCount groups in this category. You can delete only if there is no group left.",
+                  txt: "There are $itemCount ${itemLabel}s using this $categoryLabel. You can delete it only when nothing references it.",
                 );
               }else{
 
                 showSheet.showCusDialogScreen(
                     ConfirmScreen(
-                      txt: "Are you sure want to delete this category?",
+                      txt: "Are you sure want to delete this $categoryLabel?",
                       title: "Delete",
                       acceptBtnTxt: "Yes, delete",
                       cancelBtnTxt: "Cancel",
@@ -170,7 +173,7 @@ class CategoryBoxWidget extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "$groupCount ${groupCount == 1 ? 'group' : 'groups'}",
+                          "$itemCount ${itemCount == 1 ? itemLabel.toLowerCase() : '${itemLabel.toLowerCase()}s'}",
                           style: Theme.of(context).textTheme.bodySmall!.copyWith(
                             color: Colors.grey,
                           ),

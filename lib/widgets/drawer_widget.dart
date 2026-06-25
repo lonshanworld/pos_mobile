@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
+import 'package:pos_mobile/controller/ui_controller.dart';
 
 class DrawerWidget extends StatelessWidget {
 
@@ -26,6 +27,8 @@ class DrawerWidget extends StatelessWidget {
         return Icons.inventory_2_rounded;
       case 'storage':
         return Icons.warehouse_rounded;
+      case 'catalogs':
+        return Icons.category_rounded;
       case 'transaction history':
         return Icons.receipt_long_rounded;
       case 'history':
@@ -46,9 +49,10 @@ class DrawerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = _getIconForPage(txt);
+    final accent = UIController.instance.accentColor();
 
     return InkWell(
-      splashColor: Colors.deepPurple.withValues(alpha: 0.1),
+      splashColor: accent.withValues(alpha: 0.1),
       borderRadius: UIConstants.mediumBorderRadius,
       onTap: func,
       child: AnimatedContainer(
@@ -59,12 +63,12 @@ class DrawerWidget extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.deepPurple.withValues(alpha: 0.15)
+              ? accent.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: UIConstants.mediumBorderRadius,
           border: isSelected
               ? Border.all(
-                  color: Colors.deepPurple.withValues(alpha: 0.3),
+                  color: accent.withValues(alpha: 0.3),
                   width: 1,
                 )
               : null,
@@ -78,7 +82,7 @@ class DrawerWidget extends StatelessWidget {
             Icon(
               icon,
               size: 20,
-              color: isSelected ? Colors.deepPurple : Colors.grey,
+              color: isSelected ? accent : Colors.grey,
             ),
             const SizedBox(width: UIConstants.mediumSpace + 2),
             Expanded(
@@ -87,7 +91,7 @@ class DrawerWidget extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                       color: isSelected
-                          ? Colors.deepPurple
+                          ? accent
                           : Theme.of(context).textTheme.bodyMedium!.color,
                     ),
               ),
@@ -97,7 +101,7 @@ class DrawerWidget extends StatelessWidget {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.deepPurple,
+                  color: accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

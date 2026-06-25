@@ -3,6 +3,8 @@ import "package:pos_mobile/models/abstract_models_folder/item_info_model.dart";
 
 class ItemModel extends ItemInfoSkeletalModel{
   // final int id;
+  final int? categoryId;
+  final int? groupId;
   final int typeId; // NOTE : foreign key
   final String name;
   // final DateTime createTime;
@@ -22,9 +24,12 @@ class ItemModel extends ItemInfoSkeletalModel{
   final String? code;
   final Color? colorCode;
   final double? taxPercentage;
+  final bool needStock;
 
   ItemModel({
     required super.id,
+    required this.categoryId,
+    required this.groupId,
     required this.typeId,
     required this.name,
     required super.createTime,
@@ -45,11 +50,14 @@ class ItemModel extends ItemInfoSkeletalModel{
     required this.imageId,
     required this.code,
     required this.taxPercentage,
+    this.needStock = true,
   });
 
   @override
   ItemModel.fromJson(super.jsonData) :
     // id = jsonData["id"],
+    categoryId = jsonData["categoryId"],
+    groupId = jsonData["groupId"],
     typeId = jsonData["typeId"],
     name = jsonData["name"],
     // createTime = DateTime.parse(jsonData["createTime"]),
@@ -70,12 +78,15 @@ class ItemModel extends ItemInfoSkeletalModel{
     // createPersonId = jsonData["createPersonId"],
     imageId = jsonData["imageId"],
     taxPercentage = jsonData["taxPercentage"],
+    needStock = jsonData["need_stock"] == 1 ? true : false,
     super.fromJson();
 
 
   @override
   Map<String, dynamic> toJson(){
     final Map<String, dynamic> jsonData = super.toJson();
+    jsonData["categoryId"] = categoryId;
+    jsonData["groupId"] = groupId;
     jsonData["typeId"] = typeId;
     jsonData["name"] = name;
     jsonData["hasExpire"] = hasExpire ? 1 : 0;
@@ -87,6 +98,7 @@ class ItemModel extends ItemInfoSkeletalModel{
     jsonData["code"] = code;
     jsonData["imageId"] = imageId;
     jsonData["taxPercentage"] = taxPercentage;
+    jsonData["need_stock"] = needStock ? 1 : 0;
     return jsonData;
   }
 }

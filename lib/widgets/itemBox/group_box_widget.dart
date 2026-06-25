@@ -15,19 +15,20 @@ import '../../error_handlers/error_handler.dart';
 import '../../features/cus_showmodelbottomsheet.dart';
 import '../../models/groupingItem_models_folders/group_model.dart';
 import '../../screens/confirm_screens_folder/comfirm_screen.dart';
+import '../../constants/business_hierarchy_config.dart';
 import '../../utils/txt_formatters.dart';
 import '../cusTxt_widget.dart';
 
 class GroupBoxWidget extends StatelessWidget {
   final GroupModel groupModel;
-  final int typeCount;
+  final int itemCount;
   final VoidCallback func;
 
   final bool isStorage;
   const GroupBoxWidget({
     super.key,
     required this.groupModel,
-    required this.typeCount,
+    required this.itemCount,
     required this.func,
     required this.isStorage,
   });
@@ -40,6 +41,8 @@ class GroupBoxWidget extends StatelessWidget {
     final GlobalKey<PopupMenuButtonState> popupMenu = GlobalKey<PopupMenuButtonState>();
     final ErrorHandlers errorHandlers = ErrorHandlers();
     final CusShowSheet showSheet = CusShowSheet();
+    final groupLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group);
+    final itemLabel = BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.item);
 
     return PopupMenuButton(
       key: popupMenu,
@@ -55,14 +58,14 @@ class GroupBoxWidget extends StatelessWidget {
           ),
           cusPopUpMenuItem(
             func: (){
-              if(typeCount > 0){
+              if(itemCount > 0){
                 errorHandlers.cannotDeleteItem(
                   title: "Delete denied !!!",
-                  txt: "There are $typeCount types in this group. You can delete only if there is no type left.",
+                  txt: "There are $itemCount ${itemLabel}s using this $groupLabel. You can delete it only when nothing references it.",
                 );
               }else{
                 showSheet.showCusDialogScreen( ConfirmScreen(
-                  txt: "Are you sure want to delete this group?",
+                  txt: "Are you sure want to delete this $groupLabel?",
                   title: "Delete",
                   acceptBtnTxt: "Yes, delete",
                   cancelBtnTxt: "Cancel",
@@ -143,7 +146,7 @@ class GroupBoxWidget extends StatelessWidget {
                       color: Colors.blueAccent,
                       fontWeight: FontWeight.w600,
                     ),
-                    txt: "$typeCount ${typeCount == 1 ? 'type' : 'types'}",
+                    txt: "$itemCount ${itemCount == 1 ? itemLabel.toLowerCase() : '${itemLabel.toLowerCase()}s'}",
                   ),
                 ),
                 Flexible(

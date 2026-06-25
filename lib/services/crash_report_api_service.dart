@@ -10,7 +10,7 @@ import 'package:pos_mobile/utils/debug_print.dart';
 class CrashReportApiService {
   static const String _baseUrl = String.fromEnvironment(
     'CRASH_REPORT_URL',
-    defaultValue: 'http://10.158.13.2:8000',
+    defaultValue: 'https://minipos-crash-backend.nanonux.com',
   );
 
   static const Duration _requestTimeout = Duration(seconds: 30);

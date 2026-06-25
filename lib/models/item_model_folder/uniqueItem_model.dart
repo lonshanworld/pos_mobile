@@ -19,6 +19,10 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
   final double profitPrice;
   final double taxPercentage;
   final int? moduleCount;
+  final double? instanceLength;
+  final double? instanceWidth;
+  final String? instanceBatchNumber;
+  final String? instanceImei;
 
   // final DateTime? lastUpdateTime;
   // final bool activeStatus;
@@ -43,6 +47,10 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     required this.profitPrice,
     required this.taxPercentage,
     required this.moduleCount,
+    this.instanceLength,
+    this.instanceWidth,
+    this.instanceBatchNumber,
+    this.instanceImei,
   });
   
   @override
@@ -65,6 +73,10 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     // lastUpdateTime = jsonData["lastUpdateTime"] == null ? null : DateTime.parse(jsonData["lastUpdateTime"]),
     // activeStatus = jsonData["activeState"] == 1 ? true : false,
     moduleCount = jsonData["moduleCount"],
+    instanceLength = (jsonData["instanceLength"] as num?)?.toDouble(),
+    instanceWidth = (jsonData["instanceWidth"] as num?)?.toDouble(),
+    instanceBatchNumber = jsonData["instanceBatchNumber"] as String?,
+    instanceImei = jsonData["instanceImei"] as String?,
     super.fromJson();
   
   @override
@@ -81,6 +93,10 @@ class UniqueItemModel extends ItemInfoSkeletalModel{
     jsonData["originalPrice"] = originalPrice;
     jsonData["taxPercentage"] = taxPercentage;
     jsonData["moduleCount"] = moduleCount;
+    jsonData["instanceLength"] = instanceLength;
+    jsonData["instanceWidth"] = instanceWidth;
+    jsonData["instanceBatchNumber"] = instanceBatchNumber;
+    jsonData["instanceImei"] = instanceImei;
     return jsonData;
   }
 }

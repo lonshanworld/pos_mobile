@@ -1,4 +1,3 @@
-
 import 'package:flutter/cupertino.dart';
 
 class UIConstants {
@@ -44,6 +43,9 @@ class UIConstants {
 
   static const double checkMoreTableAndChartsWidth = 200;
 
+  // Pagination
+  static const int defaultPageLimit = 100;
+  static const int stockOutPageLimit = 100;
 
   // box width and height
   static const double itemBoxWidth = 250;

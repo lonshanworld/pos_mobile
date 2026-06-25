@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/loading_bloc/loading_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
@@ -73,7 +74,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
     return Card(
       elevation: 4,
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
+      shape: const RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,14 +124,13 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
           Container(
             color: uiController.getpureDirectClr(themeModeType),
             child: ListView.separated(
+              padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.historyModel.stockOutList.length,
               separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16),
               itemBuilder: (context, index) {
-                // We show newest first within the day
-                final reversedIndex = widget.historyModel.stockOutList.length - 1 - index;
-                final transaction = widget.historyModel.stockOutList[reversedIndex];
+                final transaction = widget.historyModel.stockOutList[index];
                 
                 final UserModel? seller = context.read<UserDataCubit>().getSingleUser(transaction.createPersonId);
                 final List<StockOutItemModel> selectedStockOutItemList = context.read<TransactionsCubit>().getSelectedStockOutItemList(transaction.id);
@@ -144,11 +144,11 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
 
                 final List<ItemModel> selectedItemModelList = [];
                 for(int a = 0 ; a < selectedStockOutItemList.length; a++){
-                  try {
-                    ItemModel singleItem = allItemModelList.firstWhere((element) => element.id == selectedStockOutItemList[a].itemId);
+                  final ItemModel? singleItem = allItemModelList.firstWhereOrNull((element) => element.id == selectedStockOutItemList[a].itemId);
+                  if (singleItem != null) {
                     selectedItemModelList.add(singleItem);
-                  } catch (e) {
-                    // Ignore if item not found
+                  } else {
+                    debugPrint('StockOutHistoryWidget: missing item for itemId=${selectedStockOutItemList[a].itemId}');
                   }
                 }
 
@@ -239,7 +239,7 @@ class _StockOutHistoryWidgetState extends State<StockOutHistoryWidget> {
                       txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600),
                     ),
                     subtitle: CusTxtWidget(
-                      txt: "${TextFormatters.getDateTime(transaction.createTime).split(' ')[1]} • $totalItemsCount items",
+                      txt: "${TextFormatters.getTime24(transaction.createTime)} • $totalItemsCount items",
                       txtStyle: Theme.of(context).textTheme.bodySmall!,
                     ),
                     trailing: Column(

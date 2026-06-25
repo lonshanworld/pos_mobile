@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 
 import '../../../../blocs/item_bloc/item_cubit.dart';
 import '../../../../blocs/loading_bloc/loading_cubit.dart';
 import '../../../../blocs/userData_bloc/user_data_cubit.dart';
+import '../../../../constants/business_hierarchy_config.dart';
 import '../../../../controller/ui_controller.dart';
 import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
@@ -15,11 +15,8 @@ import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
 
 class CreateGroupScreen extends StatefulWidget {
-
-  final CategoryModel selectedCategoryModel;
   const CreateGroupScreen({
     super.key,
-    required this.selectedCategoryModel,
   });
 
   @override
@@ -56,8 +53,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-          "Create Group",
+        title: Text(
+          "Create ${BusinessHierarchyConfig.getLabel(uiController.businessType, HierarchyLevel.group)}",
         ),
       ),
       body: Padding(
@@ -108,7 +105,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       context.read<LoadingCubit>().setLoading("Creating ...");
                       final value = await context.read<ItemCubit>().createNewGroup(
                         userModel: userModel,
-                        categoryModel: widget.selectedCategoryModel,
                         groupName: groupNameController.text.trim(),
                         description:
                             (textAreaController.text.trim() == "" ||
@@ -119,9 +115,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                       if (!mounted) return;
                       if(value){
-                        Navigator.of(context).pop();
                         context.read<LoadingCubit>().setSuccess("Success !");
-
+                        Navigator.of(context).pop();
                       }else{
                         context.read<LoadingCubit>().setFail("Fail !");
                       }

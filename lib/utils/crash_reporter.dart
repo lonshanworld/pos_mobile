@@ -7,6 +7,7 @@ import 'package:pos_mobile/models/crash_report_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:pos_mobile/services/crash_report_sync_manager.dart';
 
 class CrashReporter {
   CrashReporter._();
@@ -22,6 +23,31 @@ class CrashReporter {
     } catch (e) {
       cusDebugPrint('Failed to send crash report to Sentry: $e');
     }
+  }
+
+  static Future<void> reportError(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String errorType = 'AppError',
+  }) async {
+    // Ignore network/internet connection errors to prevent cluttering reports
+    final errorStr = error.toString().toLowerCase();
+    if (errorStr.contains('socketexception') || 
+        errorStr.contains('clientexception') || 
+        errorStr.contains('handshakeexception') ||
+        errorStr.contains('no internet connection') ||
+        errorStr.contains('network_error') ||
+        errorStr.contains('failed host lookup')) {
+      return;
+    }
+
+    // If no stack trace is provided, capture the current stack trace
+    final trace = stackTrace ?? StackTrace.current;
+    await _saveToLocalDatabase(
+      error: error,
+      stackTrace: trace,
+      errorType: errorType,
+    );
   }
 
   static Future<void> _saveToLocalDatabase({
@@ -47,6 +73,9 @@ class CrashReporter {
 
       await DBHelper.saveCrashReport(report);
       cusDebugPrint('Crash report saved to local database');
+
+      // Attempt immediate sync if online
+      await CrashReportSyncManager.instance.triggerSync(reason: 'Immediate error submission');
     } catch (e) {
       cusDebugPrint('Failed to save crash report to database: $e');
     }
@@ -59,6 +88,14 @@ class CrashReporter {
 
     FlutterError.onError = (FlutterErrorDetails details) async {
       FlutterError.presentError(details);
+
+      // Ignore layout overflow errors to prevent cluttering the crash reports
+      final errorStr = details.exception.toString();
+      if (errorStr.contains('A RenderFlex overflowed') || 
+          errorStr.contains('overflowed by') ||
+          errorStr.contains('RenderBox was not laid out')) {
+        return;
+      }
 
       await _saveToLocalDatabase(
         error: details.exception,

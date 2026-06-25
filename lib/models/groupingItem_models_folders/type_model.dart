@@ -4,7 +4,7 @@ import 'package:pos_mobile/models/abstract_models_folder/item_info_model.dart';
 
 class TypeModel extends ItemInfoSkeletalModel{
   // final int id;
-  final int groupId;
+  final int? groupId; // Legacy optional link. Types are now independent catalogs.
   final String name;
   // final DateTime createTime;
   // final DateTime? lastUpdateTime;

@@ -25,8 +25,8 @@ class DrawerInLargeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final UserModel? userModel= context.watch<UserDataCubit>().state.userModel;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
 
     return  userModel == null
         ?

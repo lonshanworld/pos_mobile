@@ -8,6 +8,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stockout_history_model.dart';
 import 'package:pos_mobile/utils/formula.dart';
+import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
 
 class DailySales extends StatefulWidget {
@@ -26,7 +27,12 @@ class _DailySalesState extends State<DailySales> {
     final tablesAndCharts = TablesAndCharts(context: context);
     final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
     final List<StockOutHistoryModel> allRows =
-        HistoryFilter.filterStockOutHistory(stockOutList);
+        HistoryFilter.filterStockOutHistory(stockOutList)
+          ..sort(
+            (left, right) => TextFormatters.reverseDate(right.dateTimeTxt).compareTo(
+              TextFormatters.reverseDate(left.dateTimeTxt),
+            ),
+          );
     final int totalCount = allRows.length;
 
     if (totalCount == 0) return _emptyState(context);
@@ -47,7 +53,8 @@ class _DailySalesState extends State<DailySales> {
               scrollDirection: Axis.vertical,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.resolveWith(
-                    (_) => UIConstants.redVioletClr.withValues(alpha: 0.4)),
+                  (_) => UIConstants.redVioletClr.withValues(alpha: 0.4),
+                ),
                 dataRowMinHeight: 48,
                 dataRowMaxHeight: 56,
                 columns: [
@@ -55,17 +62,17 @@ class _DailySalesState extends State<DailySales> {
                   tablesAndCharts.tableTitle("Date"),
                   tablesAndCharts.tableTitle("Original Price"),
                   tablesAndCharts.tableTitle("Sell Price"),
-                  tablesAndCharts.tableTitle("Stock-out Price"),
+                  tablesAndCharts.tableTitle("Final Sell Price"),
                   tablesAndCharts.tableTitle("Profit"),
                 ],
-                rows: List.generate(pageRows.length, (i) {
-                  final e = pageRows[i];
-                  final List<StockOutModel> selectedList = e.stockOutList;
+                rows: List.generate(pageRows.length, (index) {
+                  final history = pageRows[index];
+                  final List<StockOutModel> selectedStockOutList = history.stockOutList;
                   double totalOrgPrice = 0;
                   double totalSellPrice = 0;
                   double totalFinalSellPrice = 0;
 
-                  for (final stockOut in selectedList) {
+                  for (final stockOut in selectedStockOutList) {
                     final List<StockOutItemModel> items = context
                         .read<TransactionsCubit>()
                         .getSelectedStockOutItemList(stockOut.id);
@@ -73,6 +80,7 @@ class _DailySalesState extends State<DailySales> {
                         CalculationFormula.getItemTotalOriginalPriceForStockOut(items);
                     totalSellPrice +=
                         CalculationFormula.getItemTotalFinalSellPriceForStockOut(items);
+
                     double finalPrice = stockOut.finalTotalPrice;
                     final DeliveryModel? delivery = stockOut.deliveryModelId == null
                         ? null
@@ -86,13 +94,13 @@ class _DailySalesState extends State<DailySales> {
                   }
 
                   return tablesAndCharts.dataRow(
-                    index: start + i + 1,
-                    txt: e.dateTimeTxt,
+                    index: start + index + 1,
+                    txt: history.dateTimeTxt,
                     originalPrice: totalOrgPrice,
                     sellPrice: totalSellPrice,
                     finalSellPrice: totalFinalSellPrice,
                     profit: totalFinalSellPrice - totalOrgPrice,
-                    isEven: i.isEven,
+                    isEven: index.isEven,
                   );
                 }),
               ),
@@ -104,25 +112,39 @@ class _DailySalesState extends State<DailySales> {
     );
   }
 
-  Widget _recordsHeader(BuildContext context, int totalCount, int page,
-      int totalPages, int start, int end) {
+  Widget _recordsHeader(
+    BuildContext context,
+    int totalCount,
+    int page,
+    int totalPages,
+    int start,
+    int end,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(UIConstants.bigSpace, UIConstants.smallSpace,
-          UIConstants.bigSpace, UIConstants.smallSpace),
+      padding: const EdgeInsets.fromLTRB(
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: 3),
+              horizontal: UIConstants.mediumSpace,
+              vertical: 3,
+            ),
             decoration: BoxDecoration(
               color: UIConstants.redVioletClr.withValues(alpha: 0.1),
               borderRadius: UIConstants.smallBorderRadius,
             ),
             child: Text(
-              "$totalCount record${totalCount == 1 ? '' : 's'}",
+              "$totalCount date${totalCount == 1 ? '' : 's'}",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: UIConstants.redVioletClr, fontWeight: FontWeight.w600),
+                    color: UIConstants.redVioletClr,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ),
           Text(
@@ -140,7 +162,9 @@ class _DailySalesState extends State<DailySales> {
   Widget _paginationRow(int page, int totalPages) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-          vertical: UIConstants.mediumSpace, horizontal: UIConstants.bigSpace),
+        vertical: UIConstants.mediumSpace,
+        horizontal: UIConstants.bigSpace,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -152,14 +176,19 @@ class _DailySalesState extends State<DailySales> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: UIConstants.smallSpace),
+              horizontal: UIConstants.mediumSpace,
+              vertical: UIConstants.smallSpace,
+            ),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: UIConstants.redVioletClr.withValues(alpha: 0.3)),
+                color: UIConstants.redVioletClr.withValues(alpha: 0.3),
+              ),
               borderRadius: UIConstants.smallBorderRadius,
             ),
-            child: Text("${page + 1} / $totalPages",
-                style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              "${page + 1} / $totalPages",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded),
@@ -178,17 +207,21 @@ class _DailySalesState extends State<DailySales> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bar_chart_outlined,
-              size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+          Icon(
+            Icons.bar_chart_outlined,
+            size: 64,
+            color: Colors.grey.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: UIConstants.mediumSpace),
-          Text("No daily sales data yet",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey)),
+          Text(
+            "No daily sales data yet",
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Colors.grey),
+          ),
         ],
       ),
     );
   }
 }
-

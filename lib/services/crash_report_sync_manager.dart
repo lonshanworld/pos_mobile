@@ -36,11 +36,6 @@ class CrashReportSyncManager {
         'Initial connectivity: ${_isOnline ? "Online" : "Offline"}',
       );
 
-      // If online at startup, attempt initial sync
-      if (_isOnline) {
-        unawaited(_attemptSync(reason: 'Initial startup'));
-      }
-
       // Listen for connectivity changes
       _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
         _onConnectivityChanged,
@@ -49,17 +44,17 @@ class CrashReportSyncManager {
         },
       );
 
-      // Set up periodic sync while online (every 5 minutes)
-      _periodicSyncTimer = Timer.periodic(
-        const Duration(minutes: 1),
-        (_) => unawaited(_attemptSync(reason: 'Periodic check')),
-      );
-
       _isInitialized = true;
       cusDebugPrint('CrashReportSyncManager initialized successfully');
     } catch (e) {
       cusDebugPrint('Failed to initialize CrashReportSyncManager: $e');
     }
+  }
+
+  /// Trigger sync manually (e.g., on login)
+  Future<void> triggerSync({required String reason}) async {
+    cusDebugPrint('Manual sync triggered: $reason');
+    await _attemptSync(reason: reason);
   }
 
   /// Handle connectivity changes

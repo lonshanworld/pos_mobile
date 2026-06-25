@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
@@ -18,7 +19,9 @@ import "../../blocs/userData_bloc/user_data_cubit.dart";
 import "../../constants/enums.dart";
 import "../../controller/ui_controller.dart";
 import "../../models/user_model_folder/user_model.dart";
+import "package:pos_mobile/widgets/business_type_selector.dart";
 import '../../screens/confirm_screens_folder/comfirm_screen.dart';
+import '../../utils/checkout_helpers.dart';
 import "../../utils/formula.dart";
 import "../cusPopMenuItem_widget.dart";
 
@@ -44,6 +47,45 @@ class ItemBoxWidget extends StatelessWidget {
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
     final int stockCount = context.read<ItemCubit>().getSelectedUniqueItemList(itemModel.id).length;
     final bool outOfStock = stockCount <= 0;
+    final BusinessType businessType =
+        context.watch<ShopInfoCubit>().state.businessType;
+    final businessDetail =
+        context.read<ItemCubit>().getBusinessDetail(itemModel.id);
+    final stockUnits =
+        context.read<ItemCubit>().getSelectedUniqueItemList(itemModel.id);
+
+    String costPriceLabel() {
+      if (stockUnits.isEmpty) {
+        return '${itemModel.originalPrice.toInt()} MMK';
+      }
+
+      final costs = stockUnits.map((u) => u.originalPrice).toList();
+      final minC = costs.reduce((a, b) => a < b ? a : b);
+      final maxC = costs.reduce((a, b) => a > b ? a : b);
+      if (minC == maxC) {
+        return '${minC.toInt()} MMK';
+      }
+      return '${minC.toInt()}–${maxC.toInt()} MMK';
+    }
+
+    String sellPriceLabel() {
+      if (stockUnits.isEmpty) {
+        return '${CalculationFormula.getItemSellPrice(
+          originalPrice: itemModel.originalPrice,
+          profitPrice: itemModel.profitPrice,
+          taxPercentage: itemModel.taxPercentage ?? 0,
+        ).toInt()} MMK';
+      }
+
+      final prices =
+          stockUnits.map(CheckoutHelpers.uniqueItemSellPrice).toList();
+      final minP = prices.reduce((a, b) => a < b ? a : b);
+      final maxP = prices.reduce((a, b) => a > b ? a : b);
+      if (minP == maxP) {
+        return '${minP.toInt()} MMK';
+      }
+      return '${minP.toInt()}–${maxP.toInt()} MMK';
+    }
 
     return BlocBuilder<PromotionCubit, PromotionState>(
       builder: (context, state) {
@@ -53,7 +95,7 @@ class ItemBoxWidget extends StatelessWidget {
         return Card(
           elevation: 3,
           shadowColor: Colors.black12,
-          shape: RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
+          shape: const RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onLongPress: () => popupMenu.currentState?.showButtonMenu(),
@@ -71,22 +113,23 @@ class ItemBoxWidget extends StatelessWidget {
                     child: const SizedBox.shrink(),
                     itemBuilder: (BuildContext context) {
                       return [
-                        cusPopUpMenuItem(
-                          func: (){
-                            showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: true));
-                          },
-                          txt: "Batch Stock-In",
-                          context : context,
-                          isImportant: false,
-                        ),
-                        cusPopUpMenuItem(
-                          func: (){
-                            showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: false));
-                          },
-                          txt: "Single Stock-In",
-                          context : context,
-                          isImportant: false,
-                        ),
+                        if (itemModel.needStock)
+                          cusPopUpMenuItem(
+                            func: (){
+                              showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: true));
+                            },
+                            txt: "Batch Stock-In",
+                            context : context,
+                            isImportant: false,
+                          ),
+                        // cusPopUpMenuItem(
+                        //   func: (){
+                        //     showSheet.showCusBottomSheet(CreateUniqueStockInScreen(itemModel: itemModel, batchStockIn: false));
+                        //   },
+                        //   txt: "Single Stock-In",
+                        //   context : context,
+                        //   isImportant: false,
+                        // ),
                         if(userModel != null && userModel.userLevel == UserLevel.merchant && isStorage == true)cusPopUpMenuItem(
                           func: (){
                             Navigator.of(context).pushNamed(
@@ -204,7 +247,11 @@ class ItemBoxWidget extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  outOfStock ? "Out of Stock" : "$stockCount in Stock",
+                                  !itemModel.needStock
+                                      ? "Made to Order"
+                                      : outOfStock
+                                          ? "Out of Stock"
+                                          : "$stockCount in Stock",
                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -251,6 +298,11 @@ class ItemBoxWidget extends StatelessWidget {
                                 height: 1.2,
                               ),
                             ),
+                            BusinessItemDetailChips(
+                              businessType: businessType,
+                              detail: businessDetail,
+                              maxLines: 2,
+                            ),
                             
                             // Prices based on user level
                             Column(
@@ -259,13 +311,13 @@ class ItemBoxWidget extends StatelessWidget {
                               children: [
                                 if (userModel?.userLevel == UserLevel.merchant && isStorage) ...[
                                   Text(
-                                    "Cost: ${itemModel.originalPrice} MMK",
+                                    "Cost: ${costPriceLabel()}",
                                     style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.grey[600]),
                                   ),
                                   const SizedBox(height: 2),
                                 ],
                                 Text(
-                                  "${CalculationFormula.getItemSellPrice(originalPrice: itemModel.originalPrice, profitPrice: itemModel.profitPrice, taxPercentage: itemModel.taxPercentage ?? 0).toInt()} MMK",
+                                  sellPriceLabel(),
                                   style: Theme.of(context).textTheme.titleSmall!.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),

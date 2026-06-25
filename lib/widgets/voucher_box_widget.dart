@@ -2,8 +2,6 @@ import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/features/printer_font_changer.dart";
-import "package:pos_mobile/models/promotion_model_folder/promotion_model.dart";
-import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/widgets/tables_folder/voucherTable.dart";
 import "package:qr_flutter/qr_flutter.dart";
 
@@ -13,7 +11,9 @@ import "../constants/uiConstants.dart";
 import "../controller/ui_controller.dart";
 import "../models/item_model_folder/item_model.dart";
 import "../models/item_model_folder/uniqueItem_model.dart";
-import "../utils/formula.dart";
+import "../models/promotion_model_folder/promotion_model.dart";
+import "package:pos_mobile/utils/checkout_helpers.dart";
+import "package:pos_mobile/utils/formula.dart";
 import "../utils/txt_formatters.dart";
 import "cusTxt_widget.dart";
 import "dividers/cus_divider_widget.dart";
@@ -33,6 +33,7 @@ class VoucherBox extends StatelessWidget {
   final String? barCode;
   final double taxPercentage;
   final PromotionModel? promotionModel;
+  final DateTime? orderDateTime;
 
   final bool showAdditionalPromotion;
   const VoucherBox({
@@ -49,6 +50,7 @@ class VoucherBox extends StatelessWidget {
     required this.barCode,
     required this.taxPercentage,
     required this.promotionModel,
+    this.orderDateTime,
     // required this.showItem,
     required this.showAdditionalPromotion,
   });
@@ -85,34 +87,11 @@ class VoucherBox extends StatelessWidget {
     );
 
     double getAllPrice(){
-      double price = 0;
-      final itemCubit = context.read<ItemCubit>();
-      final activePromotionList = context.read<PromotionCubit>().state.activePromotionList;
-      final itemPromotionList = context.read<PromotionCubit>().state.activeItemPromotionList;
-      
-      final dataList = itemCubit.getItemListWithCountFromUniqueItemListWithPromotion(
+      return CheckoutHelpers.cartSubtotal(
         uniqueItemList: selectedUniqueItemList,
-        itemModelList: selectedItemModelList,
-        activePromotionList: activePromotionList,
-        itemPromotionList: itemPromotionList,
+        activePromotionList: context.read<PromotionCubit>().state.activePromotionList,
+        itemPromotionList: context.read<PromotionCubit>().state.activeItemPromotionList,
       );
-
-      for (var item in dataList) {
-        double rawSellPrice = CalculationFormula.getItemSellPrice(
-          originalPrice: item.itemModel.originalPrice,
-          profitPrice: item.itemModel.profitPrice,
-          taxPercentage: item.itemModel.taxPercentage ?? 0,
-        );
-        
-        double unitPriceAfterPromo = CalculationFormula.getItemAfterPromotionPrice(
-          sellPrice: rawSellPrice,
-          promotionPercentage: item.promotion?.promotionPercentage,
-          promotionPrice: item.promotion?.promotionPrice,
-        );
-        
-        price += unitPriceAfterPromo * item.count;
-      }
-      return price;
     }
 
     Widget dataRow(Widget titleWidget, Widget txtWidget){
@@ -139,10 +118,11 @@ class VoucherBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          LogoImageWidget(
-            widthandheight: logoSize,
-            customLogoPath: shopInfo.logoPath,
-          ),
+          if (shopInfo.includeLogo)
+            LogoImageWidget(
+              widthandheight: logoSize,
+              customLogoPath: shopInfo.logoPath,
+            ),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -187,7 +167,7 @@ class VoucherBox extends StatelessWidget {
                 color: Colors.black,
                 fontSize: printerFontChanger.printerFontSize,
               ),
-              txt: TextFormatters.getDateTime(DateTime.now()),
+              txt: TextFormatters.getDateTime(orderDateTime ?? DateTime.now()),
             ),
           ),
           if(customerName != null && customerName != "")Align(
@@ -290,6 +270,7 @@ class VoucherBox extends StatelessWidget {
               txt: "Thank you for your purchase",
             ),
           ),
+          const SizedBox(height: UIConstants.mediumSpace,),
           if(description != null && description != "")uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
           if(description != null && description != "")Align(
             alignment: Alignment.center,
@@ -301,7 +282,7 @@ class VoucherBox extends StatelessWidget {
               txt: "NOTE -  $description",
             ),
           ),
-          if( barCode != null)QrImageView(
+          if (barCode != null && shopInfo.includeQrCode) QrImageView(
             data: barCode!,
             version: QrVersions.auto,
             size: 140,

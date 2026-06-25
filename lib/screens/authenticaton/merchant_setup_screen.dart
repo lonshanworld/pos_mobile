@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/blocs/key_validation_bloc/key_validation_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
@@ -7,8 +8,8 @@ import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/screens/authenticaton/check_user_screen.dart';
 import 'package:pos_mobile/utils/ui_responsive_calculation.dart';
+import 'package:pos_mobile/widgets/business_type_selector.dart';
 import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart';
-import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 
@@ -25,6 +26,7 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
   final TextEditingController _userNameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  BusinessType _selectedBusinessType = BusinessType.general;
 
   @override
   void dispose() {
@@ -69,6 +71,9 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      if (!mounted) return;
+      await context.read<ShopInfoCubit>().updateBusinessType(_selectedBusinessType);
+
       // Mark first time setup as complete
       if (!mounted) return;
       await context.read<KeyValidationCubit>().completeFirstTimeSetup();
@@ -97,8 +102,7 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              uiController.sizedBox(
-                  cusHeight: uiController.getDeviceHeight / 11, cusWidth: null),
+            
               const LogoImageWidget(widthandheight: 150),
               uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
               Text(
@@ -112,7 +116,22 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: uIutils.txtFieldLoginWidth(500),
+                  ),
+                  child: BusinessTypeSelector(
+                    selected: _selectedBusinessType,
+                    onChanged: (type) {
+                      setState(() => _selectedBusinessType = type);
+                    },
+                  ),
+                ),
+              ),
+              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: UIConstants.bigSpace,
@@ -153,7 +172,10 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                       txtStyle: Theme.of(context).textTheme.bodyLarge!,
                       txtClr: Colors.white,
                     ),
+                uiController.sizedBox(
+                  cusHeight: uiController.getDeviceHeight / 11, cusWidth: null),
             ],
+            
           ),
         ),
       ),

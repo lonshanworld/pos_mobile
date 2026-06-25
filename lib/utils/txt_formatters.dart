@@ -37,6 +37,15 @@ class TextFormatters{
     }
   }
 
+  static String getTime24(DateTime? dateTxt){
+    final DateFormat formatter = DateFormat("HH:mm");
+    if(dateTxt == null){
+      return "- -";
+    }else{
+      return formatter.format(dateTxt);
+    }
+  }
+
   static DateTime reverseDate(String dateStr){
     final DateFormat formatter = DateFormat("dd-MMM-yyyy");
     return formatter.parse(dateStr);

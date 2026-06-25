@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
+import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
+import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
+import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
 
@@ -19,6 +22,8 @@ class DashboardStockOut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final UIController uiController = UIController.instance;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
     final CusShowSheet showSheet = CusShowSheet();
 
     Widget dataRow(String title, String txt, {bool isTotal = false}) {
@@ -60,17 +65,17 @@ class DashboardStockOut extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: uiController.getpureDirectClr(themeModeType),
             borderRadius: BorderRadius.circular(UIConstants.mediumRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
             ),
           ),
           child: Column(
@@ -178,10 +183,10 @@ class DashboardStockOut extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(UIConstants.mediumSpace),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(UIConstants.smallRadius),
                           border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.2),
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(
@@ -222,7 +227,7 @@ class DashboardStockOut extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.grey.withValues(alpha: 0.05),
+                                color: Theme.of(context).scaffoldBackgroundColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Table(

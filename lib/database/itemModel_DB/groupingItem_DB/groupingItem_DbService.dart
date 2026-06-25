@@ -1,4 +1,5 @@
 import 'package:pos_mobile/constants/enums.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/Item_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
@@ -31,17 +32,92 @@ class GroupingItemDbService{
     await CategoryDbStorage.onDelete(db);
   }
 
-  static Future<Map<String, List>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<Map<String, List>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     List<dynamic> categoryList = await CategoryDbStorage.getAllData(db, limit: limit, offset: offset);
     List<dynamic> groupList = await GroupDbStorage.getAllData(db, limit: limit, offset: offset);
-    List<dynamic> typeList = await TypeDbStorage.getAllData(db, limit: limit, offset: offset);
-    List<dynamic> itemList = await ItemDbStorage.getAllData(db, limit: limit, offset: offset);
+    List<dynamic> typeList = await TypeDbStorage.getAllData(db, limit: 5000, offset: 0);
+    List<dynamic> itemList = await ItemDbStorage.getAllData(db, limit: 5000, offset: 0);
+    List<dynamic> uniqueItemList = await UniqueItemDbService.getAllData(
+      db,
+      limit: 5000,
+      offset: 0,
+    );
     return {
       "category" : categoryList.map((e) => CategoryModel.fromJson(e)).toList(),
       "group" : groupList.map((e) => GroupModel.fromJson(e)).toList(),
       "type" : typeList.map((e) => TypeModel.fromJson(e)).toList(),
       "item" : itemList.map((e) => ItemModel.fromJson(e)).toList(),
+      "uniqueItem" : uniqueItemList,
     };
+  }
+
+  static Future<List<CategoryModel>> getAllCategories(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    List<dynamic> categoryList = await CategoryDbStorage.getAllData(db, limit: limit, offset: offset);
+    return categoryList.map((e) => CategoryModel.fromJson(e)).toList();
+  }
+
+  static Future<List<CategoryModel>> getAllActiveCategories(Database db) async {
+    final List<dynamic> categoryList = await CategoryDbStorage.getAllActiveData(db);
+    return categoryList.map((e) => CategoryModel.fromJson(e)).toList();
+  }
+
+  static Future<CategoryModel?> getCategoryById(Database db, int id) async {
+    return await CategoryDbStorage.getCategoryById(db, id);
+  }
+
+  static Future<int> getTotalCategoryCount(Database db) async {
+    return await CategoryDbStorage.getTotalCategoryCount(db);
+  }
+
+  static Future<List<GroupModel>> getAllGroups(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0}) async {
+    List<dynamic> groupList = await GroupDbStorage.getAllData(db, limit: limit, offset: offset);
+    return groupList.map((e) => GroupModel.fromJson(e)).toList();
+  }
+
+  static Future<List<GroupModel>> getAllActiveGroups(Database db) async {
+    final List<dynamic> groupList = await GroupDbStorage.getAllActiveData(db);
+    return groupList.map((e) => GroupModel.fromJson(e)).toList();
+  }
+
+  static Future<GroupModel?> getGroupById(Database db, int id) async {
+    return await GroupDbStorage.getGroupById(db, id);
+  }
+
+  static Future<TypeModel?> getTypeById(Database db, int id) async {
+    return await TypeDbStorage.getTypeById(db, id);
+  }
+
+  static Future<List<TypeModel>> getAllActiveTypes(Database db) async {
+    final List<dynamic> typeList = await TypeDbStorage.getAllActiveData(db);
+    return typeList.map((e) => TypeModel.fromJson(e)).toList();
+  }
+
+  static Future<Map<int, int>> getGroupCountByCategory(Database db) async {
+    final List<dynamic> rows = await GroupDbStorage.getGroupCountByCategory(db);
+    final Map<int, int> result = {};
+    for (final row in rows) {
+      final Map<String, Object?> map = row as Map<String, Object?>;
+      final int? categoryId = map['categoryId'] as int?;
+      final int? total = map['total'] as int?;
+      if (categoryId != null && total != null) {
+        result[categoryId] = total;
+      }
+    }
+    return result;
+  }
+
+  static Future<Map<int, int>> getTypeCountByGroup(Database db) async {
+    final List<dynamic> rows = await TypeDbStorage.getTypeCountByGroup(db);
+    final Map<int, int> result = {};
+    for (final row in rows) {
+      final Map<String, Object?> map = row as Map<String, Object?>;
+      final int? groupId = map['groupId'] as int?;
+      final int? total = map['total'] as int?;
+      if (groupId != null && total != null) {
+        result[groupId] = total;
+      }
+    }
+    return result;
   }
 
   static Future<bool>createNewCategory(
@@ -63,69 +139,53 @@ class GroupingItemDbService{
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
+      CategoryModel? categoryModel,
       required String groupName,
       required String? description,
     }  
   )async{
-    DateTime dateTime = DateTime.now();
-    int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-    if(value == -1){
-      return false;
-    }else{
-      int groupId = await GroupDbStorage.insertNewGroup(db, userModel: userModel, categoryModel: categoryModel, groupName: groupName, description: description, dateTime: dateTime);
-      if(groupId == -1){
-        return false;
-      }else{
-        return true;
-      }
-    }
+    final DateTime dateTime = DateTime.now();
+    final int groupId = await GroupDbStorage.insertNewGroup(
+      db,
+      userModel: userModel,
+      categoryModel: categoryModel,
+      groupName: groupName,
+      description: description,
+      dateTime: dateTime,
+    );
+    return groupId != -1;
   }
 
   static Future<bool>createNewType(
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
-      required GroupModel groupModel,
+      CategoryModel? categoryModel,
+      GroupModel? groupModel,
       required String typeName,
       required String? generalDescription,
       required bool hasExpire
     }
   )async{
-    DateTime dateTime = DateTime.now();
-    int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-    if(value == -1){
-      return false;
-    }else{
-      int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-      if(groupValue == -1){
-        return false;
-      }else{
-        int typeId = await TypeDbStorage.insertNewType(
-          db,
-          name: typeName,
-          generalDescription: generalDescription,
-          groupModel: groupModel,
-          dateTime: dateTime,
-          userModel: userModel,
-          hasExpire: hasExpire,
-        );
-        if(typeId == -1){
-          return false;
-        }else{
-          return true;
-        }
-      }
-    }
+    final DateTime dateTime = DateTime.now();
+    final int typeId = await TypeDbStorage.insertNewType(
+      db,
+      name: typeName,
+      generalDescription: generalDescription,
+      groupModel: groupModel,
+      dateTime: dateTime,
+      userModel: userModel,
+      hasExpire: hasExpire,
+    );
+    return typeId != -1;
   }
 
-  static Future<bool>createNewItem(
+  static Future<int>createNewItem(
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
-      required GroupModel groupModel,
+      required int? categoryId,
+      required int? groupId,
       required TypeModel typeModel,
       required String name,
       required String? description,
@@ -133,29 +193,49 @@ class GroupingItemDbService{
       required double profitPrice,
       required double originalPrice,
       required double taxPercentage,
+      required bool needStock,
+      required String? code,
     }
   )async{
     try{
-      DateTime dateTime = DateTime.now();
-      int value = await CategoryDbStorage.updateCategoryLastUpdateTime(db, dateTime, categoryModel);
-      int groupValue = await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, groupModel);
-      int typeValue = await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
-      int itemId = await ItemDbStorage.insertNewItem(
-          db,
-          userModel: userModel,
-          name: name,
-          typeModel: typeModel,
-          dateTime: dateTime,
-          hasExpire: hasExpire,
-          description: description,
-          profitPrice: profitPrice,
-          originalPrice: originalPrice,
-          taxPercentage: taxPercentage
+      final DateTime dateTime = DateTime.now();
+      if (categoryId != null) {
+        final category = await CategoryDbStorage.getCategoryById(db, categoryId);
+        if (category != null) {
+          await CategoryDbStorage.updateCategoryLastUpdateTime(
+            db,
+            dateTime,
+            category,
+          );
+        }
+      }
+      if (groupId != null) {
+        final group = await GroupDbStorage.getGroupById(db, groupId);
+        if (group != null) {
+          await GroupDbStorage.updateGroupLastUpdateTime(db, dateTime, group);
+        }
+      }
+      await TypeDbStorage.updateTypeLastUpdateTime(db, dateTime, typeModel);
+      final int itemId = await ItemDbStorage.insertNewItem(
+        db,
+        userModel: userModel,
+        name: name,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeModel: typeModel,
+        dateTime: dateTime,
+        hasExpire: hasExpire,
+        description: description,
+        profitPrice: profitPrice,
+        originalPrice: originalPrice,
+        taxPercentage: taxPercentage,
+        needStock: needStock,
+        code: code,
       );
-      return value != -1 && groupValue != -1 && typeValue != -1 && itemId != -1;
+      return itemId;
     }catch(e){
       cusDebugPrint(e);
-      return false;
+      return -1;
     }
   }
 
@@ -331,9 +411,14 @@ class GroupingItemDbService{
       required ItemModel itemModel,
       required List<UniqueItemModel> uniqueItemList,
       required String newName,
+      required int? categoryId,
+      required int? groupId,
+      required int typeId,
       required double newOriginalPrice,
       required double newProfitPrice,
       required double newTaxPercentage,
+      required bool needStock,
+      required String? newCode,
     }
   )async{
     try{
@@ -346,9 +431,14 @@ class GroupingItemDbService{
         dateTime: dateTime,
         itemModel: itemModel,
         newName: newName,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeId: typeId,
         originalPrice: newOriginalPrice,
         profitPrice: newProfitPrice,
         taxPercentage: newTaxPercentage,
+        needStock: needStock,
+        code: newCode,
       );
       if(value == -1) return false;
 

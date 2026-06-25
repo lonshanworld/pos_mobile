@@ -1,3 +1,4 @@
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_model_DbStorage.dart';
 import 'package:pos_mobile/models/deliver_model_folder/delivery_model.dart';
 import 'package:sqflite/sqflite.dart';
@@ -11,7 +12,7 @@ class DeliveryModelDbService{
     await DeliveryModelDbStorage.onDelete(db);
   }
 
-  static Future<List<DeliveryModel>>getAllDeliveryModel(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<DeliveryModel>>getAllDeliveryModel(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     List<dynamic> rawDataList = await DeliveryModelDbStorage.getAllData(db, limit: limit, offset: offset);
     return rawDataList.map((e) => DeliveryModel.fromJson(e)).toList();
   }

@@ -19,6 +19,23 @@ from auth import verify_mobile_token, verify_admin_token, authenticate_admin, se
 # Initialize FastAPI app
 app = FastAPI(title="Mobile Crash Report Backend", version="1.0.0")
 
+# Configure CORS for mobile and web clients
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://minipos-crash-backend.nanonux.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -127,6 +144,12 @@ async def get_stats(_: dict = Depends(verify_admin_token)):
     """Get crash report statistics (admin only)"""
     stats = await db.get_crash_report_stats()
     return stats
+
+@app.delete("/api/admin/reports/{report_id}")
+async def delete_report(report_id: int, _: dict = Depends(verify_admin_token)):
+    """Delete a crash report (admin only)"""
+    success = await db.delete_crash_report(report_id)
+    return {"success": success}
 
 @app.get("/api/admin/reports/{report_id}")
 async def get_report_detail(report_id: int, _: dict = Depends(verify_admin_token)):

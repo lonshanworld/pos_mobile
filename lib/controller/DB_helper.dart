@@ -6,7 +6,9 @@ import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_m
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
+import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
+import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/junction_folder/item_promotion_db/item_promotion_DbService.dart';
@@ -23,6 +25,7 @@ import 'package:pos_mobile/database/reports_DB/reports_DbService.dart';
 import 'package:pos_mobile/database/restrictionModel_DB/restriction_DBservice.dart';
 import 'package:pos_mobile/database/transactionModel_DB/transaction_DBservice.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
+import 'package:pos_mobile/database/db_schema_migrator.dart';
 import 'package:pos_mobile/models/customer_model.dart';
 
 import 'package:pos_mobile/models/crash_report_model.dart';
@@ -45,38 +48,39 @@ import '../constants/txtconstants.dart';
 import '../models/deliver_model_folder/delivery_model.dart';
 import '../models/deliver_model_folder/delivery_person_model.dart';
 import '../models/groupingItem_models_folders/type_model.dart';
+import '../models/item_model_folder/item_business_detail_model.dart';
 import '../models/item_model_folder/item_model.dart';
+import '../models/stock_in_unit_spec.dart';
 import '../models/promotion_model_folder/promotion_model.dart';
 import '../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 
-class DBHelper{
-
+class DBHelper {
   static Database? database;
 
-
-  static Future<String> getDbpath(String tableName)async{
+  static Future<String> getDbpath(String tableName) async {
     return join(await getDatabasesPath(), "$tableName.db");
   }
 
-  static Future<void>dbConfig(Database db)async{
+  static Future<void> dbConfig(Database db) async {
     await db.execute("PRAGMA foreign_keys = ON");
   }
 
   @pragma('vm:entry-point')
-  static Future<void> initiateAllDB()async{
+  static Future<void> initiateAllDB() async {
     // TODO : initiate all DB;
     String path = await getDbpath(TxtConstants.databaseKey);
     database = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
       onConfigure: DBHelper.dbConfig,
       onUpgrade: _onUpgrade,
+      onOpen: _onOpen,
     );
   }
 
-
-  static Future<void> _onCreate(Database db, int value)async {
+  static Future<void> _onCreate(Database db, int value) async {
     await ImageDbService.initImageDb(db);
     await UserDBService.initUserDB(db);
     await CustomerDbService.initCustomerDb(db);
@@ -88,6 +92,7 @@ class DBHelper{
     await TransactionDBService.initTransactionDb(db);
     await UniqueItemDbService.initUniqueItemDb(db);
     await ModuleComponentItemDbService.initModuleComponentItemDbService(db);
+    await ItemBusinessDetailDbService.initItemBusinessDetailDb(db);
     await AlertDbService.initAlertDb(db);
     await ReportDbService.initReportDb(db);
     await CrashReportDbService.initCrashReportDb(db);
@@ -107,15 +112,34 @@ class DBHelper{
     await HistoryDBService.initHistoryDb(db);
   }
 
-  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion)async{
-
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    await _prepareDatabase(db);
   }
 
-  static Future<List<UniqueItemModel>>getAllUniqueItems({int limit = 5000, int offset = 0})async{
-    return await UniqueItemDbService.getAllData(database!, limit: limit, offset: offset);
+  static Future<void> _onOpen(Database db) async {
+    await _prepareDatabase(db);
   }
 
-  static Future<List<UserModel>> getAllUsersFromDB()async{
+  static Future<void> _prepareDatabase(Database db) async {
+    await DbSchemaMigrator.reconcile(db);
+  }
+
+  static Future<List<UniqueItemModel>> getAllUniqueItems({
+    int limit = 5000,
+    int offset = 0,
+  }) async {
+    return await UniqueItemDbService.getAllData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  static Future<List<UserModel>> getAllUsersFromDB() async {
     return await UserDBService.getAllUsers(database!);
   }
 
@@ -123,8 +147,13 @@ class DBHelper{
     required String userName,
     required String password,
     required UserLevel userLevel,
-  })async{
-    bool value = await UserDBService.createNewUser(userName: userName, password: password, userLevel: userLevel, db: database!);
+  }) async {
+    bool value = await UserDBService.createNewUser(
+      userName: userName,
+      password: password,
+      userLevel: userLevel,
+      db: database!,
+    );
     cusDebugPrint(value);
     return value;
   }
@@ -132,8 +161,12 @@ class DBHelper{
   static Future<bool> loginAndLogOut({
     required UserModel userModel,
     required bool isLogin,
-  })async{
-    return await UserDBService.loginLogoutUserUpdate(database!, userModel,isLogin);
+  }) async {
+    return await UserDBService.loginLogoutUserUpdate(
+      database!,
+      userModel,
+      isLogin,
+    );
   }
 
   static Future<bool> changeUserPassword({
@@ -147,7 +180,7 @@ class DBHelper{
     );
   }
 
-  static Future<List<UpdateHistoryModel>> getHistoryList()async{
+  static Future<List<UpdateHistoryModel>> getHistoryList() async {
     List<dynamic> dataList = await HistoryDBService.getAllHistory(database!);
     return dataList.map((e) => UpdateHistoryModel.fromJson(e)).toList();
   }
@@ -172,52 +205,75 @@ class DBHelper{
     return await CrashReportDbService.deleteSyncedReports(database!);
   }
 
-  static Future<Map<String, List>> getAllItemData()async{
-    Map<String, List> groupingItemList = await GroupingItemDbService.getAllData(database!);
-    List<UniqueItemModel> uniqueItemList = await UniqueItemDbService.getAllData(database!);
-    return {
-      "category" : groupingItemList["category"]!,
-      "group" : groupingItemList["group"]!,
-      "type" : groupingItemList["type"]!,
-      "item" : groupingItemList["item"]!,
-      "uniqueItem" : uniqueItemList,
-    };
+  static Future<List<CategoryModel>> getAllCategory({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    List<dynamic> data = await CategoryDbStorage.getAllData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+    return data.map((e) => CategoryModel.fromJson(e)).toList();
   }
 
-  static Future<bool>createNewCategory(UserModel userModel, String categoryName)async{
-    return await GroupingItemDbService.createNewCategory(database!, categoryName: categoryName, userModel: userModel);
+  static Future<int> getTotalCategoryCount() async {
+    return await GroupingItemDbService.getTotalCategoryCount(database!);
   }
 
-  static Future<bool>createNewGroup({
-    required UserModel userModel,
-    required CategoryModel categoryModel,
-    required String groupName,
-    required String? description
-  })async{
-    return await GroupingItemDbService.createNewGroup(
-        database!,
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupName: groupName,
-        description: description
+  static Future<CategoryModel?> getCategoryById(int id) async {
+    return await GroupingItemDbService.getCategoryById(database!, id);
+  }
+
+  static Future<bool> createNewCategory(
+    UserModel userModel,
+    String categoryName,
+  ) async {
+    return await GroupingItemDbService.createNewCategory(
+      database!,
+      categoryName: categoryName,
+      userModel: userModel,
     );
   }
 
-  static Future<bool>createNewType({
+  static Future<bool> createNewGroup({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
+    CategoryModel? categoryModel,
+    required String groupName,
+    required String? description,
+  }) async {
+    return await GroupingItemDbService.createNewGroup(
+      database!,
+      userModel: userModel,
+      categoryModel: categoryModel,
+      groupName: groupName,
+      description: description,
+    );
+  }
+
+  static Future<bool> createNewType({
+    required UserModel userModel,
+    CategoryModel? categoryModel,
+    GroupModel? groupModel,
     required String typeName,
     required String? generalDescription,
     required bool hasExpire,
-  })async{
-    return await GroupingItemDbService.createNewType(database!, userModel: userModel, categoryModel: categoryModel, groupModel: groupModel, typeName: typeName, generalDescription: generalDescription, hasExpire: hasExpire);
+  }) async {
+    return await GroupingItemDbService.createNewType(
+      database!,
+      userModel: userModel,
+      categoryModel: categoryModel,
+      groupModel: groupModel,
+      typeName: typeName,
+      generalDescription: generalDescription,
+      hasExpire: hasExpire,
+    );
   }
 
-  static Future<bool>createNewItem({
+  static Future<int> createNewItem({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
+    required int? categoryId,
+    required int? groupId,
     required TypeModel typeModel,
     required String name,
     required String? description,
@@ -225,46 +281,69 @@ class DBHelper{
     required double profitPrice,
     required double originalPrice,
     required double taxPercentage,
-  })async{
+    required bool needStock,
+    required String? code,
+  }) async {
     return await GroupingItemDbService.createNewItem(
-        database!,
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupModel: groupModel,
-        typeModel: typeModel,
-        name: name,
-        description: description,
-        hasExpire: hasExpire,
-        profitPrice: profitPrice,
-        originalPrice: originalPrice,
-        taxPercentage: taxPercentage
+      database!,
+      userModel: userModel,
+      categoryId: categoryId,
+      groupId: groupId,
+      typeModel: typeModel,
+      name: name,
+      description: description,
+      hasExpire: hasExpire,
+      profitPrice: profitPrice,
+      originalPrice: originalPrice,
+      taxPercentage: taxPercentage,
+      needStock: needStock,
+      code: code,
     );
   }
 
-  static Future<bool>createStockIn({
+  static Future<List<ItemBusinessDetailModel>>
+  getAllItemBusinessDetails() async {
+    return await ItemBusinessDetailDbService.getAll(database!);
+  }
+
+  static Future<ItemBusinessDetailModel?> getItemBusinessDetail(
+    int itemId,
+  ) async {
+    return await ItemBusinessDetailDbService.getByItemId(database!, itemId);
+  }
+
+  static Future<bool> saveItemBusinessDetail(
+    ItemBusinessDetailModel detail,
+  ) async {
+    return await ItemBusinessDetailDbService.upsert(database!, detail);
+  }
+
+  static Future<bool> createStockIn({
     required UserModel userModel,
-    required CategoryModel categoryModel,
-    required GroupModel groupModel,
-    required TypeModel typeModel,
+    CategoryModel? categoryModel,
+    GroupModel? groupModel,
+    TypeModel? typeModel,
     required ItemModel itemModel,
     required String? code,
     required DateTime? itemManufactureDate,
     required DateTime? itemExpireDate,
     required String? getItemFromWhere,
     required int itemLength,
-  })async{
+    List<StockInUnitSpec>? unitSpecs,
+  }) async {
     return await TransactionDBService.createStockIn(
-        database!,
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupModel: groupModel,
-        typeModel: typeModel,
-        itemModel: itemModel,
-        code: code,
-        itemManufactureDate: itemManufactureDate,
-        itemExpireDate: itemExpireDate,
-        getItemFromWhere: getItemFromWhere,
-        itemLength: itemLength
+      database!,
+      userModel: userModel,
+      categoryModel: categoryModel,
+      groupModel: groupModel,
+      typeModel: typeModel,
+      itemModel: itemModel,
+      code: code,
+      itemManufactureDate: itemManufactureDate,
+      itemExpireDate: itemExpireDate,
+      getItemFromWhere: getItemFromWhere,
+      itemLength: itemLength,
+      unitSpecs: unitSpecs,
     );
   }
 
@@ -283,122 +362,199 @@ class DBHelper{
     required String barcode,
     required double finalTotalPrice,
     required PromotionModel? promotionModel,
-  })async{
-    return await TransactionDBService.insertStockOut(database!, uniqueItemList: uniqueItemList, userModel: userModel, deliveryCharges: deliveryCharges, taxPercentage: taxPercentage, additionalPromotionAmount: additionalPromotionAmount, description: description, customerName: customerName, deliveryName: deliveryName, shoppingType: shoppingType, paymentMethod: paymentMethod, barcode: barcode, dataList: dataList, finalTotalPrice: finalTotalPrice, promotionModel: promotionModel);
+  }) async {
+    return await TransactionDBService.insertStockOut(
+      database!,
+      uniqueItemList: uniqueItemList,
+      userModel: userModel,
+      deliveryCharges: deliveryCharges,
+      taxPercentage: taxPercentage,
+      additionalPromotionAmount: additionalPromotionAmount,
+      description: description,
+      customerName: customerName,
+      deliveryName: deliveryName,
+      shoppingType: shoppingType,
+      paymentMethod: paymentMethod,
+      barcode: barcode,
+      dataList: dataList,
+      finalTotalPrice: finalTotalPrice,
+      promotionModel: promotionModel,
+    );
   }
 
-  static Future<bool>editCategoryName({
+  static Future<bool> editCategoryName({
     required String name,
     required UserModel userModel,
     required CategoryModel categoryModel,
-  })async{
-    return await GroupingItemDbService.updateCategoryName(database!, name: name, userModel: userModel, categoryModel: categoryModel);
+  }) async {
+    return await GroupingItemDbService.updateCategoryName(
+      database!,
+      name: name,
+      userModel: userModel,
+      categoryModel: categoryModel,
+    );
   }
 
-  static Future<bool>deleteCategory({
+  static Future<bool> deleteCategory({
     required UserModel userModel,
     required CategoryModel categoryModel,
-  })async{
-    return await GroupingItemDbService.deactivateCategory(database!, userModel: userModel, categoryModel: categoryModel);
+  }) async {
+    return await GroupingItemDbService.deactivateCategory(
+      database!,
+      userModel: userModel,
+      categoryModel: categoryModel,
+    );
   }
 
-  static Future<bool>editGroupName(
-    {
-      required String newName,
-      required UserModel userModel,
-      required GroupModel groupModel,
-    }
-  )async{
-    return await GroupingItemDbService.updateGroupName(database!, name: newName, userModel: userModel, groupModel: groupModel);
-  }
-
-  static Future<bool>deleteGroup({
+  static Future<bool> editGroupName({
+    required String newName,
     required UserModel userModel,
     required GroupModel groupModel,
-  })async{
-    return await GroupingItemDbService.deactivateGroup(database!, userModel: userModel, groupModel: groupModel);
+  }) async {
+    return await GroupingItemDbService.updateGroupName(
+      database!,
+      name: newName,
+      userModel: userModel,
+      groupModel: groupModel,
+    );
   }
 
-  static Future<bool>editType(
-    {
-      required String newName,
-      required UserModel userModel,
-      required TypeModel typeModel,
-    }
-  )async{
-    return await GroupingItemDbService.updateTypeName(database!, newName: newName, userModel: userModel, typeModel: typeModel);
+  static Future<bool> deleteGroup({
+    required UserModel userModel,
+    required GroupModel groupModel,
+  }) async {
+    return await GroupingItemDbService.deactivateGroup(
+      database!,
+      userModel: userModel,
+      groupModel: groupModel,
+    );
   }
 
-  static Future<bool>deleteType({
+  static Future<bool> editType({
+    required String newName,
     required UserModel userModel,
     required TypeModel typeModel,
-  })async{
-    return await GroupingItemDbService.deactivateType(database!, typeModel: typeModel, userModel: userModel);
+  }) async {
+    return await GroupingItemDbService.updateTypeName(
+      database!,
+      newName: newName,
+      userModel: userModel,
+      typeModel: typeModel,
+    );
   }
 
-  static Future<bool>editItem({
+  static Future<bool> deleteType({
+    required UserModel userModel,
+    required TypeModel typeModel,
+  }) async {
+    return await GroupingItemDbService.deactivateType(
+      database!,
+      typeModel: typeModel,
+      userModel: userModel,
+    );
+  }
+
+  static Future<bool> editItem({
     required UserModel userModel,
     required ItemModel itemModel,
     required List<UniqueItemModel> uniqueItemList,
     required String newName,
+    required int? categoryId,
+    required int? groupId,
+    required int typeId,
     required double newOriginalPrice,
     required double newProfitPrice,
     required double newTaxPercentage,
-  })async{
+    required bool needStock,
+    required String? newCode,
+  }) async {
     return await GroupingItemDbService.updateItem(
       database!,
       userModel: userModel,
       itemModel: itemModel,
       uniqueItemList: uniqueItemList,
       newName: newName,
+      categoryId: categoryId,
+      groupId: groupId,
+      typeId: typeId,
       newOriginalPrice: newOriginalPrice,
       newProfitPrice: newProfitPrice,
       newTaxPercentage: newTaxPercentage,
+      needStock: needStock,
+      newCode: newCode,
     );
   }
 
-  static Future<bool>deleteItem({
+  static Future<bool> deleteItem({
     required UserModel userModel,
     required ItemModel itemModel,
     required List<UniqueItemModel> uniqueItemList,
-  })async{
-    return await GroupingItemDbService.deactivateItem(database!, userModel: userModel, itemModel: itemModel,uniqueItemList: uniqueItemList);
+  }) async {
+    return await GroupingItemDbService.deactivateItem(
+      database!,
+      userModel: userModel,
+      itemModel: itemModel,
+      uniqueItemList: uniqueItemList,
+    );
   }
 
-  static Future<List<StockInModel>>getAllStockIn({int limit = 2000, int offset = 0})async{
-    return await TransactionDBService.getAllStockInData(database!, limit: limit, offset: offset);
+  static Future<List<StockInModel>> getAllStockIn({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    return await TransactionDBService.getAllStockInData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
   }
 
-  static Future<List<StockOutModel>>getAllStockOut({int limit = 2000, int offset = 0})async{
-    return await TransactionDBService.getAllStockOutData(database!, limit: limit, offset: offset);
+  static Future<List<StockOutModel>> getAllStockOut({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    return await TransactionDBService.getAllStockOutData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
   }
 
-  static Future<List<StockOutItemModel>>getAllStockOutItem({int limit = 5000, int offset = 0})async{
-    return await TransactionDBService.getAllStockOutItemData(database!, limit: limit, offset: offset);
+  static Future<List<StockOutItemModel>> getAllStockOutItem({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    return await TransactionDBService.getAllStockOutItemData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
   }
 
-  static Future<List<CustomerModel>>getAllCustomer()async{
+  static Future<List<CustomerModel>> getAllCustomer() async {
     return await CustomerDbService.getAllCustomer(database!);
   }
 
-  static Future<List<DeliveryModel>>getAllDeliveryModel()async{
+  static Future<List<DeliveryModel>> getAllDeliveryModel() async {
     return await DeliveryModelDbService.getAllDeliveryModel(database!);
   }
 
-  static Future<List<DeliveryPersonModel>>getAllDeliveryPerson()async{
+  static Future<List<DeliveryPersonModel>> getAllDeliveryPerson() async {
     return await DeliveryPersonDbService.getAllDeliveryPerson(database!);
   }
 
-  static Future<List<PromotionModel>> getAllPromotion()async{
+  static Future<List<PromotionModel>> getAllPromotion() async {
     return await PromotionDBService.getAllPromotions(database!);
   }
 
-  static Future<List<ItemPromotionModel>>getAllItemPromotion()async{
+  static Future<List<ItemPromotionModel>> getAllItemPromotion() async {
     return await ItemPromotionDbService.getAllItemPromotion(database!);
   }
 
-  static Future<List<StockOutPromotionModel>> getAllStockOutPromotion()async{
-    return await StockOutPromotionDbServive.getAllStockOutPromotionList(database!);
+  static Future<List<StockOutPromotionModel>> getAllStockOutPromotion() async {
+    return await StockOutPromotionDbServive.getAllStockOutPromotionList(
+      database!,
+    );
   }
 
   static Future<bool> addNewPromotion({
@@ -408,7 +564,7 @@ class DBHelper{
     required double? promotionPrice,
     required String promotionCode,
     required UserModel userModel,
-  })async{
+  }) async {
     return await PromotionDBService.insertNewPromotion(
       db: database!,
       promotionName: promotionName,
@@ -429,7 +585,7 @@ class DBHelper{
     required UserModel userModel,
     required int promotionId,
     required List<ItemPromotionModel> itemPromotionList,
-  })async{
+  }) async {
     return await PromotionDBService.deletePromotion(
       database!,
       userModel: userModel,
@@ -438,39 +594,126 @@ class DBHelper{
     );
   }
 
-  static Future<bool>attachItemWithPromotion({
+  static Future<bool> attachItemWithPromotion({
     required UserModel userModel,
     required int promotionId,
     required int itemId,
-  })async{
-    return await ItemPromotionDbService.addNewData(db: database!, itemId: itemId, promotionId: promotionId, createPersonId: userModel.id);
+  }) async {
+    return await ItemPromotionDbService.addNewData(
+      db: database!,
+      itemId: itemId,
+      promotionId: promotionId,
+      createPersonId: userModel.id,
+    );
   }
 
-  static Future<bool>detachItemWithPromotion({
+  static Future<bool> detachItemWithPromotion({
     required List<ItemPromotionModel> itemPromotionList,
     required UserModel userModel,
-  })async{
+  }) async {
     DateTime dateTime = DateTime.now();
-    return await ItemPromotionDbService.deleteItemPromotion(database!, itemPromotionList: itemPromotionList, userModel: userModel, dateTime: dateTime);
+    return await ItemPromotionDbService.deleteItemPromotion(
+      database!,
+      itemPromotionList: itemPromotionList,
+      userModel: userModel,
+      dateTime: dateTime,
+    );
   }
 
-
-  static Future<bool>stockOutOrderCancel({
+  static Future<bool> stockOutOrderCancel({
     required int stockOutId,
     required UserModel userModel,
     required List<ItemModel> itemModelList,
-  })async{
-    return await TransactionDBService.stockOutOrderCancel(database!, userModel: userModel, stockOutId: stockOutId, itemModelList: itemModelList);
+  }) async {
+    return await TransactionDBService.stockOutOrderCancel(
+      database!,
+      userModel: userModel,
+      stockOutId: stockOutId,
+      itemModelList: itemModelList,
+    );
   }
 
-  static Future<bool>deleteStockOut({
+  static Future<bool> deleteStockOut({
     required int stockOutId,
     required UserModel userModel,
-  })async{
-    return await TransactionDBService.deleteStockOut(database!, userModel: userModel, stockOutId: stockOutId);
+  }) async {
+    return await TransactionDBService.deleteStockOut(
+      database!,
+      userModel: userModel,
+      stockOutId: stockOutId,
+    );
   }
 
-  static Future<bool>deleteUniqueItem(UniqueItemModel uniqueItemModel, UserModel userModel)async{
-    return await UniqueItemDbService.deActivateUniqueItem(database!, uniqueItemModel: uniqueItemModel, userModel: userModel);
+  static Future<bool> deleteUniqueItem(
+    UniqueItemModel uniqueItemModel,
+    UserModel userModel,
+  ) async {
+    return await UniqueItemDbService.deActivateUniqueItem(
+      database!,
+      uniqueItemModel: uniqueItemModel,
+      userModel: userModel,
+    );
+  }
+
+  static Future<List<CategoryModel>> getAllCategories({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    final data = await GroupingItemDbService.getAllCategories(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+    return data;
+  }
+
+  static Future<List<CategoryModel>> getAllActiveCategories() async {
+    return await GroupingItemDbService.getAllActiveCategories(database!);
+  }
+
+  static Future<List<GroupModel>> getAllGroups({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    return await GroupingItemDbService.getAllGroups(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  static Future<List<GroupModel>> getAllActiveGroups() async {
+    return await GroupingItemDbService.getAllActiveGroups(database!);
+  }
+
+  static Future<GroupModel?> getGroupById(int id) async {
+    return await GroupingItemDbService.getGroupById(database!, id);
+  }
+
+  static Future<TypeModel?> getTypeById(int id) async {
+    return await GroupingItemDbService.getTypeById(database!, id);
+  }
+
+  static Future<List<TypeModel>> getAllActiveTypes() async {
+    return await GroupingItemDbService.getAllActiveTypes(database!);
+  }
+
+  static Future<Map<String, List>> getAllItemData({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    return await GroupingItemDbService.getAllData(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  static Future<Map<int, int>> getGroupCountByCategory() async {
+    return await GroupingItemDbService.getGroupCountByCategory(database!);
+  }
+
+  static Future<Map<int, int>> getTypeCountByGroup() async {
+    return await GroupingItemDbService.getTypeCountByGroup(database!);
   }
 }
