@@ -18,11 +18,11 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # BUILD STEP
+      # BUILD
       # =========================
       - name: Build package
         run: |
-          APP_PATH=pos_mobile/mobile-crash-backend
+          APP_PATH=mobile-crash-backend
 
           mkdir release
 
