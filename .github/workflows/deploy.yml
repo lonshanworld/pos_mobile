@@ -18,13 +18,13 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # BUILD
+      # BUILD STEP (LOCAL ON GITHUB RUNNER)
       # =========================
       - name: Build package
         run: |
           APP_PATH=mobile-crash-backend
 
-          mkdir release
+          mkdir -p release
 
           pip install -r $APP_PATH/requirements.txt -t release
 
@@ -38,7 +38,7 @@ jobs:
       # =========================
       # PACKAGE
       # =========================
-      - name: Create archive
+      - name: Create tar archive
         run: tar -czf release.tar.gz release
 
       # =========================
@@ -55,7 +55,7 @@ jobs:
           target: "/opt/crash-backend"
 
       # =========================
-      # DEPLOY ON VPS
+      # DEPLOY ON VPS (FIXED FOR OPENVZ + LOW RAM)
       # =========================
       - name: Deploy on VPS
         uses: appleboy/ssh-action@master
@@ -66,6 +66,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
 
+            set -e
+
             cd /opt/crash-backend
 
             rm -rf current
@@ -75,9 +77,16 @@ jobs:
 
             cd current/release
 
-            pkill -f uvicorn || true
+            # safer kill (avoid blocking on OpenVZ VPS)
+            pkill -f "uvicorn main:app" || true
 
+            # start FastAPI in fully detached mode
             nohup python3 -m uvicorn main:app \
               --host 0.0.0.0 \
               --port 12500 \
+              --log-level warning \
               > backend.log 2>&1 &
+
+            disown
+
+            echo "Deployment completed successfully"
