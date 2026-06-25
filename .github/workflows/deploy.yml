@@ -1,0 +1,72 @@
+name: Deploy FastAPI to VPS
+
+on:
+  push:
+    branches: [ "production" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # BUILD STEP (temporary inside GitHub runner)
+      - name: Build package
+        run: |
+          mkdir release
+          pip install -r requirements.txt -t release
+
+          cp main.py release/
+          cp database.py release/
+          cp auth.py release/
+          cp config.py release/
+
+          cp -r templates release/
+
+      # COMPRESS
+      - name: Create tar
+        run: tar -czf release.tar.gz release
+
+      # UPLOAD TO VPS
+      - name: Upload to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: 51.79.178.15
+          username: root
+          port: 12520
+          key: ${{ secrets.SSH_KEY }}
+          source: "release.tar.gz"
+          target: "/opt/crash-backend"
+
+      # DEPLOY ON VPS
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: 51.79.178.15
+          username: root
+          port: 12520
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+
+            cd /opt/crash-backend
+
+            rm -rf current
+            mkdir current
+
+            tar -xzf release.tar.gz -C current
+
+            cd current/release
+
+            pkill -f uvicorn || true
+
+            nohup python3 -m uvicorn main:app \
+              --host 0.0.0.0 \
+              --port 12500 \
+              > backend.log 2>&1 &
