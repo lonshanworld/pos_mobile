@@ -67,26 +67,42 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
   }
 
   Future<void> checkPermission() async {
-    // Request Bluetooth and Location permissions for Android 12+
-    await Permission.bluetoothScan.request();
-    await Permission.bluetoothConnect.request();
-    await Permission.locationWhenInUse.request();
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ].request();
 
-    bool? isAvailable = await _bluetooth.isAvailable;
-    bool? isOn = await _bluetooth.isOn;
-    bool isGpsOn = await Geolocator.isLocationServiceEnabled();
+    if (statuses[Permission.bluetoothScan]!.isGranted &&
+        statuses[Permission.bluetoothConnect]!.isGranted) {
+      bool? isAvailable = await _bluetooth.isAvailable;
+      bool? isOn = await _bluetooth.isOn;
+      bool isGpsOn = await Geolocator.isLocationServiceEnabled();
 
-    emit(BluetoothPrinterData(
-      bluetoothOpened: (isAvailable == true && isOn == true),
-      bluetoothConnection: state.bluetoothConnection,
-      printerName: state.printerName,
-      paperSizeModel: state.paperSizeModel,
-      gpsOpened: isGpsOn,
-      connectedDevice: state.connectedDevice,
-    ));
-    
-    if (isOn == true && isGpsOn) {
-      startScanning();
+      emit(BluetoothPrinterData(
+        bluetoothOpened: (isAvailable == true && isOn == true),
+        bluetoothConnection: state.bluetoothConnection,
+        printerName: state.printerName,
+        paperSizeModel: state.paperSizeModel,
+        gpsOpened: isGpsOn,
+        connectedDevice: state.connectedDevice,
+      ));
+
+      if (isOn == true && isGpsOn) {
+        startScanning();
+      }
+    } else {
+      // Handle permission denied - you might want to show a dialog or snackbar
+      // to the user explaining why permissions are needed.
+      // For now, we just emit the state without scanning.
+      emit(BluetoothPrinterData(
+        bluetoothOpened: false,
+        bluetoothConnection: state.bluetoothConnection,
+        printerName: state.printerName,
+        paperSizeModel: state.paperSizeModel,
+        gpsOpened: false,
+        connectedDevice: state.connectedDevice,
+      ));
     }
   }
 
@@ -179,19 +195,37 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
 
   Future<Uint8List?> convertWidgetToImage(GlobalKey key) async {
     try {
-      await WidgetsBinding.instance.endOfFrame;
+      cusDebugPrint("Starting widget to image conversion");
 
       RenderRepaintBoundary? boundary =
           key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return null;
-
-      if (boundary.debugNeedsPaint) {
-        await Future.delayed(const Duration(milliseconds: 120));
-        await WidgetsBinding.instance.endOfFrame;
+      if (boundary == null) {
+        cusDebugPrint("Boundary is null");
+        return null;
       }
+      cusDebugPrint("Boundary found");
 
-      final image = await boundary.toImage(pixelRatio: 2.5);
+      final completer = Completer<dynamic>();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final img = await boundary.toImage(pixelRatio: 2.5);
+          completer.complete(img);
+        } catch (e) {
+          completer.completeError(e);
+        }
+      });
+
+      // Force a frame to ensure the callback runs
+      WidgetsBinding.instance.scheduleFrame();
+
+      dynamic image = await completer.future;
+
+      if (image == null) return null;
+
+      cusDebugPrint("Image created");
       final byteData = await image.toByteData(format: ImageByteFormat.png);
+      cusDebugPrint("Byte data created");
       return byteData?.buffer.asUint8List();
     } catch (e) {
       cusDebugPrint("Widget to image error: $e");
@@ -246,6 +280,8 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       return true;
     } catch (e) {
       cusDebugPrint("Print error: $e");
+      await CrashReporter.reportError("Print error: $e", errorType: "PrintFailure");
+
       return false;
     }
   }

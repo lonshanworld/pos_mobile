@@ -1010,10 +1010,10 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                                   : 190,
                                               mainAxisExtent:
                                                   screenWidth >= 1400
-                                                  ? 360
+                                                  ? 260
                                                   : isWide
-                                                  ? 320
-                                                  : 290,
+                                                  ? 230
+                                                  : 190,
                                               crossAxisSpacing:
                                                   UIConstants.mediumSpace,
                                               mainAxisSpacing:

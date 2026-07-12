@@ -7,4 +7,5 @@ void cusDebugPrint(dynamic data){
     }
     return true; // Always return true to make assert pass in release mode.
   }());
+  // print(data);
 }

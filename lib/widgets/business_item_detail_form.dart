@@ -284,9 +284,9 @@ class BusinessItemDetailFormState extends State<BusinessItemDetailForm> {
       case BusinessType.convenience:
         return null;
       case BusinessType.basicPharmacy:
-        if (_parseString(_dosage.text) == null) {
-          return 'Enter dosage (required for pharmacy items)';
-        }
+        // if (_parseString(_dosage.text) == null) {
+        //   return 'Enter dosage (required for pharmacy items)';
+        // }
         return null;
       case BusinessType.grocery:
       case BusinessType.food:

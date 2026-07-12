@@ -55,6 +55,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       GlobalKey<StockInPieceListFormState>();
   final List<TextEditingController> _unitCodeControllers = [];
   final List<TextEditingController> _imeiControllers = [];
+  List<StockInPieceEntry> _pieceEntries = [];
 
   int moreItem = 0;
   DateTime? expiredDate;
@@ -95,6 +96,11 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   /// Clothing always uses per-piece sizes; pharmacy uses per-piece batch on single stock-in.
   bool get _usesPieceForm =>
       _isMeasurementBasedClothing || (_isPharmacy && !widget.batchStockIn);
+
+  bool get _usesPharmacyPieceForm => _isPharmacy && !widget.batchStockIn;
+
+  List<StockInPieceEntry> get _currentPieceEntries =>
+      _pieceFormKey.currentState?.pieces ?? _pieceEntries;
 
   @override
   void didChangeDependencies() {
@@ -219,7 +225,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
 
   List<StockInUnitSpec>? _buildUnitSpecs() {
     if (_isMeasurementBasedClothing) {
-      final pieces = _pieceFormKey.currentState?.pieces ?? [];
+      final pieces = _currentPieceEntries;
       if (pieces.isEmpty) return null;
       final specs = StockInUnitBuilder.fromClothingPieces(
         pieces: pieces,
@@ -254,7 +260,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       //   return _attachOptionalCodes(specs);
       // }
       if (!widget.batchStockIn) {
-        final pieces = _pieceFormKey.currentState?.pieces ?? [];
+        final pieces = _currentPieceEntries;
         if (pieces.isEmpty) return null;
         final specs = StockInUnitBuilder.fromPharmacyPieces(
           pieces: pieces,
@@ -308,7 +314,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
     }
 
     if (_isMeasurementBasedClothing) {
-      final pieces = _pieceFormKey.currentState?.pieces ?? [];
+      final pieces = _currentPieceEntries;
       if (pieces.isEmpty) return 'Add at least one piece';
       for (int i = 0; i < pieces.length; i++) {
         final length = double.tryParse(pieces[i].lengthController.text.trim());
@@ -320,15 +326,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       return null;
     }
 
-    if (_isPharmacy) {
-      // if (widget.batchStockIn) {
-      //   if (pharmacyBatchController.text.trim().isEmpty) {
-      //     return 'Enter batch / lot number';
-      //   }
-      //   if (moreItem < 1) return 'Please add stock quantity';
-      //   return null;
-      // }
-      final pieces = _pieceFormKey.currentState?.pieces ?? [];
+    if (_usesPharmacyPieceForm) {
+      final pieces = _currentPieceEntries;
       if (pieces.isEmpty) return 'Add at least one unit';
       for (int i = 0; i < pieces.length; i++) {
         if (pieces[i].batchController.text.trim().isEmpty) {
@@ -444,7 +443,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
     }
 
     Widget buildForm(_UniqueItemParents formParents) {
-      final pieceCount = _pieceFormKey.currentState?.pieces.length ?? 1;
+      final pieceCount = _currentPieceEntries.isEmpty
+          ? 1
+          : _currentPieceEntries.length;
       final expectedCodeCount = _usesPieceForm
           ? pieceCount
           : widget.batchStockIn
@@ -583,6 +584,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                       widget.batchStockIn || _isMeasurementBasedClothing,
                   businessDetail: _businessDetail,
                   itemModel: widget.itemModel,
+                  onPiecesChanged: (pieces) {
+                    _pieceEntries = pieces;
+                  },
                 ),
               ],
               if (_supportsUniqueCodeForm) ...[
