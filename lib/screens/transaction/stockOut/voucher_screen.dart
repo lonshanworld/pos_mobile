@@ -36,6 +36,7 @@ class VoucherScreen extends StatefulWidget {
 
   final double taxPercentage;
   final PromotionModel? promotionModel;
+  final DateTime checkoutTime;
   final VoidCallback clearDataFunc;
 
   const VoucherScreen({
@@ -53,6 +54,7 @@ class VoucherScreen extends StatefulWidget {
     required this.taxPercentage,
     required this.promotionModel,
     required this.clearDataFunc,
+    required this.checkoutTime,
   });
 
   @override
@@ -205,6 +207,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       barcode: barCode,
       finalTotalPrice: _getFinalTotal(context),
       promotionModel: widget.promotionModel,
+      checkoutTime: widget.checkoutTime,
     );
 
     if (!mounted) return;
@@ -213,10 +216,12 @@ class _VoucherScreenState extends State<VoucherScreen> {
       await itemCubit.reloadAllItem();
       await promotionCubit.reloadStockOutPromotionDataList();
       if (!mounted) return;
-      loadingCubit.setSuccess("Success !");
+      loadingCubit.setSuccess("Success !", showDialog: false);
       widget.clearDataFunc();
       if (!mounted) return;
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     } else {
       loadingCubit.setFail("Fail !");
     }
@@ -267,9 +272,11 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    loadingCubit.setSuccess("Success !");
+    loadingCubit.setSuccess("Success !", showDialog: false);
     widget.clearDataFunc();
-    Navigator.of(context).pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _handleCompleteLogic(String barCode) async {
@@ -307,6 +314,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       barcode: barCode,
       finalTotalPrice: _getFinalTotal(context),
       promotionModel: widget.promotionModel,
+      checkoutTime: widget.checkoutTime,
     );
 
     if (!mounted) return;

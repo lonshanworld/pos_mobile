@@ -139,7 +139,9 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
 
                   if (!mounted) return;
                   if(value){
-                    Navigator.of(context).pop();
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
                     context.read<LoadingCubit>().setSuccess("Success !");
                   }else{
                     context.read<LoadingCubit>().setFail("Failed !");

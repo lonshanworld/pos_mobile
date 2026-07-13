@@ -13,10 +13,7 @@ import "package:pos_mobile/widgets/noitem_widget.dart";
 class TypeScreen extends StatelessWidget {
   final bool isStorage;
 
-  const TypeScreen({
-    super.key,
-    required this.isStorage,
-  });
+  const TypeScreen({super.key, required this.isStorage});
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +22,9 @@ class TypeScreen extends StatelessWidget {
       businessType,
       HierarchyLevel.type,
     );
-    final itemCubit = context.read<ItemCubit>();
-    final typeList = context.select((ItemCubit cubit) => cubit.state.activeTypeList);
+    final typeList = context.select(
+      (ItemCubit cubit) => cubit.state.activeTypeList,
+    );
 
     return Scaffold(
       body: Stack(
@@ -46,7 +44,10 @@ class TypeScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.label_outline_rounded, color: Colors.grey),
+                        const Icon(
+                          Icons.label_outline_rounded,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: UIConstants.smallSpace),
                         CusTxtWidget(
                           txtStyle: Theme.of(context).textTheme.titleSmall!,
@@ -56,40 +57,23 @@ class TypeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: UIConstants.mediumSpace),
                     Expanded(
-                      child: SingleChildScrollView(
-                        child: Wrap(
-                          spacing: UIConstants.mediumSpace,
-                          runSpacing: UIConstants.mediumSpace,
-                          children: [
-                            for (final typeModel in typeList)
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CusSelectTypeBtnWidget(
-                                    isSelected: false,
-                                    typeModel: typeModel,
-                                    func: () {},
-                                    isStorage: isStorage,
-                                    afterDeleteFunc: () {},
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: UIConstants.smallSpace,
-                                      top: 4,
-                                    ),
-                                    child: Text(
-                                      "${itemCubit.getItemCountForType(typeModel.id)} items",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(color: Colors.grey),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: UIConstants.smallSpace,
                         ),
+                        itemCount: typeList.length,
+                        separatorBuilder: (_, index) =>
+                            const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final typeModel = typeList[index];
+                          return CusSelectTypeBtnWidget(
+                            isSelected: false,
+                            typeModel: typeModel,
+                            func: () {},
+                            isStorage: isStorage,
+                            afterDeleteFunc: () {},
+                          );
+                        },
                       ),
                     ),
                   ],

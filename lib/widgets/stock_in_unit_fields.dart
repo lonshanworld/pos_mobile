@@ -233,9 +233,9 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
                   children: [
                     Text(
                       'Piece ${index + 1}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: accent,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall?.copyWith(color: accent),
                     ),
                     const Spacer(),
                     if (widget.allowMultiplePieces && _pieces.length > 1)
@@ -295,10 +295,8 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
                     CusTxtWidget(
                       txt:
                           'Calculated sell: ${sellPreview.toStringAsFixed(0)} MMK (+ tax)',
-                      txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: accent,
-                          ),
+                      txtStyle: Theme.of(context).textTheme.bodyMedium!
+                          .copyWith(fontWeight: FontWeight.w600, color: accent),
                     ),
                   ],
                 ],

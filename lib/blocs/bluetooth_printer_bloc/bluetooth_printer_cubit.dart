@@ -25,7 +25,8 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
   final BlueThermalPrinter _bluetooth = BlueThermalPrinter.instance;
 
   BluetoothPrinterCubit()
-      : super(const BluetoothPrinterData(
+    : super(
+        const BluetoothPrinterData(
           bluetoothOpened: false,
           bluetoothConnection: BluetoothConnection.disconnected,
           printerName: null,
@@ -34,7 +35,8 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
             sizeName: "Small",
           ),
           gpsOpened: false,
-        )) {
+        ),
+      ) {
     checkPermission();
     _initConnectionListener();
   }
@@ -45,23 +47,27 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
   void _initConnectionListener() {
     _bluetooth.onStateChanged().listen((stateStr) {
       if (stateStr == BlueThermalPrinter.CONNECTED) {
-        emit(BluetoothPrinterData(
-          bluetoothOpened: state.bluetoothOpened,
-          bluetoothConnection: BluetoothConnection.connected,
-          printerName: state.printerName,
-          paperSizeModel: state.paperSizeModel,
-          gpsOpened: state.gpsOpened,
-          connectedDevice: state.connectedDevice,
-        ));
+        emit(
+          BluetoothPrinterData(
+            bluetoothOpened: state.bluetoothOpened,
+            bluetoothConnection: BluetoothConnection.connected,
+            printerName: state.printerName,
+            paperSizeModel: state.paperSizeModel,
+            gpsOpened: state.gpsOpened,
+            connectedDevice: state.connectedDevice,
+          ),
+        );
       } else if (stateStr == BlueThermalPrinter.DISCONNECTED) {
-        emit(BluetoothPrinterData(
-          bluetoothOpened: state.bluetoothOpened,
-          bluetoothConnection: BluetoothConnection.disconnected,
-          printerName: null,
-          paperSizeModel: state.paperSizeModel,
-          gpsOpened: state.gpsOpened,
-          connectedDevice: null,
-        ));
+        emit(
+          BluetoothPrinterData(
+            bluetoothOpened: state.bluetoothOpened,
+            bluetoothConnection: BluetoothConnection.disconnected,
+            printerName: null,
+            paperSizeModel: state.paperSizeModel,
+            gpsOpened: state.gpsOpened,
+            connectedDevice: null,
+          ),
+        );
       }
     });
   }
@@ -79,14 +85,16 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       bool? isOn = await _bluetooth.isOn;
       bool isGpsOn = await Geolocator.isLocationServiceEnabled();
 
-      emit(BluetoothPrinterData(
-        bluetoothOpened: (isAvailable == true && isOn == true),
-        bluetoothConnection: state.bluetoothConnection,
-        printerName: state.printerName,
-        paperSizeModel: state.paperSizeModel,
-        gpsOpened: isGpsOn,
-        connectedDevice: state.connectedDevice,
-      ));
+      emit(
+        BluetoothPrinterData(
+          bluetoothOpened: (isAvailable == true && isOn == true),
+          bluetoothConnection: state.bluetoothConnection,
+          printerName: state.printerName,
+          paperSizeModel: state.paperSizeModel,
+          gpsOpened: isGpsOn,
+          connectedDevice: state.connectedDevice,
+        ),
+      );
 
       if (isOn == true && isGpsOn) {
         startScanning();
@@ -95,45 +103,54 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       // Handle permission denied - you might want to show a dialog or snackbar
       // to the user explaining why permissions are needed.
       // For now, we just emit the state without scanning.
-      emit(BluetoothPrinterData(
-        bluetoothOpened: false,
-        bluetoothConnection: state.bluetoothConnection,
-        printerName: state.printerName,
-        paperSizeModel: state.paperSizeModel,
-        gpsOpened: false,
-        connectedDevice: state.connectedDevice,
-      ));
+      emit(
+        BluetoothPrinterData(
+          bluetoothOpened: false,
+          bluetoothConnection: state.bluetoothConnection,
+          printerName: state.printerName,
+          paperSizeModel: state.paperSizeModel,
+          gpsOpened: false,
+          connectedDevice: state.connectedDevice,
+        ),
+      );
     }
   }
 
   Future<void> startScanning() async {
     try {
       _scanResults = await _bluetooth.getBondedDevices();
-      
+
       // Force UI rebuild
-      emit(BluetoothPrinterData(
-        bluetoothOpened: state.bluetoothOpened,
-        bluetoothConnection: state.bluetoothConnection,
-        printerName: state.printerName,
-        paperSizeModel: state.paperSizeModel,
-        gpsOpened: state.gpsOpened,
-        connectedDevice: state.connectedDevice,
-      ));
+      emit(
+        BluetoothPrinterData(
+          bluetoothOpened: state.bluetoothOpened,
+          bluetoothConnection: state.bluetoothConnection,
+          printerName: state.printerName,
+          paperSizeModel: state.paperSizeModel,
+          gpsOpened: state.gpsOpened,
+          connectedDevice: state.connectedDevice,
+        ),
+      );
     } catch (e) {
       cusDebugPrint("Scan error: $e");
-      await CrashReporter.reportError("Bluetooth scan error: $e", errorType: "BluetoothError");
+      await CrashReporter.reportError(
+        "Bluetooth scan error: $e",
+        errorType: "BluetoothError",
+      );
     }
   }
 
   Future<void> connectToDevice(BluetoothDevice device) async {
-    emit(BluetoothPrinterData(
-      bluetoothOpened: state.bluetoothOpened,
-      bluetoothConnection: BluetoothConnection.connecting,
-      printerName: device.name,
-      paperSizeModel: state.paperSizeModel,
-      gpsOpened: state.gpsOpened,
-      connectedDevice: device,
-    ));
+    emit(
+      BluetoothPrinterData(
+        bluetoothOpened: state.bluetoothOpened,
+        bluetoothConnection: BluetoothConnection.connecting,
+        printerName: device.name,
+        paperSizeModel: state.paperSizeModel,
+        gpsOpened: state.gpsOpened,
+        connectedDevice: device,
+      ),
+    );
 
     try {
       bool? isConnected = await _bluetooth.isConnected;
@@ -142,26 +159,33 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       }
 
       await _bluetooth.connect(device);
-      
-      emit(BluetoothPrinterData(
-        bluetoothOpened: state.bluetoothOpened,
-        bluetoothConnection: BluetoothConnection.connected,
-        printerName: device.name,
-        paperSizeModel: state.paperSizeModel,
-        gpsOpened: state.gpsOpened,
-        connectedDevice: device,
-      ));
+
+      emit(
+        BluetoothPrinterData(
+          bluetoothOpened: state.bluetoothOpened,
+          bluetoothConnection: BluetoothConnection.connected,
+          printerName: device.name,
+          paperSizeModel: state.paperSizeModel,
+          gpsOpened: state.gpsOpened,
+          connectedDevice: device,
+        ),
+      );
     } catch (e) {
       cusDebugPrint("Connect error: $e");
-      await CrashReporter.reportError("Bluetooth connect error: $e", errorType: "BluetoothError");
-      emit(BluetoothPrinterData(
-        bluetoothOpened: state.bluetoothOpened,
-        bluetoothConnection: BluetoothConnection.disconnected,
-        printerName: null,
-        paperSizeModel: state.paperSizeModel,
-        gpsOpened: state.gpsOpened,
-        connectedDevice: null,
-      ));
+      await CrashReporter.reportError(
+        "Bluetooth connect error: $e",
+        errorType: "BluetoothError",
+      );
+      emit(
+        BluetoothPrinterData(
+          bluetoothOpened: state.bluetoothOpened,
+          bluetoothConnection: BluetoothConnection.disconnected,
+          printerName: null,
+          paperSizeModel: state.paperSizeModel,
+          gpsOpened: state.gpsOpened,
+          connectedDevice: null,
+        ),
+      );
     }
   }
 
@@ -170,27 +194,34 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       await _bluetooth.disconnect();
     } catch (e) {
       cusDebugPrint("Disconnect error: $e");
-      await CrashReporter.reportError("Bluetooth disconnect error: $e", errorType: "BluetoothError");
+      await CrashReporter.reportError(
+        "Bluetooth disconnect error: $e",
+        errorType: "BluetoothError",
+      );
     }
-    emit(BluetoothPrinterData(
-      bluetoothOpened: state.bluetoothOpened,
-      bluetoothConnection: BluetoothConnection.disconnected,
-      printerName: null,
-      paperSizeModel: state.paperSizeModel,
-      gpsOpened: state.gpsOpened,
-      connectedDevice: null,
-    ));
+    emit(
+      BluetoothPrinterData(
+        bluetoothOpened: state.bluetoothOpened,
+        bluetoothConnection: BluetoothConnection.disconnected,
+        printerName: null,
+        paperSizeModel: state.paperSizeModel,
+        gpsOpened: state.gpsOpened,
+        connectedDevice: null,
+      ),
+    );
   }
 
   void setPaperSize(PaperSizeModel paperSizeModel) {
-    emit(BluetoothPrinterData(
-      bluetoothOpened: state.bluetoothOpened,
-      bluetoothConnection: state.bluetoothConnection,
-      printerName: state.printerName,
-      paperSizeModel: paperSizeModel,
-      gpsOpened: state.gpsOpened,
-      connectedDevice: state.connectedDevice,
-    ));
+    emit(
+      BluetoothPrinterData(
+        bluetoothOpened: state.bluetoothOpened,
+        bluetoothConnection: state.bluetoothConnection,
+        printerName: state.printerName,
+        paperSizeModel: paperSizeModel,
+        gpsOpened: state.gpsOpened,
+        connectedDevice: state.connectedDevice,
+      ),
+    );
   }
 
   Future<Uint8List?> convertWidgetToImage(GlobalKey key) async {
@@ -206,17 +237,30 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       cusDebugPrint("Boundary found");
 
       final completer = Completer<dynamic>();
+      var paintAttempts = 0;
 
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          final img = await boundary.toImage(pixelRatio: 2.5);
-          completer.complete(img);
-        } catch (e) {
-          completer.completeError(e);
-        }
-      });
+      void captureAfterPaint() {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          try {
+            // Some dynamically-built print widgets need an additional frame
+            // before their repaint boundary is ready for toImage().
+            if (boundary.debugNeedsPaint && paintAttempts < 5) {
+              paintAttempts++;
+              WidgetsBinding.instance.scheduleFrame();
+              captureAfterPaint();
+              return;
+            }
 
-      // Force a frame to ensure the callback runs
+            final image = await boundary.toImage(pixelRatio: 2.5);
+            completer.complete(image);
+          } catch (e) {
+            completer.completeError(e);
+          }
+        });
+      }
+
+      captureAfterPaint();
+      // Force a frame to ensure the first callback runs.
       WidgetsBinding.instance.scheduleFrame();
 
       dynamic image = await completer.future;
@@ -264,7 +308,10 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
 
       // Resize the image to fit the paper width
       final int paperWidthPx = state.paperSizeModel.paperSize.width;
-      final img.Image resized = img.copyResize(decodedImage, width: paperWidthPx);
+      final img.Image resized = img.copyResize(
+        decodedImage,
+        width: paperWidthPx,
+      );
 
       // Print image
       bytes += generator.imageRaster(resized, align: PosAlign.center);
@@ -275,12 +322,15 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
 
       // Send the full job in one write to avoid stop-start transport jitter.
       await _bluetooth.writeBytes(Uint8List.fromList(bytes));
-      
+
       cusDebugPrint("Print command sent successfully to ${state.printerName}");
       return true;
     } catch (e) {
       cusDebugPrint("Print error: $e");
-      await CrashReporter.reportError("Print error: $e", errorType: "PrintFailure");
+      await CrashReporter.reportError(
+        "Print error: $e",
+        errorType: "PrintFailure",
+      );
 
       return false;
     }
@@ -301,15 +351,19 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
 
     try {
       final doc = pw.Document();
-      final paperWidthMm =
-          state.paperSizeModel.paperSize == PaperSize.mm80 ? 80.0 : 58.0;
+      final paperWidthMm = state.paperSizeModel.paperSize == PaperSize.mm80
+          ? 80.0
+          : 58.0;
       final pageWidth = paperWidthMm * PdfPageFormat.mm;
       final ratio = decodedImage.height / decodedImage.width;
       final imageHeight = pageWidth * ratio;
 
       doc.addPage(
         pw.Page(
-          pageFormat: PdfPageFormat(pageWidth, imageHeight + (6 * PdfPageFormat.mm)),
+          pageFormat: PdfPageFormat(
+            pageWidth,
+            imageHeight + (6 * PdfPageFormat.mm),
+          ),
           margin: const pw.EdgeInsets.all(3 * PdfPageFormat.mm),
           build: (_) {
             return pw.Center(
@@ -330,7 +384,10 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     }
   }
 
-  Future<String?> downloadVoucherPdf(GlobalKey printKey, {String? fileName}) async {
+  Future<String?> downloadVoucherPdf(
+    GlobalKey printKey, {
+    String? fileName,
+  }) async {
     try {
       final pdfBytes = await generateVoucherPdf(printKey);
       if (pdfBytes == null) return null;
@@ -344,7 +401,9 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
             final androidIndex = externalDir.path.indexOf('/Android/');
             if (androidIndex != -1) {
               final rootPath = externalDir.path.substring(0, androidIndex);
-              final candidate = Directory('$rootPath/Documents/nanonux/vouchers');
+              final candidate = Directory(
+                '$rootPath/Documents/nanonux/vouchers',
+              );
               // Try to create the folder if it doesn't exist yet
               if (!await candidate.exists()) {
                 await candidate.create(recursive: true);
@@ -391,5 +450,4 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     }
     return cleaned;
   }
-
 }

@@ -525,8 +525,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
 
                       if (!mounted) return;
                       if (value) {
-                        loadingCubit.setSuccess("Success !");
-                        navigator.pop();
+                        loadingCubit.setSuccess("Success !", showDialog: false);
+                        if (navigator.canPop()) {
+                          navigator.pop();
+                        }
                       } else {
                         loadingCubit.setFail("Fail !");
                       }

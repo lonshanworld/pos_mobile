@@ -18,6 +18,7 @@ import "package:pos_mobile/screens/authenticaton/check_user_screen.dart";
 import "package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart";
 import "package:pos_mobile/widgets/cusAppbar_widget.dart";
 import "package:pos_mobile/widgets/loading_widget.dart";
+import "package:pos_mobile/languages/app_strings.dart";
 
 import "../features/logout_feature.dart";
 import "../constants/txtconstants.dart";
@@ -60,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (ShopInfoCubit cubit) => cubit.state.businessType,
     );
     final bool showThemeToggle = businessType.allowsThemeToggle;
+    final strings = AppStrings.of(context);
     final pages = PageList.getPages(userModel?.userLevel ?? UserLevel.merchant);
     final int safePageIndex = pages.isEmpty
         ? 0
@@ -161,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return Scaffold(
                 appBar: AppBar(
                   centerTitle: true,
-                  title: Text(pages[safePageIndex].title),
+                  title: Text(strings.pageTitle(pages[safePageIndex].title)),
                   leading: Builder(
                     builder: (ctx) {
                       return CusIconBtn(

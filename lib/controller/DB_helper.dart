@@ -362,6 +362,7 @@ class DBHelper {
     required String barcode,
     required double finalTotalPrice,
     required PromotionModel? promotionModel,
+    required DateTime checkoutTime,
   }) async {
     return await TransactionDBService.insertStockOut(
       database!,
@@ -379,6 +380,7 @@ class DBHelper {
       dataList: dataList,
       finalTotalPrice: finalTotalPrice,
       promotionModel: promotionModel,
+      checkoutTime: checkoutTime,
     );
   }
 
@@ -483,6 +485,53 @@ class DBHelper {
       needStock: needStock,
       newCode: newCode,
     );
+  }
+
+  static Future<bool> updateItemBarcode({
+    required int itemId,
+    required String barcode,
+  }) async {
+    if (!await isBarcodeAvailable(barcode)) return false;
+    return GroupingItemDbService.updateItemBarcode(
+      database!,
+      itemId: itemId,
+      barcode: barcode,
+    );
+  }
+
+  static Future<bool> updateUniqueItemBarcode({
+    required int uniqueItemId,
+    required String barcode,
+  }) async {
+    if (!await isBarcodeAvailable(barcode)) return false;
+    return UniqueItemDbService.updateUniqueItemBarcode(
+      database!,
+      uniqueItemId: uniqueItemId,
+      barcode: barcode,
+    );
+  }
+
+  static Future<bool> isBarcodeAvailable(String barcode) async {
+    final normalized = barcode.trim();
+    if (normalized.isEmpty) return false;
+
+    final itemMatches = await database!.query(
+      TxtConstants.itemTableName,
+      columns: const ['id'],
+      where: 'LOWER(code) = LOWER(?)',
+      whereArgs: [normalized],
+      limit: 1,
+    );
+    if (itemMatches.isNotEmpty) return false;
+
+    final uniqueItemMatches = await database!.query(
+      TxtConstants.uniqueItemTableName,
+      columns: const ['id'],
+      where: 'LOWER(code) = LOWER(?)',
+      whereArgs: [normalized],
+      limit: 1,
+    );
+    return uniqueItemMatches.isEmpty;
   }
 
   static Future<bool> deleteItem({

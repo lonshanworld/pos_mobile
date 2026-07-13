@@ -5,6 +5,9 @@ import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/language_settings_screen.dart';
+import 'package:pos_mobile/languages/app_strings.dart';
+import 'package:pos_mobile/languages/app_language.dart';
 
 import '../blocs/theme_bloc/theme_cubit.dart';
 import '../blocs/userData_bloc/user_data_cubit.dart';
@@ -26,6 +29,7 @@ class SettingScreen extends StatelessWidget {
     final BluetoothPrinterState printerState =
         context.watch<BluetoothPrinterCubit>().state;
     final accent = uiController.accentColor();
+    final strings = AppStrings.of(context);
 
     final bool isPrinterConnected =
         printerState.bluetoothConnection == BluetoothConnection.connected;
@@ -42,7 +46,7 @@ class SettingScreen extends StatelessWidget {
             const SizedBox(height: UIConstants.mediumSpace),
 
             Text(
-              'Manage your preferences and configuration',
+              strings.managePreferences,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall!
@@ -53,10 +57,10 @@ class SettingScreen extends StatelessWidget {
             // ── Printer Settings Card ──
             _SettingHubCard(
               icon: Icons.print_outlined,
-              title: 'Printer Settings',
+              title: strings.printerSettings,
               subtitle: isPrinterConnected
-                  ? 'Connected: ${printerState.printerName ?? "Printer"}'
-                  : 'No printer connected',
+                  ? '${strings.connected}: ${printerState.printerName ?? "Printer"}'
+                  : strings.noPrinterConnected,
               statusDot: isPrinterConnected ? Colors.green : Colors.grey,
               accentColor: Colors.amber,
               themeModeType: themeModeType,
@@ -69,16 +73,27 @@ class SettingScreen extends StatelessWidget {
             // ── General Settings Card ──
             _SettingHubCard(
               icon: Icons.tune_outlined,
-              title: 'General Settings',
+              title: strings.generalSettings,
               subtitle: isOwner
-                  ? 'Shop info, business type, logo & security'
-                  : 'View shop information',
+                  ? strings.shopInfoBusinessTypeLogoSecurity
+                  : strings.viewShopInformation,
               statusDot: null,
               accentColor: accent,
               themeModeType: themeModeType,
               uiController: uiController,
               onTap: () => Navigator.of(context)
                   .pushNamed(GeneralSettingsScreen.routeName),
+            ),
+            const SizedBox(height: UIConstants.mediumSpace),
+            _SettingHubCard(
+              icon: Icons.language_outlined,
+              title: strings.language,
+              subtitle: context.watch<LanguageCubit>().state.displayName,
+              statusDot: null,
+              accentColor: Colors.blue,
+              themeModeType: themeModeType,
+              uiController: uiController,
+              onTap: () => Navigator.of(context).pushNamed(LanguageSettingsScreen.routeName),
             ),
           ],
         ),

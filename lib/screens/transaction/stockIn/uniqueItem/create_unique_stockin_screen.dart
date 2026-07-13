@@ -67,8 +67,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   bool get _isClothing => _businessType == BusinessType.clothing;
 
   bool get _isPharmacy => _businessType == BusinessType.basicPharmacy;
-  bool get _isPhoneTablets =>
-      _businessType == BusinessType.phoneLaptopTablets;
+  bool get _isPhoneTablets => _businessType == BusinessType.phoneLaptopTablets;
 
   bool get _supportsUniqueCodeForm =>
       _businessType != null &&
@@ -106,7 +105,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _businessType ??= context.read<ShopInfoCubit>().state.businessType;
-    if (_supportsUniqueCodeForm && !_usesPieceForm && _unitCodeControllers.isEmpty) {
+    if (_supportsUniqueCodeForm &&
+        !_usesPieceForm &&
+        _unitCodeControllers.isEmpty) {
       _ensureUnitCodeControllers(widget.batchStockIn ? moreItem : 1);
     }
   }
@@ -233,19 +234,16 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         businessDetail: _businessDetail,
       );
       if (specs == null || !widget.batchStockIn) return specs;
-      return List.generate(
-        specs.length * moreItem,
-        (index) {
-          final spec = specs[index % specs.length];
-          return StockInUnitSpec(
-            instanceLength: spec.instanceLength,
-            instanceWidth: spec.instanceWidth,
-            instanceBatchNumber: spec.instanceBatchNumber,
-            originalPrice: spec.originalPrice,
-            profitPrice: spec.profitPrice,
-          );
-        },
-      );
+      return List.generate(specs.length * moreItem, (index) {
+        final spec = specs[index % specs.length];
+        return StockInUnitSpec(
+          instanceLength: spec.instanceLength,
+          instanceWidth: spec.instanceWidth,
+          instanceBatchNumber: spec.instanceBatchNumber,
+          originalPrice: spec.originalPrice,
+          profitPrice: spec.profitPrice,
+        );
+      });
     }
 
     if (_isPharmacy) {
@@ -271,19 +269,16 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
     }
 
     if (_supportsUniqueCodeForm) {
-      return List.generate(
-        _unitCodeControllers.length,
-        (index) {
-          final code = _unitCodeControllers[index].text.trim();
-          final imei = _isPhoneTablets && index < _imeiControllers.length
-              ? _imeiControllers[index].text.trim()
-              : null;
-          return StockInUnitSpec(
-            code: code.isEmpty ? null : code,
-            instanceImei: imei?.isEmpty == true ? null : imei,
-          );
-        },
-      );
+      return List.generate(_unitCodeControllers.length, (index) {
+        final code = _unitCodeControllers[index].text.trim();
+        final imei = _isPhoneTablets && index < _imeiControllers.length
+            ? _imeiControllers[index].text.trim()
+            : null;
+        return StockInUnitSpec(
+          code: code.isEmpty ? null : code,
+          instanceImei: imei?.isEmpty == true ? null : imei,
+        );
+      });
     }
 
     return null;
@@ -307,7 +302,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   }
 
   String? _validateBeforeSubmit() {
-    if (_canTrackExpiry && expiredDate == null &&
+    if (_canTrackExpiry &&
+        expiredDate == null &&
         _businessType != BusinessType.grocery &&
         _businessType != BusinessType.convenience) {
       return 'Please add expired date';
@@ -427,8 +423,12 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         if (value) {
           await itemCubit.reloadAllItem();
           if (!mounted) return;
-          navigator.pop();
+          // The loading dialog is pushed above this bottom sheet. Clear it
+          // first so the following pop dismisses the stock-in screen itself.
           loadingCubit.setSuccess('Success !');
+          if (navigator.canPop()) {
+            navigator.pop();
+          }
         } else {
           loadingCubit.setFail('Fail !');
         }
@@ -456,8 +456,8 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
       }
       final addingCount = _usesPieceForm
           ? (_isMeasurementBasedClothing && widget.batchStockIn
-              ? pieceCount * moreItem
-              : pieceCount)
+                ? pieceCount * moreItem
+                : pieceCount)
           : _supportsUniqueCodeForm
           ? _unitCodeControllers.length
           : moreItem;
@@ -516,13 +516,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                           if (moreItem < 999) {
                             moreItem++;
                             if (_supportsUniqueCodeForm) {
-                              _unitCodeControllers.add(
-                                TextEditingController(),
-                              );
+                              _unitCodeControllers.add(TextEditingController());
                               if (_isPhoneTablets) {
-                                _imeiControllers.add(
-                                  TextEditingController(),
-                                );
+                                _imeiControllers.add(TextEditingController());
                               }
                             }
                           }
@@ -630,39 +626,35 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                               .copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: UIConstants.smallSpace),
-                          CusTextFieldLogin(
-                            txtController: _unitCodeControllers[index],
-                            verticalPadding: UIConstants.mediumSpace,
-                            horizontalPadding: UIConstants.bigSpace,
-                            hintTxt:
-                                'Scan or enter unique barcode / serial',
-                            txtInputType: TextInputType.text,
-                            suffixIcon: IconButton(
-                              icon: const Icon(
-                                Icons.qr_code_scanner,
-                                color: Colors.blue,
-                              ),
-                              onPressed: () =>
-                                  _scanUniqueCodeInto(
-                                _unitCodeControllers[index],
-                              ),
+                        CusTextFieldLogin(
+                          txtController: _unitCodeControllers[index],
+                          verticalPadding: UIConstants.mediumSpace,
+                          horizontalPadding: UIConstants.bigSpace,
+                          hintTxt: 'Scan or enter unique barcode / serial',
+                          txtInputType: TextInputType.text,
+                          suffixIcon: IconButton(
+                            icon: const Icon(
+                              Icons.qr_code_scanner,
+                              color: Colors.blue,
+                            ),
+                            onPressed: () => _scanUniqueCodeInto(
+                              _unitCodeControllers[index],
                             ),
                           ),
-                          if (_isPhoneTablets) ...[
-                            const SizedBox(
-                              height: UIConstants.smallSpace,
-                            ),
-                            CusTextFieldLogin(
-                              txtController: _imeiControllers[index],
-                              verticalPadding: UIConstants.mediumSpace,
-                              horizontalPadding: UIConstants.bigSpace,
-                              hintTxt: 'IMEI number (Optional)',
-                              txtInputType: TextInputType.text,
-                            ),
-                          ],
+                        ),
+                        if (_isPhoneTablets) ...[
+                          const SizedBox(height: UIConstants.smallSpace),
+                          CusTextFieldLogin(
+                            txtController: _imeiControllers[index],
+                            verticalPadding: UIConstants.mediumSpace,
+                            horizontalPadding: UIConstants.bigSpace,
+                            hintTxt: 'IMEI number (Optional)',
+                            txtInputType: TextInputType.text,
+                          ),
                         ],
-                      ),
-                    );
+                      ],
+                    ),
+                  );
                 }),
               ],
               uiController.sizedBox(
@@ -754,7 +746,6 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                 ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
                 txtInputType: TextInputType.text,
               ),
-              
             ],
           ),
         ),
@@ -777,28 +768,28 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
                 horizontalpadding: UIConstants.smallSpace,
                 bdrRadius: UIConstants.mediumRadius,
                 bgClr: Colors.green,
-              
+
                 txtStyle: Theme.of(context).textTheme.titleSmall!,
                 txtClr: Theme.of(context).textTheme.titleSmall!.color!,
-                  txt: 'Create',
-                  func: () async {
-                    try {
-                      final validationError = _validateBeforeSubmit();
-                      if (validationError != null) {
-                        showValidationMessage(validationError);
-                        return;
-                      }
-                      await createNewItemList(parents!);
-                    } catch (err, st) {
-                      debugPrint(
-                        'CreateUniqueStockInScreen: submit failed itemId=${widget.itemModel.id}',
-                      );
-                      debugPrint(err.toString());
-                      debugPrint(st.toString());
-                      rethrow;
+                txt: 'Create',
+                func: () async {
+                  try {
+                    final validationError = _validateBeforeSubmit();
+                    if (validationError != null) {
+                      showValidationMessage(validationError);
+                      return;
                     }
-                  },
-                ),
+                    await createNewItemList(parents!);
+                  } catch (err, st) {
+                    debugPrint(
+                      'CreateUniqueStockInScreen: submit failed itemId=${widget.itemModel.id}',
+                    );
+                    debugPrint(err.toString());
+                    debugPrint(st.toString());
+                    rethrow;
+                  }
+                },
+              ),
 
               const SizedBox(width: UIConstants.mediumSpace),
             ],
@@ -808,9 +799,13 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
               : parents == null
               ? NoSelectedIdErrorWidget(
                   txt: 'This item has some missing group data',
-                  func: () => Navigator.of(context).pop(),
+                  func: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+                  },
                 )
-               : buildForm(parents),
+              : buildForm(parents),
         );
       },
     );

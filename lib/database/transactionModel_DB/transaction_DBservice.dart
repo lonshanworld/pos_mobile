@@ -1,4 +1,3 @@
-
 import 'package:pos_mobile/database/customer_DB/customer_Db_service.dart';
 import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_model_DbService.dart';
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
@@ -30,124 +29,187 @@ import '../itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/group_DbSto
 import '../itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/type_DbStorage.dart';
 import '../itemModel_DB/uniqueItem_DB/uniqueItem_DbStorage.dart';
 
-
-class TransactionDBService{
-  static Future<void>initTransactionDb(Database db)async{
+class TransactionDBService {
+  static Future<void> initTransactionDb(Database db) async {
     await TransactionStockInDbStorage.onCreate(db);
     await TransactionStockOutDbStorage.onCreate(db);
     await TransactionStockOutItemDbStorage.onCreate(db);
   }
 
-  static Future<void>deleteTransactionDb(Database db)async{
+  static Future<void> deleteTransactionDb(Database db) async {
     await TransactionStockOutItemDbStorage.onDelete(db);
     await TransactionStockOutDbStorage.onDelete(db);
     await TransactionStockInDbStorage.onDelete(db);
   }
 
-
-  static Future<int>insertStockIn(Database db, UserModel userModel, DateTime dateTime)async{
-    return await TransactionStockInDbStorage.insertStockIn(db: db, createPersonId: userModel.id, dateTime: dateTime);
+  static Future<int> insertStockIn(
+    Database db,
+    UserModel userModel,
+    DateTime dateTime,
+  ) async {
+    return await TransactionStockInDbStorage.insertStockIn(
+      db: db,
+      createPersonId: userModel.id,
+      dateTime: dateTime,
+    );
   }
 
-
-
-  static Future<bool>insertStockOut(
-    Database db,
-    {
-      required List<UniqueItemModel> uniqueItemList,
-      required List<ItemModelWithUniqueItemCountWithPromotion> dataList,
-      required UserModel userModel,
-      required double? deliveryCharges,
-      required double taxPercentage,
-      required double? additionalPromotionAmount,
-      required String? description,
-      required String? customerName,
-      required String? deliveryName,
-      required ShoppingType shoppingType,
-      required PaymentMethod paymentMethod,
-      required String barcode,
-      required double finalTotalPrice,
-      required PromotionModel? promotionModel,
-    }
-  )async{
-    try{
-      DateTime dateTime = DateTime.now();
+  static Future<bool> insertStockOut(
+    Database db, {
+    required List<UniqueItemModel> uniqueItemList,
+    required List<ItemModelWithUniqueItemCountWithPromotion> dataList,
+    required UserModel userModel,
+    required double? deliveryCharges,
+    required double taxPercentage,
+    required double? additionalPromotionAmount,
+    required String? description,
+    required String? customerName,
+    required String? deliveryName,
+    required ShoppingType shoppingType,
+    required PaymentMethod paymentMethod,
+    required String barcode,
+    required double finalTotalPrice,
+    required PromotionModel? promotionModel,
+    required DateTime checkoutTime,
+  }) async {
+    try {
+      DateTime dateTime = checkoutTime;
       int? customerId;
       int? deliveryModelId;
       int? deliveryPersonId;
-      if(customerName != null && customerName != ""){
+      if (customerName != null && customerName != "") {
         customerId = await CustomerDbService.addNewCustomer(db, customerName);
       }
-      if(deliveryCharges != null && deliveryCharges != 0){
-        deliveryModelId = await DeliveryModelDbService.createNewDeliveryModel(db, deliveryCharges);
+      if (deliveryCharges != null && deliveryCharges != 0) {
+        deliveryModelId = await DeliveryModelDbService.createNewDeliveryModel(
+          db,
+          deliveryCharges,
+        );
       }
-      if(deliveryName != null && deliveryName != ""){
-        deliveryPersonId = await DeliveryPersonDbService.addNewDeliveryPerson(db, deliveryName);
+      if (deliveryName != null && deliveryName != "") {
+        deliveryPersonId = await DeliveryPersonDbService.addNewDeliveryPerson(
+          db,
+          deliveryName,
+        );
       }
 
-      if(customerId == -1 || deliveryModelId == -1 || deliveryPersonId == -1){
+      if (customerId == -1 || deliveryModelId == -1 || deliveryPersonId == -1) {
         return false;
-      }else{
-        int stockOutId = await TransactionStockOutDbStorage.insertNewData(db, userModel: userModel, dateTime: dateTime, taxPercentage: taxPercentage, additionalPromotionAmount: additionalPromotionAmount, description: description, shoppingType: shoppingType, paymentMethod: paymentMethod, barcode: barcode, customerId: customerId, deliveryPersonId: deliveryPersonId, deliveryModelId: deliveryModelId, finalTotalPrice: finalTotalPrice);
-        if(stockOutId == -1) return false;
-        List<int> valueList = await TransactionStockOutItemDbStorage.insertNewDataList(db: db, dataList: dataList, stockOutId: stockOutId);
-        if(valueList.contains(-1)) return false;
+      } else {
+        int stockOutId = await TransactionStockOutDbStorage.insertNewData(
+          db,
+          userModel: userModel,
+          dateTime: dateTime,
+          taxPercentage: taxPercentage,
+          additionalPromotionAmount: additionalPromotionAmount,
+          description: description,
+          shoppingType: shoppingType,
+          paymentMethod: paymentMethod,
+          barcode: barcode,
+          customerId: customerId,
+          deliveryPersonId: deliveryPersonId,
+          deliveryModelId: deliveryModelId,
+          finalTotalPrice: finalTotalPrice,
+        );
+        if (stockOutId == -1) return false;
+        List<int> valueList =
+            await TransactionStockOutItemDbStorage.insertNewDataList(
+              db: db,
+              dataList: dataList,
+              stockOutId: stockOutId,
+            );
+        if (valueList.contains(-1)) return false;
 
-        if(promotionModel != null){
-          bool insertStockOutPromotion = await StockOutPromotionDbServive.addNewData(db: db, stockOutId: stockOutId, promotionId: promotionModel.id);
-          if(!insertStockOutPromotion) return false;
+        if (promotionModel != null) {
+          bool insertStockOutPromotion =
+              await StockOutPromotionDbServive.addNewData(
+                db: db,
+                stockOutId: stockOutId,
+                promotionId: promotionModel.id,
+              );
+          if (!insertStockOutPromotion) return false;
         }
 
-        return await stockOutUniqueItemList(db, uniqueItemList: uniqueItemList, userModel: userModel, dateTime: dateTime, stockOutId: stockOutId);
+        return await stockOutUniqueItemList(
+          db,
+          uniqueItemList: uniqueItemList,
+          userModel: userModel,
+          dateTime: dateTime,
+          stockOutId: stockOutId,
+        );
       }
-    }catch(err){
+    } catch (err) {
       cusDebugPrint(err);
       return false;
     }
   }
-  
-  static Future<List<StockOutModel>> getAllStockOutData(Database db, {int limit = 100, int offset = 0})async{
-    List<dynamic> dataList = await TransactionStockOutDbStorage.getAllData(db, limit: limit, offset: offset);
+
+  static Future<List<StockOutModel>> getAllStockOutData(
+    Database db, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    List<dynamic> dataList = await TransactionStockOutDbStorage.getAllData(
+      db,
+      limit: limit,
+      offset: offset,
+    );
     return dataList.map((e) => StockOutModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockInModel>> getAllStockInData(Database db, {int limit = 100, int offset = 0})async{
-    List<dynamic> dataList = await TransactionStockInDbStorage.getAllStockInList(db, limit: limit, offset: offset);
+  static Future<List<StockInModel>> getAllStockInData(
+    Database db, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    List<dynamic> dataList =
+        await TransactionStockInDbStorage.getAllStockInList(
+          db,
+          limit: limit,
+          offset: offset,
+        );
     return dataList.map((e) => StockInModel.fromJson(e)).toList();
   }
 
-  static Future<List<StockOutItemModel>> getAllStockOutItemData(Database db, {int limit = 100, int offset = 0})async{
-    List<dynamic> dataList = await TransactionStockOutItemDbStorage.getAllData(db, limit: limit, offset: offset);
+  static Future<List<StockOutItemModel>> getAllStockOutItemData(
+    Database db, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    List<dynamic> dataList = await TransactionStockOutItemDbStorage.getAllData(
+      db,
+      limit: limit,
+      offset: offset,
+    );
     return dataList.map((e) => StockOutItemModel.fromJson(e)).toList();
   }
 
-  static Future<bool>createStockIn(
-      Database db,
-      {
-        required UserModel userModel,
-        CategoryModel? categoryModel,
-        GroupModel? groupModel,
-        TypeModel? typeModel,
-        required ItemModel itemModel,
-        required String? code,
-        required DateTime? itemManufactureDate,
-        required DateTime? itemExpireDate,
-        required String? getItemFromWhere,
-        required int itemLength,
-        List<StockInUnitSpec>? unitSpecs,
-      }
-      )async{
+  static Future<bool> createStockIn(
+    Database db, {
+    required UserModel userModel,
+    CategoryModel? categoryModel,
+    GroupModel? groupModel,
+    TypeModel? typeModel,
+    required ItemModel itemModel,
+    required String? code,
+    required DateTime? itemManufactureDate,
+    required DateTime? itemExpireDate,
+    required String? getItemFromWhere,
+    required int itemLength,
+    List<StockInUnitSpec>? unitSpecs,
+  }) async {
     DateTime dateTime = DateTime.now();
     int stockInId = await insertStockIn(db, userModel, dateTime);
-    if(stockInId == -1){
+    if (stockInId == -1) {
       return false;
     }
     if (categoryModel != null) {
-      final categoryValue = await CategoryDbStorage.updateCategoryLastUpdateTime(
-        db,
-        dateTime,
-        categoryModel,
-      );
+      final categoryValue =
+          await CategoryDbStorage.updateCategoryLastUpdateTime(
+            db,
+            dateTime,
+            categoryModel,
+          );
       if (categoryValue == -1) return false;
     }
     if (groupModel != null) {
@@ -189,56 +251,71 @@ class TransactionDBService{
     return !uniqueIdList.contains(-1);
   }
 
-  static Future<bool>stockOutUniqueItemList(
-      Database db,
-      {
-        required List<UniqueItemModel> uniqueItemList,
-        required UserModel userModel,
-        required DateTime dateTime,
-        required int stockOutId,
-      }
-      )async{
-    List<int> idList = await UniqueItemDbStorage.stockOutUniqueItemList(db, uniqueItemList: uniqueItemList, userModel: userModel, dateTime: dateTime, stockOutId: stockOutId);
-    if(idList.contains(-1)){
+  static Future<bool> stockOutUniqueItemList(
+    Database db, {
+    required List<UniqueItemModel> uniqueItemList,
+    required UserModel userModel,
+    required DateTime dateTime,
+    required int stockOutId,
+  }) async {
+    List<int> idList = await UniqueItemDbStorage.stockOutUniqueItemList(
+      db,
+      uniqueItemList: uniqueItemList,
+      userModel: userModel,
+      dateTime: dateTime,
+      stockOutId: stockOutId,
+    );
+    if (idList.contains(-1)) {
       return false;
-    }else{
+    } else {
       return true;
     }
   }
 
-  static Future<bool>stockOutOrderCancel(
-    Database db,
-    {
-      required UserModel userModel,
-      required int stockOutId,
-      required List<ItemModel> itemModelList,
-    }
-  )async{
+  static Future<bool> stockOutOrderCancel(
+    Database db, {
+    required UserModel userModel,
+    required int stockOutId,
+    required List<ItemModel> itemModelList,
+  }) async {
     DateTime dateTime = DateTime.now();
-    try{
-      int value = await TransactionStockOutDbStorage.deActivateStockOut(db, userModel: userModel, dateTime: dateTime, stockOutId: stockOutId);
-      if(value == -1) return false;
-      bool updateValue = await UniqueItemDbService.reActivateUniqueItemList(db, userModel: userModel, stockOutId: stockOutId, dateTime: dateTime, itemModelList: itemModelList);
+    try {
+      int value = await TransactionStockOutDbStorage.deActivateStockOut(
+        db,
+        userModel: userModel,
+        dateTime: dateTime,
+        stockOutId: stockOutId,
+      );
+      if (value == -1) return false;
+      bool updateValue = await UniqueItemDbService.reActivateUniqueItemList(
+        db,
+        userModel: userModel,
+        stockOutId: stockOutId,
+        dateTime: dateTime,
+        itemModelList: itemModelList,
+      );
       return updateValue;
-    }catch(err){
+    } catch (err) {
       cusDebugPrint(err);
       return false;
-
     }
   }
 
-  static Future<bool>deleteStockOut(
-    Database db,
-    {
-      required UserModel userModel,
-      required int stockOutId,
-    }
-  )async{
+  static Future<bool> deleteStockOut(
+    Database db, {
+    required UserModel userModel,
+    required int stockOutId,
+  }) async {
     DateTime dateTime = DateTime.now();
-    try{
-      int value = await TransactionStockOutDbStorage.deActivateStockOut(db, userModel: userModel, dateTime: dateTime, stockOutId: stockOutId);
+    try {
+      int value = await TransactionStockOutDbStorage.deActivateStockOut(
+        db,
+        userModel: userModel,
+        dateTime: dateTime,
+        stockOutId: stockOutId,
+      );
       return value != -1;
-    }catch(err){
+    } catch (err) {
       cusDebugPrint(err);
       return false;
     }

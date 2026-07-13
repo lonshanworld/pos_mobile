@@ -377,9 +377,7 @@ class BusinessItemDetailFormState extends State<BusinessItemDetailForm> {
 
   Widget _itemBarcodeNote() {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: UIConstants.mediumSpace,
-      ),
+      padding: const EdgeInsets.only(bottom: UIConstants.mediumSpace),
       child: CusTxtWidget(
         txt:
             'This is not for unique item barcode. This is for item differentiation.',

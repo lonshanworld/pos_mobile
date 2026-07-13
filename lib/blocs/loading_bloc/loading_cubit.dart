@@ -100,9 +100,7 @@ class LoadingCubit extends Cubit<LoadingState> {
   void setSuccess(String txt, {bool showDialog = true}) {
     cancelLoadingLoading();
     emit(LoadingSuccess(newTxt: txt));
-    if (showDialog) {
-      showLoadingStatus();
-    }
+    _showResultSnackBar(txt, Colors.green);
     final int operationId = _loadingOperationId;
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (operationId == _loadingOperationId) {
@@ -114,7 +112,7 @@ class LoadingCubit extends Cubit<LoadingState> {
   void setFail(String txt) {
     cancelLoadingLoading();
     emit(LoadingFail(newTxt: txt));
-    showLoadingStatus();
+    _showResultSnackBar(txt, Colors.red);
 
     // Automatically report any failure shown to the user
     CrashReporter.reportError(
@@ -128,5 +126,18 @@ class LoadingCubit extends Cubit<LoadingState> {
         cancelLoadingLoading();
       }
     });
+  }
+
+  void _showResultSnackBar(String text, Color color) {
+    final messenger = mainGlobalKeys.cusGlobalScaffoldKey.currentState;
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 }

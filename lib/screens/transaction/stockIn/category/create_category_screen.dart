@@ -95,7 +95,9 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                         // open a second success dialog above it, otherwise
                         // pop() can dismiss that dialog instead of the sheet.
                         loadingCubit.setSuccess("Success !", showDialog: false);
-                        await navigator.maybePop();
+                        if (navigator.canPop()) {
+                          await navigator.maybePop();
+                        }
                       } else {
                         loadingCubit.setFail("Fail !");
                         setState(() => _isSubmitting = false);

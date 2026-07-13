@@ -157,8 +157,10 @@ class _CreateTypeScreenState extends State<CreateTypeScreen> {
 
                       if (!mounted) return;
                       if (value) {
-                        loadingCubit.setSuccess("Success !");
-                        navigator.pop();
+                        loadingCubit.setSuccess("Success !", showDialog: false);
+                        if (navigator.canPop()) {
+                          navigator.pop();
+                        }
                       } else {
                         loadingCubit.setFail("Fail !");
                       }

@@ -9,7 +9,9 @@ import 'package:pos_mobile/screens/authenticaton/merchant_setup_screen.dart';
 import 'package:pos_mobile/screens/home_screen.dart';
 import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/language_settings_screen.dart';
 import 'package:pos_mobile/screens/transaction/stockIn/uniqueItem/uniqueitem_screen.dart';
+import 'package:pos_mobile/screens/print_barcode_screen.dart';
 
 class AppRouter{
 
@@ -70,6 +72,15 @@ class AppRouter{
       case PrinterSettingsScreen.routeName:
         return MaterialPageRoute(
           builder: (BuildContext ctx) => const PrinterSettingsScreen(),
+          );
+      case LanguageSettingsScreen.routeName:
+        return MaterialPageRoute(
+          builder: (BuildContext ctx) => const LanguageSettingsScreen(),
+        );
+
+      case PrintBarcodeScreen.routeName:
+        return MaterialPageRoute(
+          builder: (BuildContext ctx) => const PrintBarcodeScreen(),
         );
 
       case GeneralSettingsScreen.routeName:

@@ -16,6 +16,7 @@ import '../../models/item_model_folder/item_model.dart';
 import '../../models/user_model_folder/user_model.dart';
 import '../../utils/formula.dart';
 import '../history/transactions_history/history_voucher_screen.dart';
+import '../../languages/app_language.dart';
 
 class DashboardStockOut extends StatelessWidget {
   const DashboardStockOut({super.key});
@@ -121,7 +122,7 @@ class DashboardStockOut extends StatelessWidget {
                               ),
                         ),
                         Text(
-                          "$totalSalePrice MMK",
+                          CurrencyFormatter.format(context, totalSalePrice),
                           style: Theme.of(context).textTheme.titleSmall!.copyWith(
                                 color: Colors.deepPurple.shade700,
                                 fontWeight: FontWeight.w900,
@@ -280,22 +281,22 @@ class DashboardStockOut extends StatelessWidget {
                             // Calculations
                             dataRow(
                               "Tax",
-                              "${CalculationFormula.getPercentageToMMK(CalculationFormula.getTotalPriceForStockOutHistory(stockOutItemList), stockOut.taxPercentage ?? 0)} MMK",
+                              CurrencyFormatter.format(context, CalculationFormula.getPercentageToMMK(CalculationFormula.getTotalPriceForStockOutHistory(stockOutItemList), stockOut.taxPercentage ?? 0)),
                             ),
                             if (stockOut.additionalPromotionAmount != null && stockOut.additionalPromotionAmount! > 0)
                               dataRow(
                                 "Discount",
-                                "-${stockOut.additionalPromotionAmount} MMK",
+                                '-${CurrencyFormatter.format(context, stockOut.additionalPromotionAmount!)}',
                               ),
                             if (deliveryModel != null)
                               dataRow(
                                 "Delivery",
-                                "${deliveryModel.deliveryCharges} MMK",
+                                CurrencyFormatter.format(context, deliveryModel.deliveryCharges ?? 0),
                               ),
                             const Divider(height: 16),
                             dataRow(
                               "Final Total",
-                              "${stockOut.finalTotalPrice} MMK",
+                              CurrencyFormatter.format(context, stockOut.finalTotalPrice),
                               isTotal: true,
                             ),
                           ],
