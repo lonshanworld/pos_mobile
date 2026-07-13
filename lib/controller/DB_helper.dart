@@ -284,6 +284,11 @@ class DBHelper {
     required bool needStock,
     required String? code,
   }) async {
+    final normalizedCode = code?.trim();
+    if (normalizedCode != null && normalizedCode.isNotEmpty) {
+      if (!await isBarcodeAvailable(normalizedCode)) return -1;
+    }
+
     return await GroupingItemDbService.createNewItem(
       database!,
       userModel: userModel,
@@ -518,7 +523,7 @@ class DBHelper {
     final itemMatches = await database!.query(
       TxtConstants.itemTableName,
       columns: const ['id'],
-      where: 'LOWER(code) = LOWER(?)',
+      where: 'LOWER(TRIM(code)) = LOWER(?)',
       whereArgs: [normalized],
       limit: 1,
     );
@@ -527,7 +532,7 @@ class DBHelper {
     final uniqueItemMatches = await database!.query(
       TxtConstants.uniqueItemTableName,
       columns: const ['id'],
-      where: 'LOWER(code) = LOWER(?)',
+      where: 'LOWER(TRIM(code)) = LOWER(?)',
       whereArgs: [normalized],
       limit: 1,
     );

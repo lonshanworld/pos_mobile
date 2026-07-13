@@ -10,6 +10,7 @@ import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
+import "package:pos_mobile/controller/DB_helper.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
@@ -497,11 +498,18 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       final itemCubit = context.read<ItemCubit>();
                       final navigator = Navigator.of(context);
 
-                      loadingCubit.setLoading("Creating ...");
                       final businessDetail = _businessFormKey.currentState
                           ?.buildDetail(0);
                       final itemBarcode = _businessFormKey.currentState
                           ?.buildItemBarcode();
+                      if (itemBarcode != null &&
+                          !await DBHelper.isBarcodeAvailable(itemBarcode)) {
+                        showValidationMessage(
+                          'This barcode is already in use. Please enter a different barcode.',
+                        );
+                        return;
+                      }
+                      loadingCubit.setLoading("Creating ...");
                       final value = await itemCubit.createNewItem(
                         userModel: userModel,
                         categoryId: _selectedCategoryId,
@@ -530,7 +538,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           navigator.pop();
                         }
                       } else {
-                        loadingCubit.setFail("Fail !");
+                        loadingCubit.setFail(
+                          "Item could not be created. Please check the barcode and item details.",
+                        );
                       }
                     }
                   },

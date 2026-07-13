@@ -134,9 +134,6 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              border: hasBarcode
-                  ? Border.all(color: Colors.green, width: 1.5)
-                  : null,
               borderRadius: BorderRadius.circular(8),
             ),
             child: CheckboxListTile(
@@ -150,7 +147,9 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                   color: hasBarcode ? Colors.green : Colors.grey,
                 ),
               ),
-              secondary: const Icon(Icons.qr_code_2),
+              secondary: hasBarcode
+                  ? const Icon(Icons.qr_code_2)
+                  : null,
               onChanged: (_) => setState(
                 () => _selected.contains(code)
                     ? _selected.remove(code)
@@ -621,9 +620,6 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          border: hasBarcode
-                              ? Border.all(color: Colors.green, width: 1.5)
-                              : null,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: CheckboxListTile(
@@ -635,7 +631,9 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                               color: hasBarcode ? Colors.green : Colors.grey,
                             ),
                           ),
-                          secondary: const Icon(Icons.qr_code_2),
+                          secondary: hasBarcode
+                              ? const Icon(Icons.qr_code_2)
+                              : null,
                           onChanged: (_) => setState(
                             () => _selected.contains(code)
                                 ? _selected.remove(code)
@@ -664,7 +662,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _addBarcode,
-                        icon: const Icon(Icons.qr_code_scanner),
+                        // icon: const Icon(Icons.qr_code_scanner),
                         label: const Text('Add barcode'),
                       ),
                     ),
@@ -672,7 +670,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _generate,
-                        icon: const Icon(Icons.auto_awesome),
+                        // icon: const Icon(Icons.auto_awesome),
                         label: const Text('Generate barcode'),
                       ),
                     ),
@@ -680,7 +678,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: _print,
-                        icon: const Icon(Icons.print),
+                        // icon: const Icon(Icons.print),
                         label: const Text('Print barcode'),
                       ),
                     ),

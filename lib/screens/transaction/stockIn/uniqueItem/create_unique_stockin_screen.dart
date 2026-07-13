@@ -397,6 +397,22 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
         return;
       }
 
+      final seenBarcodes = <String>{};
+      for (final spec in unitSpecs ?? const <StockInUnitSpec>[]) {
+        final barcode = spec.code?.trim();
+        if (barcode == null || barcode.isEmpty) continue;
+
+        if (!seenBarcodes.add(barcode.toLowerCase())) {
+          showValidationMessage('Duplicate barcode: $barcode');
+          return;
+        }
+
+        if (!await DBHelper.isBarcodeAvailable(barcode)) {
+          showValidationMessage('Barcode already exists: $barcode');
+          return;
+        }
+      }
+
       final int itemLength =
           unitSpecs?.length ?? (widget.batchStockIn ? moreItem : 1);
 
@@ -430,7 +446,9 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
             navigator.pop();
           }
         } else {
-          loadingCubit.setFail('Fail !');
+          loadingCubit.setFail(
+            'Stock could not be added. A barcode may already be in use; please use a different barcode.',
+          );
         }
       } catch (err, st) {
         debugPrint(

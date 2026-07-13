@@ -353,6 +353,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
         barCode: _barCode,
         taxPercentage: widget.taxPercentage,
         promotionModel: widget.promotionModel,
+        orderDateTime: widget.checkoutTime,
         showAdditionalPromotion: showAdditionalPromotion,
       ),
     );

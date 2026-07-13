@@ -16,6 +16,7 @@ import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../constants/enums.dart';
+import '../../constants/txtconstants.dart';
 import '../../models/groupingItem_models_folders/category_model.dart';
 import '../../models/groupingItem_models_folders/group_model.dart';
 import '../../models/groupingItem_models_folders/type_model.dart';
@@ -198,6 +199,44 @@ class TransactionDBService {
     required int itemLength,
     List<StockInUnitSpec>? unitSpecs,
   }) async {
+    // Validate all barcodes before creating the stock-in transaction. This
+    // protects callers that do not go through the stock-in form validation.
+    final stockInCodes = <String>[];
+    if (code != null && code.trim().isNotEmpty) {
+      stockInCodes.add(code.trim());
+    }
+    for (final spec in unitSpecs ?? const <StockInUnitSpec>[]) {
+      final unitCode = spec.code?.trim();
+      if (unitCode != null && unitCode.isNotEmpty) {
+        stockInCodes.add(unitCode);
+      }
+    }
+
+    final normalizedCodes = <String>{};
+    for (final stockInCode in stockInCodes) {
+      if (!normalizedCodes.add(stockInCode.toLowerCase())) {
+        return false;
+      }
+
+      final itemMatches = await db.query(
+        TxtConstants.itemTableName,
+        columns: const ['id'],
+        where: 'LOWER(TRIM(code)) = LOWER(?)',
+        whereArgs: [stockInCode],
+        limit: 1,
+      );
+      if (itemMatches.isNotEmpty) return false;
+
+      final uniqueItemMatches = await db.query(
+        TxtConstants.uniqueItemTableName,
+        columns: const ['id'],
+        where: 'LOWER(TRIM(code)) = LOWER(?)',
+        whereArgs: [stockInCode],
+        limit: 1,
+      );
+      if (uniqueItemMatches.isNotEmpty) return false;
+    }
+
     DateTime dateTime = DateTime.now();
     int stockInId = await insertStockIn(db, userModel, dateTime);
     if (stockInId == -1) {
