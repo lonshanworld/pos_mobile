@@ -24,41 +24,43 @@ import '../../models/user_model_folder/user_model.dart';
 part 'item_state.dart';
 
 class ItemCubit extends Cubit<ItemState> {
-
   Map<int, ItemBusinessDetailModel> _businessDetailMap = {};
 
   ItemBusinessDetailModel? getBusinessDetail(int itemId) =>
       _businessDetailMap[itemId];
 
-  ItemCubit() : super(const ItemData(
-    activeCategoryList: [],
-    activeGroupList: [],
-    activeTypeList: [],
-    allActiveCategoryList: [],
-    allActiveGroupList: [],
-    allActiveTypeList: [],
-    activeItemList: [],
-    activeUniqueItemList: [],
-    inActiveCategoryList: [],
-    inActiveGroupList: [],
-    inActiveTypeList: [],
-    inActiveItemList: [],
-    inActiveUniqueItemList: [],
-    categoryGroupCountMap: {},
-    groupTypeCountMap: {},
-    totalCategoryCount: 0,
-    categoryOffset: 0,
-    hasMoreCategory: true,
-    isLoadingMoreCategory: false,
-    groupOffset: 0,
-    hasMoreGroup: true,
-    isLoadingMoreGroup: false,
-  )) {
+  ItemCubit()
+    : super(
+        const ItemData(
+          activeCategoryList: [],
+          activeGroupList: [],
+          activeTypeList: [],
+          allActiveCategoryList: [],
+          allActiveGroupList: [],
+          allActiveTypeList: [],
+          activeItemList: [],
+          activeUniqueItemList: [],
+          inActiveCategoryList: [],
+          inActiveGroupList: [],
+          inActiveTypeList: [],
+          inActiveItemList: [],
+          inActiveUniqueItemList: [],
+          categoryGroupCountMap: {},
+          groupTypeCountMap: {},
+          totalCategoryCount: 0,
+          categoryOffset: 0,
+          hasMoreCategory: true,
+          isLoadingMoreCategory: false,
+          groupOffset: 0,
+          hasMoreGroup: true,
+          isLoadingMoreGroup: false,
+        ),
+      ) {
     _initAllItemData();
   }
 
-  Future<void>_initAllItemData()async{
-    try{
+  Future<void> _initAllItemData() async {
+    try {
       final Map<String, List> data = await DBHelper.getAllItemData(
         limit: UIConstants.defaultPageLimit,
         offset: 0,
@@ -68,14 +70,18 @@ class ItemCubit extends Cubit<ItemState> {
         for (final detail in businessDetails) detail.itemId: detail,
       };
       final int totalCategoryCount = await DBHelper.getTotalCategoryCount();
-      final Map<int, int> categoryGroupCountMap = await DBHelper.getGroupCountByCategory();
-      final Map<int, int> groupTypeCountMap = await DBHelper.getTypeCountByGroup();
+      final Map<int, int> categoryGroupCountMap =
+          await DBHelper.getGroupCountByCategory();
+      final Map<int, int> groupTypeCountMap =
+          await DBHelper.getTypeCountByGroup();
       final List<CategoryModel> allActiveCategoryList =
           _filterActiveCategoryList(await DBHelper.getAllActiveCategories());
-      final List<GroupModel> allActiveGroupList =
-          _filterActiveGroupList(await DBHelper.getAllActiveGroups());
-      final List<TypeModel> allActiveTypeList =
-          _filterActiveTypeList(await DBHelper.getAllActiveTypes());
+      final List<GroupModel> allActiveGroupList = _filterActiveGroupList(
+        await DBHelper.getAllActiveGroups(),
+      );
+      final List<TypeModel> allActiveTypeList = _filterActiveTypeList(
+        await DBHelper.getAllActiveTypes(),
+      );
 
       final List<CategoryModel> rawCategoryList =
           (data["category"] as List<CategoryModel>?) ?? <CategoryModel>[];
@@ -86,8 +92,7 @@ class ItemCubit extends Cubit<ItemState> {
       final List<ItemModel> rawItemList =
           (data["item"] as List<ItemModel>?) ?? <ItemModel>[];
       final List<UniqueItemModel> rawUniqueItemList =
-          (data["uniqueItem"] as List<UniqueItemModel>?) ??
-          <UniqueItemModel>[];
+          (data["uniqueItem"] as List<UniqueItemModel>?) ?? <UniqueItemModel>[];
 
       List<CategoryModel> activeCategoryList = [];
       List<CategoryModel> inActiveCategoryList = [];
@@ -140,61 +145,65 @@ class ItemCubit extends Cubit<ItemState> {
         }
       }
 
-      emit(ItemData(
-        activeCategoryList: activeCategoryList,
-        activeGroupList: activeGroupList,
-        activeTypeList: activeTypeList,
-        allActiveCategoryList: allActiveCategoryList,
-        allActiveGroupList: allActiveGroupList,
-        allActiveTypeList: allActiveTypeList,
-        activeItemList: activeItemList,
-        activeUniqueItemList: activeUniqueItemList,
-        inActiveCategoryList: inActiveCategoryList,
-        inActiveGroupList: inActiveGroupList,
-        inActiveTypeList: inActiveTypeList,
-        inActiveItemList: inActiveItemList,
-        inActiveUniqueItemList: inActiveUniqueItemList,
-        categoryGroupCountMap: categoryGroupCountMap,
-        groupTypeCountMap: groupTypeCountMap,
-        totalCategoryCount: totalCategoryCount,
-        categoryOffset: 0,
-        hasMoreCategory:
-            rawCategoryList.length == UIConstants.defaultPageLimit,
-        isLoadingMoreCategory: false,
-        groupOffset: 0,
-        hasMoreGroup: rawGroupList.length == UIConstants.defaultPageLimit,
-        isLoadingMoreGroup: false,
-      ));
-    }catch(err){
+      emit(
+        ItemData(
+          activeCategoryList: activeCategoryList,
+          activeGroupList: activeGroupList,
+          activeTypeList: activeTypeList,
+          allActiveCategoryList: allActiveCategoryList,
+          allActiveGroupList: allActiveGroupList,
+          allActiveTypeList: allActiveTypeList,
+          activeItemList: activeItemList,
+          activeUniqueItemList: activeUniqueItemList,
+          inActiveCategoryList: inActiveCategoryList,
+          inActiveGroupList: inActiveGroupList,
+          inActiveTypeList: inActiveTypeList,
+          inActiveItemList: inActiveItemList,
+          inActiveUniqueItemList: inActiveUniqueItemList,
+          categoryGroupCountMap: categoryGroupCountMap,
+          groupTypeCountMap: groupTypeCountMap,
+          totalCategoryCount: totalCategoryCount,
+          categoryOffset: 0,
+          hasMoreCategory:
+              rawCategoryList.length == UIConstants.defaultPageLimit,
+          isLoadingMoreCategory: false,
+          groupOffset: 0,
+          hasMoreGroup: rawGroupList.length == UIConstants.defaultPageLimit,
+          isLoadingMoreGroup: false,
+        ),
+      );
+    } catch (err) {
       cusDebugPrint('Failed to initialize item data: $err');
-      emit(const ItemData(
-        activeCategoryList: [],
-        activeGroupList: [],
-        activeTypeList: [],
-        allActiveCategoryList: [],
-        allActiveGroupList: [],
-        allActiveTypeList: [],
-        activeItemList: [],
-        activeUniqueItemList: [],
-        inActiveCategoryList: [],
-        inActiveGroupList: [],
-        inActiveTypeList: [],
-        inActiveItemList: [],
-        inActiveUniqueItemList: [],
-        categoryGroupCountMap: {},
-        groupTypeCountMap: {},
-        totalCategoryCount: 0,
-        categoryOffset: 0,
-        hasMoreCategory: false,
-        isLoadingMoreCategory: false,
-        groupOffset: 0,
-        hasMoreGroup: false,
-        isLoadingMoreGroup: false,
-      ));
+      emit(
+        const ItemData(
+          activeCategoryList: [],
+          activeGroupList: [],
+          activeTypeList: [],
+          allActiveCategoryList: [],
+          allActiveGroupList: [],
+          allActiveTypeList: [],
+          activeItemList: [],
+          activeUniqueItemList: [],
+          inActiveCategoryList: [],
+          inActiveGroupList: [],
+          inActiveTypeList: [],
+          inActiveItemList: [],
+          inActiveUniqueItemList: [],
+          categoryGroupCountMap: {},
+          groupTypeCountMap: {},
+          totalCategoryCount: 0,
+          categoryOffset: 0,
+          hasMoreCategory: false,
+          isLoadingMoreCategory: false,
+          groupOffset: 0,
+          hasMoreGroup: false,
+          isLoadingMoreGroup: false,
+        ),
+      );
     }
   }
 
-  Future<void>reloadAllItem()async{
+  Future<void> reloadAllItem() async {
     await _initAllItemData();
   }
 
@@ -215,15 +224,19 @@ class ItemCubit extends Cubit<ItemState> {
 
     emit((state as ItemData).copyWith(isLoadingMoreCategory: true));
 
-    try{
+    try {
       final int newOffset = state.categoryOffset + UIConstants.defaultPageLimit;
       List<CategoryModel> moreCategories = await DBHelper.getAllCategories(
         limit: UIConstants.defaultPageLimit,
         offset: newOffset,
       );
 
-      List<CategoryModel> newActiveCategoryList = List.from(state.activeCategoryList);
-      List<CategoryModel> newInActiveCategoryList = List.from(state.inActiveCategoryList);
+      List<CategoryModel> newActiveCategoryList = List.from(
+        state.activeCategoryList,
+      );
+      List<CategoryModel> newInActiveCategoryList = List.from(
+        state.inActiveCategoryList,
+      );
 
       for (var category in moreCategories) {
         if (category.activeStatus) {
@@ -233,14 +246,17 @@ class ItemCubit extends Cubit<ItemState> {
         }
       }
 
-      emit((state as ItemData).copyWith(
-        activeCategoryList: newActiveCategoryList,
-        inActiveCategoryList: newInActiveCategoryList,
-        categoryOffset: newOffset,
-        hasMoreCategory: moreCategories.length == UIConstants.defaultPageLimit,
-        isLoadingMoreCategory: false,
-      ));
-    }catch(e){
+      emit(
+        (state as ItemData).copyWith(
+          activeCategoryList: newActiveCategoryList,
+          inActiveCategoryList: newInActiveCategoryList,
+          categoryOffset: newOffset,
+          hasMoreCategory:
+              moreCategories.length == UIConstants.defaultPageLimit,
+          isLoadingMoreCategory: false,
+        ),
+      );
+    } catch (e) {
       cusDebugPrint('Failed to load more categories: $e');
       emit((state as ItemData).copyWith(isLoadingMoreCategory: false));
     }
@@ -251,7 +267,7 @@ class ItemCubit extends Cubit<ItemState> {
 
     emit((state as ItemData).copyWith(isLoadingMoreGroup: true));
 
-    try{
+    try {
       final int newOffset = state.groupOffset + UIConstants.defaultPageLimit;
       List<GroupModel> moreGroups = await DBHelper.getAllGroups(
         limit: UIConstants.defaultPageLimit,
@@ -259,7 +275,9 @@ class ItemCubit extends Cubit<ItemState> {
       );
 
       List<GroupModel> newActiveGroupList = List.from(state.activeGroupList);
-      List<GroupModel> newInActiveGroupList = List.from(state.inActiveGroupList);
+      List<GroupModel> newInActiveGroupList = List.from(
+        state.inActiveGroupList,
+      );
 
       for (var group in moreGroups) {
         if (group.activeStatus) {
@@ -269,38 +287,45 @@ class ItemCubit extends Cubit<ItemState> {
         }
       }
 
-      emit((state as ItemData).copyWith(
-        activeGroupList: newActiveGroupList,
-        inActiveGroupList: newInActiveGroupList,
-        groupOffset: newOffset,
-        hasMoreGroup: moreGroups.length == UIConstants.defaultPageLimit,
-        isLoadingMoreGroup: false,
-      ));
-    }catch(e){
+      emit(
+        (state as ItemData).copyWith(
+          activeGroupList: newActiveGroupList,
+          inActiveGroupList: newInActiveGroupList,
+          groupOffset: newOffset,
+          hasMoreGroup: moreGroups.length == UIConstants.defaultPageLimit,
+          isLoadingMoreGroup: false,
+        ),
+      );
+    } catch (e) {
       cusDebugPrint('Failed to load more groups: $e');
       emit((state as ItemData).copyWith(isLoadingMoreGroup: false));
     }
   }
 
   //filter
-  List<ItemModelWithUniqueItemCountWithPromotion> getItemListWithCountFromUniqueItemListWithPromotion({
+  List<ItemModelWithUniqueItemCountWithPromotion>
+  getItemListWithCountFromUniqueItemListWithPromotion({
     required List<UniqueItemModel> uniqueItemList,
-    required List<ItemModel> itemModelList, 
+    required List<ItemModel> itemModelList,
     required List<PromotionModel> activePromotionList,
-    required List<ItemPromotionModel> itemPromotionList
-  }){
+    required List<ItemPromotionModel> itemPromotionList,
+  }) {
     List<ItemModelWithUniqueItemCountWithPromotion> dataList = [];
-    for(int i = 0; i < itemModelList.length; i++){
+    for (int i = 0; i < itemModelList.length; i++) {
       PromotionModel? promotion;
-      ItemPromotionModel? datajoint = itemPromotionList.firstWhereOrNull((element) => element.itemId == itemModelList[i].id);
-      if(datajoint != null){
-        promotion = activePromotionList.firstWhereOrNull((element) => element.id == datajoint.promotionId);
+      ItemPromotionModel? datajoint = itemPromotionList.firstWhereOrNull(
+        (element) => element.itemId == itemModelList[i].id,
+      );
+      if (datajoint != null) {
+        promotion = activePromotionList.firstWhereOrNull(
+          (element) => element.id == datajoint.promotionId,
+        );
       }
 
       int count = 0;
-      for(int j = 0; j < uniqueItemList.length; j++){
-        if(itemModelList[i].id == uniqueItemList[j].itemId){
-          count ++;
+      for (int j = 0; j < uniqueItemList.length; j++) {
+        if (itemModelList[i].id == uniqueItemList[j].itemId) {
+          count++;
         }
       }
 
@@ -321,79 +346,89 @@ class ItemCubit extends Cubit<ItemState> {
         promotionPrice: promotion?.promotionPrice,
       );
 
-      dataList.add(ItemModelWithUniqueItemCountWithPromotion(
-        itemModel: itemModelList[i],
-        count: count,
-        promotion: promotion,
-        avgOriginalPrice: count > 0
-            ? agg.avgOriginal
-            : itemModelList[i].originalPrice,
-        avgSellPrice: count > 0 ? agg.avgSell : fallbackSell,
-        avgFinalSellPrice: count > 0 ? agg.avgFinal : fallbackFinal,
-        lineTotal: count > 0 ? agg.lineTotal : 0,
-      ));
+      dataList.add(
+        ItemModelWithUniqueItemCountWithPromotion(
+          itemModel: itemModelList[i],
+          count: count,
+          promotion: promotion,
+          avgOriginalPrice: count > 0
+              ? agg.avgOriginal
+              : itemModelList[i].originalPrice,
+          avgSellPrice: count > 0 ? agg.avgSell : fallbackSell,
+          avgFinalSellPrice: count > 0 ? agg.avgFinal : fallbackFinal,
+          lineTotal: count > 0 ? agg.lineTotal : 0,
+        ),
+      );
     }
     return dataList;
   }
   //filter
 
-
-
-
   // stockIn
-  Future<bool>createNewCategory(UserModel userModel, String categoryName)async{
-    try{
+  Future<bool> createNewCategory(
+    UserModel userModel,
+    String categoryName,
+  ) async {
+    try {
       bool value = await DBHelper.createNewCategory(userModel, categoryName);
       await _initAllItemData();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create category: $e');
       return false;
     }
   }
 
-  Future<bool>createNewGroup({
+  Future<bool> createNewGroup({
     required UserModel userModel,
     CategoryModel? categoryModel,
     required String groupName,
     required String? description,
-  })async{
-    try{
-      bool value = await DBHelper.createNewGroup(userModel: userModel, categoryModel: categoryModel, groupName: groupName, description: description);
+  }) async {
+    try {
+      bool value = await DBHelper.createNewGroup(
+        userModel: userModel,
+        categoryModel: categoryModel,
+        groupName: groupName,
+        description: description,
+      );
       await _initAllItemData();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create group: $e');
       return false;
     }
   }
 
-  Future<bool>createNewType({
+  Future<bool> createNewType({
     required UserModel userModel,
     CategoryModel? categoryModel,
     GroupModel? groupModel,
     required String typeName,
     required String? generalDescription,
     required bool hasExpire,
-  })async{
-    try{
+  }) async {
+    try {
       bool value = await DBHelper.createNewType(
         userModel: userModel,
         categoryModel: categoryModel,
         groupModel: groupModel,
         typeName: typeName,
-        generalDescription: (generalDescription == null || generalDescription == "") ? null : generalDescription,
+        generalDescription:
+            (generalDescription == null || generalDescription == "")
+            ? null
+            : generalDescription,
         hasExpire: hasExpire,
       );
       await _initAllItemData();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create type: $e');
       return false;
     }
   }
 
-  Future<bool>createNewItem({
+  Future<bool> createNewItem({
     required UserModel userModel,
     required int? categoryId,
     required int? groupId,
@@ -406,24 +441,32 @@ class ItemCubit extends Cubit<ItemState> {
     required double taxPercentage,
     required bool needStock,
     required String? code,
+    String? imagePath,
     ItemBusinessDetailModel? businessDetail,
-  })async{
-    try{
+  }) async {
+    try {
       final int itemId = await DBHelper.createNewItem(
-          userModel: userModel,
-          categoryId: categoryId,
-          groupId: groupId,
-          typeModel: typeModel,
-          name: name,
-          description: description,
-          hasExpire: hasExpire,
-          profitPrice: profitPrice,
-          originalPrice: originalPrice,
-          taxPercentage: taxPercentage,
-          needStock: needStock,
-          code: code,
+        userModel: userModel,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeModel: typeModel,
+        name: name,
+        description: description,
+        hasExpire: hasExpire,
+        profitPrice: profitPrice,
+        originalPrice: originalPrice,
+        taxPercentage: taxPercentage,
+        needStock: needStock,
+        code: code,
       );
       if (itemId <= 0) return false;
+      if (imagePath != null) {
+        final imageId = await DBHelper.saveItemImage(
+          itemId: itemId,
+          imagePath: imagePath,
+        );
+        if (imageId <= 0) return false;
+      }
       if (businessDetail != null && !businessDetail.isEmpty) {
         await DBHelper.saveItemBusinessDetail(
           ItemBusinessDetailModel(
@@ -453,7 +496,7 @@ class ItemCubit extends Cubit<ItemState> {
       }
       await _initAllItemData();
       return true;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create item: $e');
       return false;
     }
@@ -471,12 +514,10 @@ class ItemCubit extends Cubit<ItemState> {
     return ok;
   }
 
-  
-
-  List<GroupModel> getSelectedGroupList(int? id){
+  List<GroupModel> getSelectedGroupList(int? id) {
     List<GroupModel> newList = [];
-    for(int a = 0 ; a < state.allActiveGroupList.length; a++){
-      if(id == state.allActiveGroupList[a].categoryId){
+    for (int a = 0; a < state.allActiveGroupList.length; a++) {
+      if (id == state.allActiveGroupList[a].categoryId) {
         newList.add(state.allActiveGroupList[a]);
       }
     }
@@ -488,17 +529,19 @@ class ItemCubit extends Cubit<ItemState> {
   }
 
   int getItemCountForCategory(int categoryId) {
-    return state.activeItemList.where((item) => item.categoryId == categoryId).length;
+    return state.activeItemList
+        .where((item) => item.categoryId == categoryId)
+        .length;
   }
 
   int getTotalCategoryCount() {
     return state.totalCategoryCount;
   }
 
-  List<TypeModel> getSelectedTypeList(int? id){
+  List<TypeModel> getSelectedTypeList(int? id) {
     List<TypeModel> newList = [];
-    for(int a = 0 ; a < state.allActiveTypeList.length; a++){
-      if(id == state.allActiveTypeList[a].groupId){
+    for (int a = 0; a < state.allActiveTypeList.length; a++) {
+      if (id == state.allActiveTypeList[a].groupId) {
         newList.add(state.allActiveTypeList[a]);
       }
     }
@@ -517,21 +560,21 @@ class ItemCubit extends Cubit<ItemState> {
     return state.activeItemList.where((item) => item.typeId == typeId).length;
   }
 
-  List<ItemModel>getSelectedItemList(int? id){
+  List<ItemModel> getSelectedItemList(int? id) {
     List<ItemModel> newList = [];
-    for(int a = 0; a < state.activeItemList.length; a++){
-      if(id == state.activeItemList[a].typeId){
+    for (int a = 0; a < state.activeItemList.length; a++) {
+      if (id == state.activeItemList[a].typeId) {
         newList.add(state.activeItemList[a]);
       }
     }
     return newList;
   }
 
-  List<UniqueItemModel>getSelectedUniqueItemList(int itemId){
+  List<UniqueItemModel> getSelectedUniqueItemList(int itemId) {
     List<UniqueItemModel> newList = [];
-    for(int a = 0; a < state.activeUniqueItemList.length; a++){
-      if(itemId == state.activeUniqueItemList[a].itemId &&
-          state.activeUniqueItemList[a].stockOutId == null){
+    for (int a = 0; a < state.activeUniqueItemList.length; a++) {
+      if (itemId == state.activeUniqueItemList[a].itemId &&
+          state.activeUniqueItemList[a].stockOutId == null) {
         newList.add(state.activeUniqueItemList[a]);
       }
     }
@@ -580,11 +623,11 @@ class ItemCubit extends Cubit<ItemState> {
   //   return newList;
   // }
 
-  List<UniqueItemModel> getSelectedUniqueItemFromStockOutId(int stockOutId){
-
+  List<UniqueItemModel> getSelectedUniqueItemFromStockOutId(int stockOutId) {
     List<UniqueItemModel> dataList = [];
-    for(int i = 0; i < state.inActiveUniqueItemList.length; i++){
-      if(state.inActiveUniqueItemList[i].stockOutId != null && state.inActiveUniqueItemList[i].stockOutId == stockOutId){
+    for (int i = 0; i < state.inActiveUniqueItemList.length; i++) {
+      if (state.inActiveUniqueItemList[i].stockOutId != null &&
+          state.inActiveUniqueItemList[i].stockOutId == stockOutId) {
         dataList.add(state.inActiveUniqueItemList[i]);
       }
     }
@@ -592,63 +635,71 @@ class ItemCubit extends Cubit<ItemState> {
     return dataList;
   }
 
-  CategoryModel getCategory(int id){
-    return state.activeCategoryList.firstWhereOrNull((element) => element.id == id)!;
-  }
-  
-  GroupModel getGroup(int id){
-    return state.activeGroupList.firstWhereOrNull((element) => element.id == id)!;
+  CategoryModel getCategory(int id) {
+    return state.activeCategoryList.firstWhereOrNull(
+      (element) => element.id == id,
+    )!;
   }
 
-  TypeModel? getType(int id){
+  GroupModel getGroup(int id) {
+    return state.activeGroupList.firstWhereOrNull(
+      (element) => element.id == id,
+    )!;
+  }
+
+  TypeModel? getType(int id) {
     return state.activeTypeList.firstWhereOrNull((element) => element.id == id);
   }
 
-  ItemModel? getItem(int id){
+  ItemModel? getItem(int id) {
     return state.activeItemList.firstWhereOrNull((element) => element.id == id);
   }
-// stockIn
-
-
-
-
-  
-
-
-
+  // stockIn
 
   // Edit
-  Future<bool>editCategoryName({
+  Future<bool> editCategoryName({
     required String name,
     required UserModel userModel,
     required CategoryModel categoryModel,
-  })async{
-    bool value = await DBHelper.editCategoryName(name: name, userModel: userModel, categoryModel: categoryModel);
+  }) async {
+    bool value = await DBHelper.editCategoryName(
+      name: name,
+      userModel: userModel,
+      categoryModel: categoryModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>editGroupName({
+  Future<bool> editGroupName({
     required String newName,
     required UserModel userModel,
     required GroupModel groupModel,
-  })async{
-    bool value = await DBHelper.editGroupName(newName: newName, userModel: userModel, groupModel: groupModel);
+  }) async {
+    bool value = await DBHelper.editGroupName(
+      newName: newName,
+      userModel: userModel,
+      groupModel: groupModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>editTypeName({
+  Future<bool> editTypeName({
     required String newName,
     required UserModel userModel,
     required TypeModel typeModel,
-  })async{
-    bool value = await DBHelper.editType(newName: newName, userModel: userModel, typeModel: typeModel);
+  }) async {
+    bool value = await DBHelper.editType(
+      newName: newName,
+      userModel: userModel,
+      typeModel: typeModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>editItem({
+  Future<bool> editItem({
     required UserModel userModel,
     required ItemModel itemModel,
     required String newName,
@@ -663,14 +714,14 @@ class ItemCubit extends Cubit<ItemState> {
     required String? newCode,
     ItemBusinessDetailModel? existingBusinessDetail,
     ItemBusinessDetailModel? businessDetail,
-  })async{
-    List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(itemModel.id);
+  }) async {
+    List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(
+      itemModel.id,
+    );
     if (businessType == BusinessType.clothing &&
         _isMeasurementBasedClothingDetail(existingBusinessDetail)) {
       uniqueItemList = uniqueItemList
-          .where(
-            (unit) => _matchesFullPieceSize(unit, existingBusinessDetail!),
-          )
+          .where((unit) => _matchesFullPieceSize(unit, existingBusinessDetail!))
           .toList();
     }
     bool value = await DBHelper.editItem(
@@ -719,58 +770,80 @@ class ItemCubit extends Cubit<ItemState> {
   }
   // edit
 
-
-
-
   // delete
-  Future<bool>deleteCategory(UserModel userModel, CategoryModel categoryModel)async{
-    bool value = await DBHelper.deleteCategory(userModel: userModel, categoryModel: categoryModel);
+  Future<bool> deleteCategory(
+    UserModel userModel,
+    CategoryModel categoryModel,
+  ) async {
+    bool value = await DBHelper.deleteCategory(
+      userModel: userModel,
+      categoryModel: categoryModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>deleteGroup(UserModel userModel, GroupModel groupModel)async{
-    bool value = await DBHelper.deleteGroup(userModel: userModel, groupModel: groupModel);
+  Future<bool> deleteGroup(UserModel userModel, GroupModel groupModel) async {
+    bool value = await DBHelper.deleteGroup(
+      userModel: userModel,
+      groupModel: groupModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>deleteType(UserModel userModel, TypeModel typeModel)async{
-    bool value = await DBHelper.deleteType(userModel: userModel, typeModel: typeModel);
+  Future<bool> deleteType(UserModel userModel, TypeModel typeModel) async {
+    bool value = await DBHelper.deleteType(
+      userModel: userModel,
+      typeModel: typeModel,
+    );
     await _initAllItemData();
     return value;
   }
 
-  Future<bool>deleteItem(UserModel userModel, ItemModel itemModel)async{
-    List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(itemModel.id);
-    bool value = await DBHelper.deleteItem(userModel: userModel, itemModel: itemModel, uniqueItemList:  uniqueItemList);
+  Future<bool> deleteItem(UserModel userModel, ItemModel itemModel) async {
+    List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(
+      itemModel.id,
+    );
+    bool value = await DBHelper.deleteItem(
+      userModel: userModel,
+      itemModel: itemModel,
+      uniqueItemList: uniqueItemList,
+    );
     await _initAllItemData();
     return value;
   }
 
-  List<UniqueItemModel> filterInActiveUniqueItemList (){
+  List<UniqueItemModel> filterInActiveUniqueItemList() {
     List<UniqueItemModel> newList = [];
-    for(int i = 0; i < state.inActiveUniqueItemList.length; i++){
-      if(state.inActiveUniqueItemList[i].activeStatus == false && state.inActiveUniqueItemList[i].stockOutId != null){
+    for (int i = 0; i < state.inActiveUniqueItemList.length; i++) {
+      if (state.inActiveUniqueItemList[i].activeStatus == false &&
+          state.inActiveUniqueItemList[i].stockOutId != null) {
         newList.add(state.inActiveUniqueItemList[i]);
       }
     }
     return newList;
   }
 
-
-  List<ItemModel> getItemListFromSelectedUniqueItemList(List<UniqueItemModel> uniqueItemList){
+  List<ItemModel> getItemListFromSelectedUniqueItemList(
+    List<UniqueItemModel> uniqueItemList,
+  ) {
     List<int> idList = [];
-    for(int a = 0; a < uniqueItemList.length; a++){
-      if(!idList.contains(uniqueItemList[a].itemId)){
+    for (int a = 0; a < uniqueItemList.length; a++) {
+      if (!idList.contains(uniqueItemList[a].itemId)) {
         idList.add(uniqueItemList[a].itemId);
       }
     }
-    List <ItemModel> allItemList = [...state.activeItemList, ...state.inActiveItemList];
+    List<ItemModel> allItemList = [
+      ...state.activeItemList,
+      ...state.inActiveItemList,
+    ];
     List<ItemModel> dataList = [];
-    for(int b = 0; b < idList.length; b++){
-      ItemModel? itemModel = allItemList.firstWhereOrNull((element) => element.id == idList[b]);
-      if(itemModel != null){
+    for (int b = 0; b < idList.length; b++) {
+      ItemModel? itemModel = allItemList.firstWhereOrNull(
+        (element) => element.id == idList[b],
+      );
+      if (itemModel != null) {
         dataList.add(itemModel);
       }
     }
@@ -778,10 +851,12 @@ class ItemCubit extends Cubit<ItemState> {
     return dataList;
   }
 
-  Future<bool>deleteUniqueItem(UniqueItemModel uniqueItemModel, UserModel userModel)async{
+  Future<bool> deleteUniqueItem(
+    UniqueItemModel uniqueItemModel,
+    UserModel userModel,
+  ) async {
     bool value = await DBHelper.deleteUniqueItem(uniqueItemModel, userModel);
-    if(value) reloadAllItem();
+    if (value) reloadAllItem();
     return value;
   }
-
 }

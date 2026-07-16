@@ -9,6 +9,7 @@ import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
 import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
+import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/Item_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/junction_folder/item_promotion_db/item_promotion_DbService.dart';
@@ -304,6 +305,23 @@ class DBHelper {
       needStock: needStock,
       code: code,
     );
+  }
+
+  static Future<int> saveItemImage({
+    required int itemId,
+    required String imagePath,
+  }) async {
+    final imageId = await ImageDbService.insertImage(database!, imagePath);
+    final updated = await ItemDbStorage.updateImageId(
+      database!,
+      itemId: itemId,
+      imageId: imageId,
+    );
+    return updated == 0 ? -1 : imageId;
+  }
+
+  static Future<String?> getImagePath(int imageId) async {
+    return await ImageDbService.getImagePath(database!, imageId);
   }
 
   static Future<List<ItemBusinessDetailModel>>

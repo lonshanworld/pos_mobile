@@ -19,6 +19,7 @@ import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
 import 'package:pos_mobile/utils/checkout_helpers.dart';
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/widgets/checkout_line_detail.dart';
+import 'package:pos_mobile/widgets/item_image_widget.dart';
 
 class StockOutItemBoxWidget extends StatefulWidget {
   final ItemModel itemModel;
@@ -756,12 +757,10 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           children: [
                             Container(
                               color: Colors.grey.withValues(alpha: 0.05),
-                              child: Center(
-                                child: Icon(
-                                  Icons.inventory_2,
-                                  size: iconSize,
-                                  color: Colors.grey.withValues(alpha: 0.25),
-                                ),
+                              child: ItemImageWidget(
+                                imageId: widget.itemModel.imageId,
+                                fallbackIcon: Icons.inventory_2,
+                                fallbackIconSize: iconSize,
                               ),
                             ),
                             Positioned(

@@ -24,6 +24,7 @@ import '../../screens/confirm_screens_folder/comfirm_screen.dart';
 import '../../utils/checkout_helpers.dart';
 import "../../utils/formula.dart";
 import "../cusPopMenuItem_widget.dart";
+import "../item_image_widget.dart";
 
 class ItemBoxWidget extends StatelessWidget {
   final int index;
@@ -320,13 +321,7 @@ class ItemBoxWidget extends StatelessWidget {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Center(
-                              child: Icon(
-                                Icons.inventory_2_rounded,
-                                size: 40,
-                                color: Colors.grey.withValues(alpha: 0.25),
-                              ),
-                            ),
+                            ItemImageWidget(imageId: itemModel.imageId),
                             // Stock Count Badge
                             Positioned(
                               top: 8,

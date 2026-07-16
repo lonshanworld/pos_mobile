@@ -208,6 +208,19 @@ class ItemDbStorage {
     );
   }
 
+  static Future<int> updateImageId(
+    Database db, {
+    required int itemId,
+    required int imageId,
+  }) async {
+    return await db.update(
+      TxtConstants.itemTableName,
+      {'imageId': imageId},
+      where: 'id = ?',
+      whereArgs: [itemId],
+    );
+  }
+
   static Future<int> deactivateItem(
     Database db, {
     required UserModel userModel,

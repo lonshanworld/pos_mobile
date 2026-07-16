@@ -43,10 +43,14 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       ? item.code!.trim()
       : 'ITEM-${item.id}';
 
+  String _itemSelectionKey(ItemModel item) => 'item:${item.id}';
+
   String _uniqueCode(UniqueItemModel item) =>
       item.code?.trim().isNotEmpty == true
       ? item.code!.trim()
       : 'UNIT-${item.id}';
+
+  String _uniqueSelectionKey(UniqueItemModel item) => 'unique:${item.id}';
 
   bool get _isPhoneBusiness =>
       UIController.instance.businessType == BusinessType.phoneLaptopTablets;
@@ -137,7 +141,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: CheckboxListTile(
-              value: _selected.contains(code),
+              value: _selected.contains(_uniqueSelectionKey(uniqueItem)),
               title: Text(code),
               subtitle: Text(
                 hasBarcode
@@ -151,9 +155,12 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                   ? const Icon(Icons.qr_code_2)
                   : null,
               onChanged: (_) => setState(
-                () => _selected.contains(code)
-                    ? _selected.remove(code)
-                    : _selected.add(code),
+                () {
+                  final key = _uniqueSelectionKey(uniqueItem);
+                  _selected.contains(key)
+                      ? _selected.remove(key)
+                      : _selected.add(key);
+                },
               ),
             ),
           );
@@ -180,9 +187,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
 
     if (_uniqueItems) {
       for (final uniqueItem in itemState.activeUniqueItemList) {
-        final selected =
-            _selected.contains(_printValue(uniqueItem)) ||
-            _selected.contains(_uniqueCode(uniqueItem));
+        final selected = _selected.contains(_uniqueSelectionKey(uniqueItem));
         if (selected && !_hasUniqueBarcode(uniqueItem)) {
           final barcode = await _nextAvailableBarcode('UNIT-', uniqueItem.id);
           final success = await DBHelper.updateUniqueItemBarcode(
@@ -194,7 +199,8 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       }
     } else {
       for (final item in itemState.activeItemList) {
-        if (_selected.contains(_code(item)) && !_hasItemBarcode(item)) {
+        if (_selected.contains(_itemSelectionKey(item)) &&
+            !_hasItemBarcode(item)) {
           final barcode = await _nextAvailableBarcode('ITEM-', item.id);
           final success = await DBHelper.updateItemBarcode(
             itemId: item.id,
@@ -236,13 +242,10 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
     loading.setLoading('Saving barcode ...');
 
     bool success = false;
-    String? previousSelection;
     if (_uniqueItems) {
       for (final uniqueItem in itemState.activeUniqueItemList) {
-        final selectionKey = _printValue(uniqueItem);
-        if (_selected.contains(selectionKey) ||
-            _selected.contains(_uniqueCode(uniqueItem))) {
-          previousSelection = selectionKey;
+        final selectionKey = _uniqueSelectionKey(uniqueItem);
+        if (_selected.contains(selectionKey)) {
           success = await DBHelper.updateUniqueItemBarcode(
             uniqueItemId: uniqueItem.id,
             barcode: barcode,
@@ -252,8 +255,8 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       }
     } else {
       for (final item in itemState.activeItemList) {
-        if (_selected.contains(_code(item))) {
-          previousSelection = _code(item);
+        final selectionKey = _itemSelectionKey(item);
+        if (_selected.contains(selectionKey)) {
           success = await DBHelper.updateItemBarcode(
             itemId: item.id,
             barcode: barcode,
@@ -270,11 +273,8 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
 
     if (success) {
       setState(() {
-        if (previousSelection != null && !_printImei) {
-          _selected
-            ..remove(previousSelection)
-            ..add(barcode);
-        }
+        // Keep the stable item ID selected after changing its barcode.
+        // Selection must not be tied to a potentially duplicated barcode.
       });
       loading.setSuccess('Barcode added.');
     } else {
@@ -293,12 +293,13 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
     final hasMissingBarcode = _uniqueItems
         ? itemState.activeUniqueItemList.any(
             (item) =>
-                (_selected.contains(_printValue(item)) ||
-                    _selected.contains(_uniqueCode(item))) &&
+                _selected.contains(_uniqueSelectionKey(item)) &&
                 !_hasUniqueBarcode(item),
           )
         : itemState.activeItemList.any(
-            (item) => _selected.contains(_code(item)) && !_hasItemBarcode(item),
+            (item) =>
+                _selected.contains(_itemSelectionKey(item)) &&
+                !_hasItemBarcode(item),
           );
     if (hasMissingBarcode) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -613,6 +614,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                     if (!_uniqueItems) {
                       final item = items[index];
                       final code = _code(item);
+                      final selectionKey = _itemSelectionKey(item);
                       final hasBarcode = _hasItemBarcode(item);
                       return Container(
                         margin: const EdgeInsets.symmetric(
@@ -623,7 +625,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: CheckboxListTile(
-                          value: _selected.contains(code),
+                          value: _selected.contains(selectionKey),
                           title: Text(item.name),
                           subtitle: Text(
                             '${_hierarchyText(item: item, categoryNames: categoryNames, groupNames: groupNames, typeNames: typeNames)}\n${hasBarcode ? 'Barcode: ${item.code!.trim()}' : 'Barcode not generated'}',
@@ -635,9 +637,9 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                               ? const Icon(Icons.qr_code_2)
                               : null,
                           onChanged: (_) => setState(
-                            () => _selected.contains(code)
-                                ? _selected.remove(code)
-                                : _selected.add(code),
+                            () => _selected.contains(selectionKey)
+                                ? _selected.remove(selectionKey)
+                                : _selected.add(selectionKey),
                           ),
                         ),
                       );
@@ -712,20 +714,23 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
     List<ItemModel> items,
     List<UniqueItemModel> uniqueItems,
   ) {
-    final itemByCode = {for (final item in items) _code(item): item};
-    final uniqueByCode = {
-      for (final item in uniqueItems) _printValue(item): item,
+    final itemByKey = {
+      for (final item in items) _itemSelectionKey(item): item,
     };
-    final labels = _selected.map((code) {
+    final uniqueByKey = {
+      for (final item in uniqueItems) _uniqueSelectionKey(item): item,
+    };
+    final labels = _selected.map((selectionKey) {
       if (_uniqueItems) {
-        final unit = uniqueByCode[code]!;
+        final unit = uniqueByKey[selectionKey]!;
         return _label(
           name: context.read<ItemCubit>().getItem(unit.itemId)?.name ?? 'Item',
-          code: code,
+          code: _printValue(unit),
           imei: _printImei ? unit.instanceImei : null,
         );
       }
-      return _label(name: itemByCode[code]?.name ?? 'Item', code: code);
+      final item = itemByKey[selectionKey]!;
+      return _label(name: item.name, code: _code(item));
     }).toList();
     return Material(
       color: Colors.white,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:collection/collection.dart";
@@ -22,6 +24,8 @@ import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
 import "package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart";
 import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
+import "package:image_picker/image_picker.dart";
+import "package:path_provider/path_provider.dart";
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -46,6 +50,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   double profitPrice = 0;
   double taxPercentage = 0;
   bool _needStock = true;
+  String? _selectedImagePath;
 
   @override
   void initState() {
@@ -95,6 +100,50 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     sellPriceController.dispose();
     taxController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickItemImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take with camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(source: source);
+    if (picked == null) return;
+
+    try {
+      final supportDir = await getApplicationSupportDirectory();
+      final imageDir = Directory('${supportDir.path}/nanonux_item_images');
+      await imageDir.create(recursive: true);
+      final ext = picked.path.contains('.')
+          ? picked.path.split('.').last.toLowerCase()
+          : 'jpg';
+      final destination =
+          '${imageDir.path}/item_${DateTime.now().microsecondsSinceEpoch}.$ext';
+      await File(picked.path).copy(destination);
+      if (mounted) setState(() => _selectedImagePath = destination);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save item image: $e')));
+    }
   }
 
   @override
@@ -454,6 +503,44 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   context,
                 ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
               ),
+              const SizedBox(height: UIConstants.mediumSpace),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Item image (optional)',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: UIConstants.smallSpace),
+              Row(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    color: Colors.grey.withValues(alpha: 0.05),
+                    child: _selectedImagePath == null
+                        ? Center(
+                            child: Icon(
+                              Icons.inventory_2_rounded,
+                              color: Colors.grey.withValues(alpha: 0.25),
+                            ),
+                          )
+                        : Image.file(
+                            File(_selectedImagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(),
+                          ),
+                  ),
+                  const SizedBox(width: UIConstants.mediumSpace),
+                  OutlinedButton.icon(
+                    onPressed: _pickItemImage,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add image'),
+                  ),
+                ],
+              ),
               BusinessItemDetailForm(
                 key: _businessFormKey,
                 businessType: businessType,
@@ -474,7 +561,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       showValidationMessage("Choose a $typeLabel first");
                     } else if (itemNameController.text.trim().isEmpty) {
                       showValidationMessage("Item name should not be empty");
-                    } else if (businessType != BusinessType.food && originalPrice < 1) {
+                    } else if (businessType != BusinessType.food &&
+                        originalPrice < 1) {
                       showValidationMessage(
                         "Original price must be greater than zero",
                       );
@@ -528,6 +616,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             ? _needStock
                             : true,
                         code: itemBarcode,
+                        imagePath: _selectedImagePath,
                         businessDetail: businessDetail,
                       );
 
