@@ -63,6 +63,34 @@ class CalculationFormula{
     return (price/ 100) * percentage;
   }
 
+  /// Sell price for a fabric piece: length × width × rate per square unit.
+  static double clothingPieceSellBase({
+    required double length,
+    required double width,
+    required double pricePerMeasurementUnit,
+  }) {
+    return length * width * pricePerMeasurementUnit;
+  }
+
+  /// Derives per-piece cost/profit from measured sell base and the item's margin ratio.
+  static ({double originalPrice, double profitPrice}) clothingPiecePrices({
+    required double sellBase,
+    required double itemOriginalPrice,
+    required double itemProfitPrice,
+    double? purchaseCostOverride,
+  }) {
+    final double itemSellBase = itemOriginalPrice + itemProfitPrice;
+    final double original = purchaseCostOverride ?? itemOriginalPrice;
+    if (itemSellBase <= 0) {
+      final profit = sellBase - original;
+      return (originalPrice: original, profitPrice: profit > 0 ? profit : 0);
+    }
+    final marginRatio = itemProfitPrice / itemSellBase;
+    final profit = (sellBase * marginRatio).clamp(0, sellBase).toDouble();
+    final adjustedOriginal = purchaseCostOverride ?? (sellBase - profit);
+    return (originalPrice: adjustedOriginal, profitPrice: profit);
+  }
+
   static double getItemTotalOriginalPriceForStockOut(List<StockOutItemModel> dataList){
     double value = 0;
     for(int i = 0; i < dataList.length; i++){

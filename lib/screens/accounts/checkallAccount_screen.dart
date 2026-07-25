@@ -22,8 +22,8 @@ class CheckAllAccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<UserModel> userList = context.watch<UserDataCubit>().state.allUserModelList;
-    final UserModel? owner = context.watch<UserDataCubit>().state.userModel;
+    final List<UserModel> userList = context.select((UserDataCubit cubit) => cubit.state.allUserModelList);
+    final UserModel? owner = context.select((UserDataCubit cubit) => cubit.state.userModel);
     final bool isOwner = owner?.userLevel == UserLevel.merchant || owner?.userLevel == UserLevel.superAdmin;
     final UIController uiController = UIController.instance;
 
@@ -57,7 +57,7 @@ class CheckAllAccountScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<UserModel>(
-                      value: selectedUser,
+                      initialValue: selectedUser,
                       isExpanded: true,
                       items: eligibleUsers
                           .map(

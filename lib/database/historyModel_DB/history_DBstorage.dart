@@ -2,6 +2,7 @@ import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/txtconstants.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 
 class HistoryDbStorage{
   static Future<void>onCreate(Database db)async{
@@ -42,7 +43,7 @@ class HistoryDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllHistoryList(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllHistoryList(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     // OPTIMIZATION: Limit the query to prevent Out-Of-Memory exceptions
     // Sort by ID descending to always show the most recent actions first.
     List<dynamic> data = await db.query(

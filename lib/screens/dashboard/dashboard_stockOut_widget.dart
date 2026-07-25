@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
+import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
+import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
+import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
 
@@ -13,12 +16,17 @@ import '../../models/item_model_folder/item_model.dart';
 import '../../models/user_model_folder/user_model.dart';
 import '../../utils/formula.dart';
 import '../history/transactions_history/history_voucher_screen.dart';
+import '../../languages/app_language.dart';
 
 class DashboardStockOut extends StatelessWidget {
   const DashboardStockOut({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final UIController uiController = UIController.instance;
+    final ThemeModeType themeModeType = context.select(
+      (ThemeCubit cubit) => cubit.state.themeModeType,
+    );
     final CusShowSheet showSheet = CusShowSheet();
 
     Widget dataRow(String title, String txt, {bool isTotal = false}) {
@@ -33,15 +41,15 @@ class DashboardStockOut extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-                    color: isTotal ? null : Colors.grey.shade700,
-                  ),
+                fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+                color: isTotal ? null : Colors.grey.shade700,
+              ),
             ),
             Text(
               txt,
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-                  ),
+                fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -50,9 +58,10 @@ class DashboardStockOut extends StatelessWidget {
 
     return BlocBuilder<TransactionsCubit, TransactionsState>(
       builder: (context, state) {
-        final List<StockOutModel> stockOutList =
-            context.read<TransactionsCubit>().getTodayStockOut();
-        
+        final List<StockOutModel> stockOutList = context
+            .read<TransactionsCubit>()
+            .getTodayStockOut();
+
         double totalSalePrice = 0;
         for (var element in stockOutList) {
           totalSalePrice += element.finalTotalPrice;
@@ -60,17 +69,17 @@ class DashboardStockOut extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: uiController.getpureDirectClr(themeModeType),
             borderRadius: BorderRadius.circular(UIConstants.mediumRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
             ),
           ),
           child: Column(
@@ -99,7 +108,8 @@ class DashboardStockOut extends StatelessWidget {
                         const SizedBox(width: UIConstants.smallSpace),
                         Text(
                           "Today's Sales",
-                          style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium!
+                              .copyWith(
                                 color: Colors.deepPurple.shade700,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -111,13 +121,13 @@ class DashboardStockOut extends StatelessWidget {
                       children: [
                         Text(
                           "Total Revenue",
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                color: Colors.deepPurple.shade700,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall!
+                              .copyWith(color: Colors.deepPurple.shade700),
                         ),
                         Text(
-                          "$totalSalePrice MMK",
-                          style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                          CurrencyFormatter.format(context, totalSalePrice),
+                          style: Theme.of(context).textTheme.titleSmall!
+                              .copyWith(
                                 color: Colors.deepPurple.shade700,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -144,8 +154,8 @@ class DashboardStockOut extends StatelessWidget {
                       Text(
                         "No sales records for today",
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                              color: Colors.grey.shade600,
-                            ),
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
@@ -156,19 +166,27 @@ class DashboardStockOut extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(UIConstants.smallSpace),
                   itemCount: stockOutList.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: UIConstants.smallSpace),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: UIConstants.smallSpace),
                   itemBuilder: (context, index) {
                     final stockOut = stockOutList[index];
-                    final List<StockOutItemModel> stockOutItemList =
-                        context.read<TransactionsCubit>().getSelectedStockOutItemList(stockOut.id);
-                    final UserModel? userModel =
-                        context.read<UserDataCubit>().getSingleUser(stockOut.createPersonId);
-                    final DeliveryModel? deliveryModel = stockOut.deliveryModelId == null
+                    final List<StockOutItemModel> stockOutItemList = context
+                        .read<TransactionsCubit>()
+                        .getSelectedStockOutItemList(stockOut.id);
+                    final UserModel? userModel = context
+                        .read<UserDataCubit>()
+                        .getSingleUser(stockOut.createPersonId);
+                    final DeliveryModel? deliveryModel =
+                        stockOut.deliveryModelId == null
                         ? null
-                        : context.read<TransactionsCubit>().getDeliveryModel(stockOut.deliveryModelId!);
+                        : context.read<TransactionsCubit>().getDeliveryModel(
+                            stockOut.deliveryModelId!,
+                          );
 
                     return InkWell(
-                      borderRadius: BorderRadius.circular(UIConstants.smallRadius),
+                      borderRadius: BorderRadius.circular(
+                        UIConstants.smallRadius,
+                      ),
                       onTap: () {
                         // Change from long press to tap for better UX
                         showSheet.showCusBottomSheet(
@@ -178,10 +196,14 @@ class DashboardStockOut extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(UIConstants.mediumSpace),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(UIConstants.smallRadius),
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(
+                            UIConstants.smallRadius,
+                          ),
                           border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.2),
+                            color: Theme.of(
+                              context,
+                            ).dividerColor.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(
@@ -203,26 +225,37 @@ class DashboardStockOut extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: UIConstants.smallSpace),
-                                Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                                Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Colors.grey.shade600,
+                                ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     userModel?.userName ?? "Unknown Seller",
-                                    style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall!
+                                        .copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 20,
+                                  color: Colors.grey.shade400,
+                                ),
                               ],
                             ),
                             const SizedBox(height: UIConstants.smallSpace),
-                            
+
                             // Items Table
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.grey.withValues(alpha: 0.05),
+                                color: Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Table(
@@ -232,34 +265,47 @@ class DashboardStockOut extends StatelessWidget {
                                   2: FlexColumnWidth(2),
                                 },
                                 children: stockOutItemList.map((stockOutItem) {
-                                  final ItemModel? itemModel =
-                                      context.read<ItemCubit>().getItem(stockOutItem.itemId);
+                                  final ItemModel? itemModel = context
+                                      .read<ItemCubit>()
+                                      .getItem(stockOutItem.itemId);
                                   return TableRow(
                                     children: [
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 2.0,
+                                        ),
                                         child: Text(
                                           itemModel?.name ?? "Unknown Item",
-                                          style: Theme.of(context).textTheme.bodySmall,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 2.0,
+                                        ),
                                         child: Text(
                                           "x",
-                                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                                color: Colors.grey,
-                                              ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall!
+                                              .copyWith(color: Colors.grey),
                                           textAlign: TextAlign.center,
                                         ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 2.0,
+                                        ),
                                         child: Text(
                                           stockOutItem.count.toString(),
-                                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall!
+                                              .copyWith(
                                                 fontWeight: FontWeight.bold,
                                               ),
                                           textAlign: TextAlign.right,
@@ -273,24 +319,40 @@ class DashboardStockOut extends StatelessWidget {
                             const SizedBox(height: UIConstants.smallSpace),
 
                             // Calculations
-                            dataRow(
-                              "Tax",
-                              "${CalculationFormula.getPercentageToMMK(CalculationFormula.getTotalPriceForStockOutHistory(stockOutItemList), stockOut.taxPercentage ?? 0)} MMK",
-                            ),
-                            if (stockOut.additionalPromotionAmount != null && stockOut.additionalPromotionAmount! > 0)
+                            if ((stockOut.taxPercentage ?? 0) > 0)
+                              dataRow(
+                                "Tax",
+                                CurrencyFormatter.format(
+                                  context,
+                                  CalculationFormula.getPercentageToMMK(
+                                    CalculationFormula.getTotalPriceForStockOutHistory(
+                                      stockOutItemList,
+                                    ),
+                                    stockOut.taxPercentage ?? 0,
+                                  ),
+                                ),
+                              ),
+                            if (stockOut.additionalPromotionAmount != null &&
+                                stockOut.additionalPromotionAmount! > 0)
                               dataRow(
                                 "Discount",
-                                "-${stockOut.additionalPromotionAmount} MMK",
+                                '-${CurrencyFormatter.format(context, stockOut.additionalPromotionAmount!)}',
                               ),
                             if (deliveryModel != null)
                               dataRow(
                                 "Delivery",
-                                "${deliveryModel.deliveryCharges} MMK",
+                                CurrencyFormatter.format(
+                                  context,
+                                  deliveryModel.deliveryCharges ?? 0,
+                                ),
                               ),
                             const Divider(height: 16),
                             dataRow(
                               "Final Total",
-                              "${stockOut.finalTotalPrice} MMK",
+                              CurrencyFormatter.format(
+                                context,
+                                stockOut.finalTotalPrice,
+                              ),
                               isTotal: true,
                             ),
                           ],

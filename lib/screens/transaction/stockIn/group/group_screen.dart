@@ -2,114 +2,111 @@ import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
-import "package:pos_mobile/error_handlers/item_folder/no_selected_id_error_widget.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/category_model.dart";
-
 import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
-
 import "package:pos_mobile/screens/transaction/stockIn/group/create_group_screen.dart";
 import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/group_box_widget.dart";
-import "package:pos_mobile/widgets/itemBox/stockin_item_appbar_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
+import "package:pos_mobile/controller/ui_controller.dart";
 
 import "../../../../constants/uiConstants.dart";
 
-
-
-
-class GroupScreen extends StatelessWidget {
-
-  final int? selectedCategoryId;
-  final VoidCallback goBackFunc;
-  final Function(int value)setSelectedGroupId;
+class GroupScreen extends StatefulWidget {
   final bool isStorage;
-  const GroupScreen({
-    super.key,
-    required this.selectedCategoryId,
-    required this.goBackFunc,
-    required this.setSelectedGroupId,
-    required this.isStorage,
-  });
+  const GroupScreen({super.key, required this.isStorage});
+
+  @override
+  State<GroupScreen> createState() => _GroupScreenState();
+}
+
+class _GroupScreenState extends State<GroupScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 500) {
+      context.read<ItemCubit>().loadMoreGroups();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // final List<GroupModel> groupList = context.read<ItemCubit>().state.groupList;
-    // final List<TypeModel> typeList = context.read<ItemCubit>().state.typeList;
-
-
+    final businessType = UIController.instance.businessType;
+    final groupLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.group,
+    );
 
     return Scaffold(
-      body: selectedCategoryId == null
-          ?
-      NoSelectedIdErrorWidget(
-        txt: "This category has some error",
-        func: goBackFunc,
-      )
-          :
-      BlocBuilder<ItemCubit, ItemState>(
+      body: BlocBuilder<ItemCubit, ItemState>(
         builder: (context, state) {
-          final List<GroupModel> groupList = context.read<ItemCubit>().getSelectedGroupList(selectedCategoryId);
-          final CategoryModel categoryModel = context.read<ItemCubit>().getCategory(selectedCategoryId!);
+          final List<GroupModel> groupList = state.activeGroupList;
+          final isLoadingMore = state.isLoadingMoreGroup;
 
           return Column(
-              children: [
-                StockInItemAppBar(
-                  txt: "Total Group ( ${groupList.length} ) From ${categoryModel.name}",
-                  func: goBackFunc,
-                ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      if(groupList.isEmpty)const Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    if (groupList.isEmpty)
+                      Positioned.fill(
                         child: NoItemWidget(
-                            noItemTxt: "No group found"
+                          noItemTxt: "No ${groupLabel.toLowerCase()} found",
                         ),
                       ),
-                      if(groupList.isNotEmpty)Positioned(
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: GridView.builder(
-                          padding: const EdgeInsets.all(UIConstants.bigSpace),
-                          itemCount: groupList.length,
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 240,
-                            mainAxisExtent: 120,
-                            mainAxisSpacing: UIConstants.mediumSpace,
-                            crossAxisSpacing: UIConstants.mediumSpace,
+                    if (groupList.isNotEmpty)
+                      Positioned.fill(
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: UIConstants.bigSpace,
+                            vertical: UIConstants.smallSpace,
                           ),
-                          itemBuilder: (ctx, index){
+                          itemCount: groupList.length + (isLoadingMore ? 1 : 0),
+                          separatorBuilder: (_, index) =>
+                              const Divider(height: 1),
+                          itemBuilder: (ctx, index) {
+                            if (index == groupList.length) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
                             return GroupBoxWidget(
                               groupModel: groupList[index],
-                              typeCount: context.read<ItemCubit>().getSelectedTypeList(groupList[index].id).length,
-                              func: (){
-                                setSelectedGroupId(groupList[index].id);
-                              },
-                              isStorage: isStorage,
+                              itemCount: context
+                                  .read<ItemCubit>()
+                                  .getItemCountForGroup(groupList[index].id),
+                              func: () {},
+                              isStorage: widget.isStorage,
                             );
                           },
                         ),
                       ),
-                      if(isStorage)CreateItemBtnWidget(
-                        txt: "Create group",
-                        widget: CreateGroupScreen(
-                          selectedCategoryModel: categoryModel,
-                        ),
+                    if (widget.isStorage)
+                      CreateItemBtnWidget(
+                        txt: "Create $groupLabel",
+                        widget: const CreateGroupScreen(),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            );
+              ),
+            ],
+          );
         },
-      )
-      ,
+      ),
     );
   }
 }

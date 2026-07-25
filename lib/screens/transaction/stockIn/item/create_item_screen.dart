@@ -1,32 +1,34 @@
+import 'dart:io';
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:collection/collection.dart";
+import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
+import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
+import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
+import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/business_hierarchy_config.dart";
+import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
-import "package:pos_mobile/models/groupingItem_models_folders/group_model.dart";
+import "package:pos_mobile/constants/uiConstants.dart";
+import "package:pos_mobile/controller/DB_helper.dart";
+import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
+import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import "package:pos_mobile/utils/formula.dart";
-
-import "../../../../blocs/item_bloc/item_cubit.dart";
-import "../../../../blocs/loading_bloc/loading_cubit.dart";
-import "../../../../blocs/userData_bloc/user_data_cubit.dart";
-import "../../../../constants/uiConstants.dart";
-import "../../../../controller/ui_controller.dart";
-import "../../../../models/groupingItem_models_folders/category_model.dart";
-import "../../../../models/user_model_folder/user_model.dart";
-import "../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart";
-import "../../../../widgets/btns_folder/cus_switch_btn_widget.dart";
-import "../../../../widgets/btns_folder/leadingBackIconBtn.dart";
-import "../../../../widgets/cusTextField/cusTextArea_widget.dart";
-import "../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart";
-import "../../../../widgets/cusTxt_widget.dart";
+import "package:pos_mobile/widgets/business_item_detail_form.dart";
+import "package:pos_mobile/widgets/btns_folder/cusTextOnlyBtn_widget.dart";
+import "package:pos_mobile/widgets/btns_folder/cus_switch_btn_widget.dart";
+import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
+import "package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart";
+import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
+import "package:pos_mobile/widgets/cusTxt_widget.dart";
+import "package:image_picker/image_picker.dart";
+import "package:pos_mobile/services/public_document_storage.dart";
 
 class CreateItemScreen extends StatefulWidget {
-
-  final TypeModel typeModel;
-  const CreateItemScreen({
-    super.key,
-    required this.typeModel,
-  });
+  const CreateItemScreen({super.key});
 
   @override
   State<CreateItemScreen> createState() => _CreateItemScreenState();
@@ -38,20 +40,39 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final TextEditingController originalPriceController = TextEditingController();
   final TextEditingController sellPriceController = TextEditingController();
   final TextEditingController taxController = TextEditingController();
+  final GlobalKey<BusinessItemDetailFormState> _businessFormKey =
+      GlobalKey<BusinessItemDetailFormState>();
 
+  int? _selectedCategoryId;
+  int? _selectedGroupId;
+  int? _selectedTypeId;
   double originalPrice = 0;
   double profitPrice = 0;
   double taxPercentage = 0;
+  bool _needStock = true;
+  String? _selectedImagePath;
 
   @override
   void initState() {
     super.initState();
+
     originalPriceController.addListener(() {
       setState(() {
-        originalPrice =
+        final double newOriginalPrice =
             double.tryParse(originalPriceController.text.trim()) ?? 0;
+        final double? sellPrice = double.tryParse(
+          sellPriceController.text.trim(),
+        );
+        originalPrice = newOriginalPrice;
+        profitPrice = sellPrice == null
+            ? 0
+            : CalculationFormula.getItemProfitPrice(
+                originalPrice: newOriginalPrice,
+                sellPrice: sellPrice,
+              );
       });
     });
+
     sellPriceController.addListener(() {
       setState(() {
         final sellPrice = double.tryParse(sellPriceController.text.trim());
@@ -63,6 +84,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               );
       });
     });
+
     taxController.addListener(() {
       setState(() {
         taxPercentage = double.tryParse(taxController.text.trim()) ?? 0;
@@ -80,21 +102,92 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     super.dispose();
   }
 
+  Future<void> _pickItemImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      // Keep the image-source actions opaque. The app-wide bottom-sheet theme
+      // is transparent, which otherwise lets the modal barrier wash out the
+      // entire item form behind it.
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      barrierColor: Colors.transparent,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take with camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(source: source);
+    if (picked == null) return;
+
+    try {
+      final ext = picked.path.contains('.')
+          ? picked.path.split('.').last.toLowerCase()
+          : 'jpg';
+      final destination = await PublicDocumentStorage.copyFile(
+        sourcePath: picked.path,
+        fileName: 'item_${DateTime.now().microsecondsSinceEpoch}.$ext',
+        directory: 'item_images',
+      );
+      if (mounted) setState(() => _selectedImagePath = destination);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save item image: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final UserModel userModel = context.watch<UserDataCubit>().state.userModel!;
-    final GroupModel groupModel = context.read<ItemCubit>().getGroup(widget.typeModel.groupId);
-    final CategoryModel categoryModel = context.read<ItemCubit>().getCategory(groupModel.categoryId);
+    final BusinessType businessType = context
+        .watch<ShopInfoCubit>()
+        .state
+        .businessType;
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final bool showItemTax =
+        shopInfoState.taxEnabled && shopInfoState.itemTaxEnabled;
+    final bool allowExpiryTracking = businessType.allowsExpiryTracking;
+    final itemState = context.watch<ItemCubit>().state;
+    final categoryLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.category,
+    );
+    final groupLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.group,
+    );
+    final typeLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.type,
+    );
+    final TypeModel? selectedTypeModel = _selectedTypeId == null
+        ? null
+        : itemState.allActiveTypeList.firstWhereOrNull(
+            (type) => type.id == _selectedTypeId,
+          );
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -102,11 +195,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       required String hintTxt,
       required String labelTxt,
       required TextEditingController textEditingController,
-    }){
+    }) {
       return Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: UIConstants.smallSpace
-        ),
+        padding: const EdgeInsets.symmetric(vertical: UIConstants.smallSpace),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -122,17 +213,20 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 txtStyle: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.mediumSpace),
+            uiController.sizedBox(
+              cusHeight: null,
+              cusWidth: UIConstants.mediumSpace,
+            ),
             CusTxtWidget(
               txtStyle: Theme.of(context).textTheme.bodyMedium!,
               txt: labelTxt,
-            )
+            ),
           ],
         ),
       );
     }
-    
-    Widget resultRow(String title, String txt){
+
+    Widget resultRow(String title, String txt) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -162,158 +256,396 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       );
     }
 
+    Widget buildCatalogDropdown({
+      required String label,
+      required int? value,
+      required List<DropdownMenuItem<int?>> items,
+      required ValueChanged<int?> onChanged,
+    }) {
+      return DropdownButtonFormField<int?>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        items: items,
+        onChanged: onChanged,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-          "Create Item",
-        ),
+        title: const Text("Create Item"),
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: UIConstants.bigSpace,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: categoryLabel,
+                value: _selectedCategoryId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("No $categoryLabel"),
+                  ),
+                  ...itemState.allActiveCategoryList.map(
+                    (category) => DropdownMenuItem<int?>(
+                      value: category.id,
+                      child: Text(category.name),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategoryId = value;
+                  });
+                },
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: groupLabel,
+                value: _selectedGroupId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("No $groupLabel"),
+                  ),
+                  ...itemState.allActiveGroupList.map(
+                    (group) => DropdownMenuItem<int?>(
+                      value: group.id,
+                      child: Text(group.name),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGroupId = value;
+                  });
+                },
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
+              buildCatalogDropdown(
+                label: typeLabel,
+                value: _selectedTypeId,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text("Select $typeLabel"),
+                  ),
+                  ...itemState.allActiveTypeList.map(
+                    (type) => DropdownMenuItem<int?>(
+                      value: type.id,
+                      child: Text(type.name),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTypeId = value;
+                  });
+                },
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
               CusTextFieldLogin(
                 txtController: itemNameController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter new Item name",
                 txtInputType: TextInputType.text,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Column(
                 children: [
-                  CusTxtWidget(
-                    txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: Colors.grey,
+                  if (allowExpiryTracking) ...[
+                    CusTxtWidget(
+                      txtStyle: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
+                      txt: "Expire tracking follows the selected $typeLabel.",
                     ),
-                    txt: "You cannot change this value because it only shows it's type has expired date or not.",
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CusTxtWidget(
-                        txtStyle: Theme.of(context).textTheme.bodyMedium!,
-                        txt: "Has Expired Date ?",
-                      ),
-                      CusSwitchBtnWidget(
-                        boolValue: widget.typeModel.hasExpire,
-                        func: (bool value){
-
-                        },
-                        clr: Colors.blue,
-                      ),
-                    ],
-                  ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CusTxtWidget(
+                          txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                          txt: "Has Expired Date ?",
+                        ),
+                        CusSwitchBtnWidget(
+                          boolValue: selectedTypeModel?.hasExpire ?? false,
+                          func: (bool value) {},
+                          clr: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (businessType == BusinessType.food)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CusTxtWidget(
+                          txtStyle: Theme.of(context).textTheme.bodyMedium!,
+                          txt: "Track Stock ?",
+                        ),
+                        CusSwitchBtnWidget(
+                          boolValue: _needStock,
+                          func: (bool value) {
+                            setState(() {
+                              _needStock = value;
+                            });
+                          },
+                          clr: Colors.blue,
+                        ),
+                      ],
+                    ),
                 ],
               ),
               priceInputField(
                 hintTxt: "Enter purchased price",
-                labelTxt: "MMK (ကျပ်)   ",
+                labelTxt: "MMK",
                 textEditingController: originalPriceController,
               ),
               priceInputField(
                 hintTxt: "Enter sell price",
-                labelTxt: "MMK (ကျပ်)   ",
+                labelTxt: "MMK",
                 textEditingController: sellPriceController,
               ),
-              priceInputField(
-                hintTxt: "Enter tax percentage",
-                labelTxt: "% percentage",
-                textEditingController: taxController,
+              if (showItemTax)
+                priceInputField(
+                  hintTxt: "Enter tax percentage",
+                  labelTxt: "% percentage",
+                  textEditingController: taxController,
+                ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
               Container(
                 padding: const EdgeInsets.symmetric(
                   vertical: UIConstants.mediumSpace,
                   horizontal: UIConstants.bigSpace,
                 ),
                 decoration: BoxDecoration(
-                  color: profitPrice< 0 ? Colors.red.withValues(alpha: 0.4) : Colors.green.withValues(alpha: 0.4),
+                  color: profitPrice < 0
+                      ? Colors.red.withValues(alpha: 0.4)
+                      : Colors.green.withValues(alpha: 0.4),
                   borderRadius: UIConstants.mediumBorderRadius,
                 ),
                 child: Column(
                   children: [
-                    resultRow("Profit (ကျပ်)  ", profitPrice.toString()),
-                    uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                    if(taxPercentage > 0)resultRow("Tax (ကျပ်)  ", CalculationFormula.getPercentageToMMK(originalPrice + profitPrice, taxPercentage).toString()),
-                    uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-                    resultRow("Final Sell Price  ", CalculationFormula.getItemSellPrice(originalPrice: originalPrice, profitPrice: profitPrice, taxPercentage: taxPercentage).toString()),
+                    resultRow("Profit", profitPrice.toString()),
+                    uiController.sizedBox(
+                      cusHeight: UIConstants.mediumSpace,
+                      cusWidth: null,
+                    ),
+                    if (showItemTax && taxPercentage > 0)
+                      resultRow(
+                        "Tax",
+                        CalculationFormula.getPercentageToMMK(
+                          originalPrice + profitPrice,
+                          taxPercentage,
+                        ).toString(),
+                      ),
+                    uiController.sizedBox(
+                      cusHeight: UIConstants.mediumSpace,
+                      cusWidth: null,
+                    ),
+                    resultRow(
+                      "Final Sell Price",
+                      CalculationFormula.getItemSellPrice(
+                        originalPrice: originalPrice,
+                        profitPrice: profitPrice,
+                        taxPercentage: taxPercentage,
+                      ).toString(),
+                    ),
                   ],
                 ),
               ),
-              
-              uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                      color: Colors.grey
-                  ),
+                  txtStyle: Theme.of(
+                    context,
+                  ).textTheme.titleSmall!.copyWith(color: Colors.grey),
                   txt: "Optional",
                 ),
               ),
-              uiController.sizedBox(cusHeight: UIConstants.smallSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.smallSpace,
+                cusWidth: null,
+              ),
               CusTextArea(
                 txtController: textAreaController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter description",
-                txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Colors.grey,
+                txtStyle: Theme.of(
+                  context,
+                ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
+              ),
+              const SizedBox(height: UIConstants.mediumSpace),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Item image (optional)',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: Colors.grey),
                 ),
+              ),
+              const SizedBox(height: UIConstants.smallSpace),
+              Row(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    color: Colors.grey.withValues(alpha: 0.05),
+                    child: _selectedImagePath == null
+                        ? Center(
+                            child: Icon(
+                              Icons.inventory_2_rounded,
+                              color: Colors.grey.withValues(alpha: 0.25),
+                            ),
+                          )
+                        : Image.file(
+                            File(_selectedImagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(),
+                          ),
+                  ),
+                  const SizedBox(width: UIConstants.mediumSpace),
+                  OutlinedButton.icon(
+                    onPressed: _pickItemImage,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add image'),
+                  ),
+                ],
+              ),
+              BusinessItemDetailForm(
+                key: _businessFormKey,
+                businessType: businessType,
+                initialBarcode: null,
+              ),
+              uiController.sizedBox(
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
               ),
               Align(
                 alignment: Alignment.centerRight,
                 child: CusTxtOnlyBtn(
                   textStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Create",
-                  func: ()async{
-
-                    if(itemNameController.text.trim().isEmpty){
+                  clr: Colors.deepPurpleAccent,
+                  func: () async {
+                    if (selectedTypeModel == null) {
+                      showValidationMessage("Choose a $typeLabel first");
+                    } else if (itemNameController.text.trim().isEmpty) {
                       showValidationMessage("Item name should not be empty");
-                    }else if(originalPrice < 1){
-                      showValidationMessage("Original price must be greater than zero");
-                    }else if (double.tryParse(sellPriceController.text.trim()) == null ||
-                        double.tryParse(taxController.text.trim()) == null) {
-                      showValidationMessage("Sell price and tax must be valid numbers");
-                    }else{
-                      context.read<LoadingCubit>().setLoading("Creating ...");
-                      final value = await context.read<ItemCubit>().createNewItem(
+                    } else if (businessType != BusinessType.food &&
+                        originalPrice < 1) {
+                      showValidationMessage(
+                        "Original price must be greater than zero",
+                      );
+                    } else if (double.tryParse(
+                              sellPriceController.text.trim(),
+                            ) ==
+                            null ||
+                        (showItemTax &&
+                            double.tryParse(taxController.text.trim()) ==
+                                null)) {
+                      showValidationMessage(
+                        "Sell price and tax must be valid numbers",
+                      );
+                    } else {
+                      final businessError = _businessFormKey.currentState
+                          ?.validate();
+                      if (businessError != null) {
+                        showValidationMessage(businessError);
+                        return;
+                      }
+
+                      final loadingCubit = context.read<LoadingCubit>();
+                      final itemCubit = context.read<ItemCubit>();
+                      final navigator = Navigator.of(context);
+
+                      final businessDetail = _businessFormKey.currentState
+                          ?.buildDetail(0);
+                      final itemBarcode = _businessFormKey.currentState
+                          ?.buildItemBarcode();
+                      if (itemBarcode != null &&
+                          !await DBHelper.isBarcodeAvailable(itemBarcode)) {
+                        showValidationMessage(
+                          'This barcode is already in use. Please enter a different barcode.',
+                        );
+                        return;
+                      }
+                      loadingCubit.setLoading("Creating ...");
+                      final value = await itemCubit.createNewItem(
                         userModel: userModel,
-                        categoryModel: categoryModel,
-                        groupModel: groupModel,
-                        typeModel: widget.typeModel,
+                        categoryId: _selectedCategoryId,
+                        groupId: _selectedGroupId,
+                        typeModel: selectedTypeModel,
                         name: itemNameController.text.trim(),
-                        description:  (textAreaController.text.trim() == "" || textAreaController.text.trim().isEmpty)
-                            ?
-                        null
-                            :
-                        textAreaController.text.trim(),
-                        hasExpire: widget.typeModel.hasExpire,
+                        description: textAreaController.text.trim().isEmpty
+                            ? null
+                            : textAreaController.text.trim(),
+                        hasExpire:
+                            allowExpiryTracking && selectedTypeModel.hasExpire,
                         profitPrice: profitPrice,
                         originalPrice: originalPrice,
-                        taxPercentage: taxPercentage,
+                        taxPercentage: showItemTax ? taxPercentage : 0,
+                        needStock: businessType == BusinessType.food
+                            ? _needStock
+                            : true,
+                        code: itemBarcode,
+                        imagePath: _selectedImagePath,
+                        businessDetail: businessDetail,
                       );
 
                       if (!mounted) return;
-                      if(value){
-                        Navigator.of(context).pop();
-                        context.read<LoadingCubit>().setSuccess("Success !");
-                      }else{
-                        context.read<LoadingCubit>().setFail("Fail !");
+                      if (value) {
+                        loadingCubit.setSuccess("Success !", showDialog: false);
+                        if (navigator.canPop()) {
+                          navigator.pop();
+                        }
+                      } else {
+                        loadingCubit.setFail(
+                          "Item could not be created. Please check the barcode and item details.",
+                        );
                       }
                     }
                   },
-                  clr: Colors.deepPurpleAccent,
                 ),
               ),
+              const SizedBox(height: UIConstants.bigSpace * 2),
             ],
           ),
         ),

@@ -43,7 +43,8 @@ void main() {
 
     if (modified) {
       file.writeAsStringSync(content);
-      print('Fixed ${file.path}');
+      // print('Fixed ${file.path}');
+      // print('Fixed ${file.path}');
       totalFixed++;
     }
   }

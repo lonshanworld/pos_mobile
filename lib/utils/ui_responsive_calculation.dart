@@ -1,12 +1,10 @@
 import 'package:pos_mobile/controller/ui_controller.dart';
-import 'package:pos_mobile/utils/debug_print.dart';
 
 class UIutils{
   final UIController uiController = UIController.instance;
 
   double txtFieldLoginWidth(double value){
     double deviceWidth = uiController.getDeviceWidth;
-    cusDebugPrint(deviceWidth);
     if(deviceWidth >= value){
       return value;
     }else{

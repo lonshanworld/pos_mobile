@@ -101,9 +101,13 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
 
                       if (!mounted) return;
                       if(value){
-                        Navigator.of(context).pop();
-                        context.read<LoadingCubit>().setSuccess("Success !");
-
+                        context.read<LoadingCubit>().setSuccess(
+                          "Success !",
+                          showDialog: false,
+                        );
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
                       }else{
                         context.read<LoadingCubit>().setFail("Fail !");
                       }

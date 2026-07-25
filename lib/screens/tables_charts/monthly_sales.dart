@@ -10,6 +10,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stock_out_model.dart';
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
+import 'package:pos_mobile/screens/tables_charts/report_export_service.dart';
 
 class MonthlySales extends StatefulWidget {
   const MonthlySales({super.key});
@@ -25,7 +26,10 @@ class _MonthlySalesState extends State<MonthlySales> {
   @override
   Widget build(BuildContext context) {
     final tablesAndCharts = TablesAndCharts(context: context);
-    final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
+    final stockOutList = context
+        .watch<TransactionsCubit>()
+        .state
+        .activeStockOutList;
     final LinkedHashMap<String, List<StockOutModel>> monthlyMap =
         HistoryFilter.filterMonthlyStockOut(stockOutList);
     final List<String> allKeys = monthlyMap.keys.toList();
@@ -49,7 +53,8 @@ class _MonthlySalesState extends State<MonthlySales> {
               scrollDirection: Axis.vertical,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.resolveWith(
-                    (_) => UIConstants.redVioletClr.withValues(alpha: 0.4)),
+                  (_) => UIConstants.redVioletClr.withValues(alpha: 0.4),
+                ),
                 dataRowMinHeight: 48,
                 dataRowMaxHeight: 56,
                 columns: [
@@ -62,7 +67,8 @@ class _MonthlySalesState extends State<MonthlySales> {
                 ],
                 rows: List.generate(pageKeys.length, (i) {
                   final key = pageKeys[i];
-                  final List<StockOutModel> selectedList = monthlyMap[key] ?? [];
+                  final List<StockOutModel> selectedList =
+                      monthlyMap[key] ?? [];
                   double totalOrgPrice = 0;
                   double totalSellPrice = 0;
                   double totalFinalSellPrice = 0;
@@ -72,15 +78,20 @@ class _MonthlySalesState extends State<MonthlySales> {
                         .read<TransactionsCubit>()
                         .getSelectedStockOutItemList(stockOut.id);
                     totalOrgPrice +=
-                        CalculationFormula.getItemTotalOriginalPriceForStockOut(items);
+                        CalculationFormula.getItemTotalOriginalPriceForStockOut(
+                          items,
+                        );
                     totalSellPrice +=
-                        CalculationFormula.getItemTotalFinalSellPriceForStockOut(items);
+                        CalculationFormula.getItemTotalFinalSellPriceForStockOut(
+                          items,
+                        );
                     double finalPrice = stockOut.finalTotalPrice;
-                    final DeliveryModel? delivery = stockOut.deliveryModelId == null
+                    final DeliveryModel? delivery =
+                        stockOut.deliveryModelId == null
                         ? null
-                        : context
-                            .read<TransactionsCubit>()
-                            .getDeliveryModel(stockOut.deliveryModelId!);
+                        : context.read<TransactionsCubit>().getDeliveryModel(
+                            stockOut.deliveryModelId!,
+                          );
                     if (delivery?.deliveryCharges != null) {
                       finalPrice -= delivery!.deliveryCharges!;
                     }
@@ -106,17 +117,31 @@ class _MonthlySalesState extends State<MonthlySales> {
     );
   }
 
-  Widget _recordsHeader(BuildContext context, int totalCount, int page,
-      int totalPages, int start, int end) {
+  Widget _recordsHeader(
+    BuildContext context,
+    int totalCount,
+    int page,
+    int totalPages,
+    int start,
+    int end,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(UIConstants.bigSpace, UIConstants.smallSpace,
-          UIConstants.bigSpace, UIConstants.smallSpace),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.fromLTRB(
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: UIConstants.smallSpace,
+        spacing: UIConstants.smallSpace,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: 3),
+              horizontal: UIConstants.mediumSpace,
+              vertical: 3,
+            ),
             decoration: BoxDecoration(
               color: UIConstants.redVioletClr.withValues(alpha: 0.1),
               borderRadius: UIConstants.smallBorderRadius,
@@ -124,15 +149,25 @@ class _MonthlySalesState extends State<MonthlySales> {
             child: Text(
               "$totalCount month${totalCount == 1 ? '' : 's'}",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: UIConstants.redVioletClr, fontWeight: FontWeight.w600),
+                color: UIConstants.redVioletClr,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             "Showing ${start + 1}–$end",
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () => ReportExportService.requestExport(
+              context: context,
+              type: ReportExportType.monthly,
+            ),
+            icon: const Icon(Icons.download_outlined, size: 16),
+            label: const Text('Export'),
           ),
         ],
       ),
@@ -142,26 +177,34 @@ class _MonthlySalesState extends State<MonthlySales> {
   Widget _paginationRow(int page, int totalPages) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-          vertical: UIConstants.mediumSpace, horizontal: UIConstants.bigSpace),
+        vertical: UIConstants.mediumSpace,
+        horizontal: UIConstants.bigSpace,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
-            onPressed:
-                page > 0 ? () => setState(() => _currentPage = page - 1) : null,
+            onPressed: page > 0
+                ? () => setState(() => _currentPage = page - 1)
+                : null,
             color: UIConstants.redVioletClr,
           ),
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: UIConstants.smallSpace),
+              horizontal: UIConstants.mediumSpace,
+              vertical: UIConstants.smallSpace,
+            ),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: UIConstants.redVioletClr.withValues(alpha: 0.3)),
+                color: UIConstants.redVioletClr.withValues(alpha: 0.3),
+              ),
               borderRadius: UIConstants.smallBorderRadius,
             ),
-            child: Text("${page + 1} / $totalPages",
-                style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              "${page + 1} / $totalPages",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded),
@@ -180,17 +223,20 @@ class _MonthlySalesState extends State<MonthlySales> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bar_chart_outlined,
-              size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+          Icon(
+            Icons.bar_chart_outlined,
+            size: 64,
+            color: Colors.grey.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: UIConstants.mediumSpace),
-          Text("No monthly sales data yet",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey)),
+          Text(
+            "No monthly sales data yet",
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
         ],
       ),
     );
   }
 }
-

@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final UIController uiController = UIController.instance;
     // final DBHelper dbController = DBHelper.instance;
     final UIutils uIutils = UIutils();
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(

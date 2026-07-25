@@ -1,0 +1,2 @@
+-keep class com.blue.thermal.printer.** { *; }
+-dontwarn com.blue.thermal.printer.**

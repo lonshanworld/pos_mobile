@@ -1,5 +1,6 @@
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/txtconstants.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UserDBStorage{
@@ -47,7 +48,7 @@ class UserDBStorage{
     await oncreate(db);
   }
 
-  static Future<List<dynamic>> getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>> getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await db.query(TxtConstants.userTableName, orderBy: 'id DESC', limit: limit, offset: offset);
   }
 

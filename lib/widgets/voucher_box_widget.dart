@@ -2,8 +2,6 @@ import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/features/printer_font_changer.dart";
-import "package:pos_mobile/models/promotion_model_folder/promotion_model.dart";
-import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
 import "package:pos_mobile/widgets/tables_folder/voucherTable.dart";
 import "package:qr_flutter/qr_flutter.dart";
 
@@ -13,14 +11,15 @@ import "../constants/uiConstants.dart";
 import "../controller/ui_controller.dart";
 import "../models/item_model_folder/item_model.dart";
 import "../models/item_model_folder/uniqueItem_model.dart";
-import "../utils/formula.dart";
+import "../models/promotion_model_folder/promotion_model.dart";
+import "package:pos_mobile/utils/checkout_helpers.dart";
+import "package:pos_mobile/utils/formula.dart";
 import "../utils/txt_formatters.dart";
 import "cusTxt_widget.dart";
 import "dividers/cus_divider_widget.dart";
 import "logo_folder/logo_image_widget.dart";
 
 class VoucherBox extends StatelessWidget {
-
   final String? customerName;
   final String? deliveryName;
   final List<UniqueItemModel> selectedUniqueItemList;
@@ -33,6 +32,7 @@ class VoucherBox extends StatelessWidget {
   final String? barCode;
   final double taxPercentage;
   final PromotionModel? promotionModel;
+  final DateTime? orderDateTime;
 
   final bool showAdditionalPromotion;
   const VoucherBox({
@@ -49,6 +49,7 @@ class VoucherBox extends StatelessWidget {
     required this.barCode,
     required this.taxPercentage,
     required this.promotionModel,
+    this.orderDateTime,
     // required this.showItem,
     required this.showAdditionalPromotion,
   });
@@ -79,54 +80,32 @@ class VoucherBox extends StatelessWidget {
     Widget cusTxtWidgetTitleMedium(String value) => CusTxtWidget(
       txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(
         color: Colors.black,
-        fontSize:printerFontChanger.printerFontSize * 1.4 ,
+        fontSize: printerFontChanger.printerFontSize * 1.4,
       ),
       txt: value,
     );
 
-    double getAllPrice(){
-      double price = 0;
-      final itemCubit = context.read<ItemCubit>();
-      final activePromotionList = context.read<PromotionCubit>().state.activePromotionList;
-      final itemPromotionList = context.read<PromotionCubit>().state.activeItemPromotionList;
-      
-      final dataList = itemCubit.getItemListWithCountFromUniqueItemListWithPromotion(
+    double getAllPrice() {
+      return CheckoutHelpers.cartSubtotal(
         uniqueItemList: selectedUniqueItemList,
-        itemModelList: selectedItemModelList,
-        activePromotionList: activePromotionList,
-        itemPromotionList: itemPromotionList,
+        activePromotionList: context
+            .read<PromotionCubit>()
+            .state
+            .activePromotionList,
+        itemPromotionList: context
+            .read<PromotionCubit>()
+            .state
+            .activeItemPromotionList,
       );
-
-      for (var item in dataList) {
-        double rawSellPrice = CalculationFormula.getItemSellPrice(
-          originalPrice: item.itemModel.originalPrice,
-          profitPrice: item.itemModel.profitPrice,
-          taxPercentage: item.itemModel.taxPercentage ?? 0,
-        );
-        
-        double unitPriceAfterPromo = CalculationFormula.getItemAfterPromotionPrice(
-          sellPrice: rawSellPrice,
-          promotionPercentage: item.promotion?.promotionPercentage,
-          promotionPrice: item.promotion?.promotionPrice,
-        );
-        
-        price += unitPriceAfterPromo * item.count;
-      }
-      return price;
     }
 
-    Widget dataRow(Widget titleWidget, Widget txtWidget){
+    Widget dataRow(Widget titleWidget, Widget txtWidget) {
       return Padding(
-        padding: const EdgeInsets.symmetric(
-            vertical: UIConstants.smallSpace
-        ),
+        padding: const EdgeInsets.symmetric(vertical: UIConstants.smallSpace),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           mainAxisSize: MainAxisSize.max,
-          children: [
-            titleWidget,
-            txtWidget,
-          ],
+          children: [titleWidget, txtWidget],
         ),
       );
     }
@@ -139,10 +118,11 @@ class VoucherBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          LogoImageWidget(
-            widthandheight: logoSize,
-            customLogoPath: shopInfo.logoPath,
-          ),
+          if (shopInfo.includeLogo)
+            LogoImageWidget(
+              widthandheight: logoSize,
+              customLogoPath: shopInfo.logoPath,
+            ),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -155,7 +135,7 @@ class VoucherBox extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: UIConstants.mediumSpace,),
+          const SizedBox(height: UIConstants.mediumSpace),
           Align(
             alignment: Alignment.center,
             child: Text(
@@ -168,7 +148,7 @@ class VoucherBox extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: UIConstants.smallSpace,),
+          const SizedBox(height: UIConstants.smallSpace),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -179,7 +159,10 @@ class VoucherBox extends StatelessWidget {
               txt: shopInfo.phNum,
             ),
           ),
-          uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
+          uiController.sizedBox(
+            cusHeight: UIConstants.mediumSpace,
+            cusWidth: null,
+          ),
           Align(
             alignment: Alignment.centerLeft,
             child: CusTxtWidget(
@@ -187,29 +170,37 @@ class VoucherBox extends StatelessWidget {
                 color: Colors.black,
                 fontSize: printerFontChanger.printerFontSize,
               ),
-              txt: TextFormatters.getDateTime(DateTime.now()),
+              txt: TextFormatters.getDateTime(orderDateTime ?? DateTime.now()),
             ),
           ),
-          if(customerName != null && customerName != "")Align(
-            alignment: Alignment.centerLeft,
-            child: CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                color: Colors.black,
-                fontSize: printerFontChanger.printerFontSize * 0.8,
+          if (customerName != null && customerName != "")
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CusTxtWidget(
+                txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                  color: Colors.black,
+                  fontSize: printerFontChanger.printerFontSize * 0.8,
+                ),
+                txt: "Customer Name -  ${customerName ?? ""}",
               ),
-              txt: "Customer Name -  ${customerName ?? ""}",
             ),
-          ),
-          if(deliveryName != null && deliveryName != "")Align(
-            alignment: Alignment.centerLeft,
-            child: CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                color: Colors.black,
-                fontSize: printerFontChanger.printerFontSize * 0.8,
+          if (deliveryName != null && deliveryName != "")
+            Padding(
+              padding: const EdgeInsets.only(
+                top: UIConstants.mediumSpace,
+                bottom: UIConstants.mediumSpace,
               ),
-              txt: "Deli Name -  ${deliveryName ?? ""}",
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CusTxtWidget(
+                  txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
+                    color: Colors.black,
+                    fontSize: printerFontChanger.printerFontSize * 1,
+                  ),
+                  txt: "Deli Name -  ${deliveryName ?? ""}",
+                ),
+              ),
             ),
-          ),
           Align(
             alignment: Alignment.centerRight,
             child: CusTxtWidget(
@@ -220,7 +211,10 @@ class VoucherBox extends StatelessWidget {
               txt: "MMK (ကျပ်)",
             ),
           ),
-          VoucherTable(uniqueItemList: selectedUniqueItemList, itemModelList: selectedItemModelList),
+          VoucherTable(
+            uniqueItemList: selectedUniqueItemList,
+            itemModelList: selectedItemModelList,
+          ),
           const CusDividerWidget(clr: Colors.black),
           dataRow(
             cusTxtWidgetTitleSmall("Price"),
@@ -234,22 +228,41 @@ class VoucherBox extends StatelessWidget {
             cusTxtWidgetBodyMedium("Payment Method"),
             cusTxtWidgetBodyMedium(paymentMethod.name.toUpperCase()),
           ),
-          dataRow(
-            cusTxtWidgetBodyMedium("Tax (MMK)"),
-            cusTxtWidgetBodyMedium(CalculationFormula.getPercentageToMMK(getAllPrice(), taxPercentage).toString()),
-          ),
-          if(additionalPromotionAmount != null && additionalPromotionAmount != 0 && showAdditionalPromotion)dataRow(
-            cusTxtWidgetTitleSmall("Additional Promotion"),
-            cusTxtWidgetTitleSmall(additionalPromotionAmount.toString()),
-          ),
-          if(promotionModel != null)dataRow(
-            cusTxtWidgetTitleSmall(promotionModel!.promotionPrice != null ? "Promotion (MMK)" : "Promotion (%)"),
-            cusTxtWidgetTitleSmall(promotionModel!.promotionPrice != null ? promotionModel!.promotionPrice.toString() : promotionModel!.promotionPercentage.toString()),
-          ),
-          if(deliCharges != null && deliCharges != 0)dataRow(
-            cusTxtWidgetBodyMedium("Deli-Charges"),
-            cusTxtWidgetBodyMedium(deliCharges.toString()),
-          ),
+          if (taxPercentage > 0)
+            dataRow(
+              cusTxtWidgetBodyMedium("Tax (MMK)"),
+              cusTxtWidgetBodyMedium(
+                CalculationFormula.getPercentageToMMK(
+                  getAllPrice(),
+                  taxPercentage,
+                ).toString(),
+              ),
+            ),
+          if (additionalPromotionAmount != null &&
+              additionalPromotionAmount != 0 &&
+              showAdditionalPromotion)
+            dataRow(
+              cusTxtWidgetTitleSmall("Additional Promotion"),
+              cusTxtWidgetTitleSmall(additionalPromotionAmount.toString()),
+            ),
+          if (promotionModel != null)
+            dataRow(
+              cusTxtWidgetTitleSmall(
+                promotionModel!.promotionPrice != null
+                    ? "Promotion (MMK)"
+                    : "Promotion (%)",
+              ),
+              cusTxtWidgetTitleSmall(
+                promotionModel!.promotionPrice != null
+                    ? promotionModel!.promotionPrice.toString()
+                    : promotionModel!.promotionPercentage.toString(),
+              ),
+            ),
+          if (deliCharges != null && deliCharges != 0)
+            dataRow(
+              cusTxtWidgetBodyMedium("Deli-Charges"),
+              cusTxtWidgetBodyMedium(deliCharges.toString()),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: UIConstants.bigSpace,
@@ -257,18 +270,25 @@ class VoucherBox extends StatelessWidget {
             child: dataRow(
               cusTxtWidgetTitleMedium("Total Price"),
               cusTxtWidgetTitleMedium(
-                  CalculationFormula.getFinalStockOutTotalPriceWithDeliCharges(
-                      totalPrice: getAllPrice(),
-                      taxPrice: CalculationFormula.getPercentageToMMK(getAllPrice(), taxPercentage),
-                      additionalPromotionPrice: additionalPromotionAmount ?? 0,
-                      deliCharges: deliCharges ?? 0,
-                      promotionPercentage: promotionModel == null ? 0 : promotionModel!.promotionPercentage ?? 0,
-                      promotionPrice: promotionModel == null ? 0 : promotionModel!.promotionPrice ?? 0,
-                  ).toString()
+                CalculationFormula.getFinalStockOutTotalPriceWithDeliCharges(
+                  totalPrice: getAllPrice(),
+                  taxPrice: CalculationFormula.getPercentageToMMK(
+                    getAllPrice(),
+                    taxPercentage,
+                  ),
+                  additionalPromotionPrice: additionalPromotionAmount ?? 0,
+                  deliCharges: deliCharges ?? 0,
+                  promotionPercentage: promotionModel == null
+                      ? 0
+                      : promotionModel!.promotionPercentage ?? 0,
+                  promotionPrice: promotionModel == null
+                      ? 0
+                      : promotionModel!.promotionPrice ?? 0,
+                ).toString(),
               ),
             ),
           ),
-          const SizedBox(height: UIConstants.mediumSpace,),
+          const SizedBox(height: UIConstants.mediumSpace),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -279,7 +299,7 @@ class VoucherBox extends StatelessWidget {
               txt: "**********************",
             ),
           ),
-          const SizedBox(height: UIConstants.mediumSpace,),
+          const SizedBox(height: UIConstants.mediumSpace),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -290,39 +310,46 @@ class VoucherBox extends StatelessWidget {
               txt: "Thank you for your purchase",
             ),
           ),
-          if(description != null && description != "")uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
-          if(description != null && description != "")Align(
-            alignment: Alignment.center,
-            child: CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: Colors.black,
-                fontSize: printerFontChanger.printerFontSize * 0.8,
-              ),
-              txt: "NOTE -  $description",
+          const SizedBox(height: UIConstants.mediumSpace),
+          if (description != null && description != "")
+            uiController.sizedBox(
+              cusHeight: UIConstants.mediumSpace,
+              cusWidth: null,
             ),
-          ),
-          if( barCode != null)QrImageView(
-            data: barCode!,
-            version: QrVersions.auto,
-            size: 140,
-            // embeddedImage: NetworkImage("https://media.istockphoto.com/id/1194465593/photo/young-japanese-woman-looking-confident.jpg?s=1024x1024&w=is&k=20&c=4hVpkslRGJNtl2cMKlrBul-h3gcSXncwkGYAg3LGqlg="),
-            // embeddedImageStyle: QrEmbeddedImageStyle(
-            //   size: Size(80, 80),
-            // ),
-            eyeStyle: const QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: Colors.black,
-            ),
-            backgroundColor: Colors.white,
-            errorStateBuilder: (cxt, err) {
-              return const Center(
-                child: Text(
-                  "Uh oh! Something went wrong...",
-                  textAlign: TextAlign.center,
+          if (description != null && description != "")
+            Align(
+              alignment: Alignment.center,
+              child: CusTxtWidget(
+                txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  color: Colors.black,
+                  fontSize: printerFontChanger.printerFontSize * 0.8,
                 ),
-              );
-            },
-          ),
+                txt: "NOTE -  $description",
+              ),
+            ),
+          if (barCode != null && shopInfo.includeQrCode)
+            QrImageView(
+              data: barCode!,
+              version: QrVersions.auto,
+              size: 140,
+              // embeddedImage: NetworkImage("https://media.istockphoto.com/id/1194465593/photo/young-japanese-woman-looking-confident.jpg?s=1024x1024&w=is&k=20&c=4hVpkslRGJNtl2cMKlrBul-h3gcSXncwkGYAg3LGqlg="),
+              // embeddedImageStyle: QrEmbeddedImageStyle(
+              //   size: Size(80, 80),
+              // ),
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Colors.black,
+              ),
+              backgroundColor: Colors.white,
+              errorStateBuilder: (cxt, err) {
+                return const Center(
+                  child: Text(
+                    "Uh oh! Something went wrong...",
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              },
+            ),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
@@ -333,15 +360,17 @@ class VoucherBox extends StatelessWidget {
               txt: shopInfo.noReturnNote,
             ),
           ),
-          const SizedBox(height: UIConstants.mediumSpace,),
+          const SizedBox(height: UIConstants.mediumSpace),
           Align(
             alignment: Alignment.center,
             child: CusTxtWidget(
               txtStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
                 color: Colors.black,
-                fontSize: (printerFontChanger.printerFontSize * 0.75).toDouble(),
+                fontSize: (printerFontChanger.printerFontSize * 0.75)
+                    .toDouble(),
               ),
-              txt: 'Need custom software for your business? https://nanonux.com',
+              txt:
+                  'Need custom software for your business? https://nanonux.com',
             ),
           ),
         ],

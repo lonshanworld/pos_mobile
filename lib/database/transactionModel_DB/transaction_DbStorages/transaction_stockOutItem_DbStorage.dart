@@ -1,5 +1,4 @@
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
-import 'package:pos_mobile/utils/formula.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../constants/txtconstants.dart';
@@ -52,8 +51,6 @@ class TransactionStockOutItemDbStorage{
   })async{
     final Batch batch = db.batch();
     for(ItemModelWithUniqueItemCountWithPromotion item in dataList){
-      final double sellPrice = CalculationFormula.getItemSellPrice(originalPrice: item.itemModel.originalPrice, profitPrice: item.itemModel.profitPrice, taxPercentage: item.itemModel.taxPercentage ?? 0);
-      
       batch.rawInsert(
         """
           INSERT INTO ${TxtConstants.stockOutItemTableName}
@@ -71,13 +68,9 @@ class TransactionStockOutItemDbStorage{
           item.itemModel.id,
           stockOutId,
           item.count,
-          item.itemModel.originalPrice,
-          sellPrice,
-          CalculationFormula.getItemAfterPromotionPrice(
-            sellPrice: sellPrice,
-            promotionPercentage: item.promotion == null ? 0 : item.promotion!.promotionPercentage,
-            promotionPrice: item.promotion == null ? 0 : item.promotion!.promotionPrice,
-          ),
+          item.avgOriginalPrice,
+          item.avgSellPrice,
+          item.avgFinalSellPrice,
         ],
       );
     }

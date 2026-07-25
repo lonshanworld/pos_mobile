@@ -2,35 +2,64 @@ import 'package:pos_mobile/constants/txtconstants.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:sqflite/sqflite.dart';
 
-class ImageDbStorage{
-  static Future<void>onCreate(Database db)async{
-    await db.execute(
-      """
+class ImageDbStorage {
+  static Future<void> onCreate(Database db) async {
+    await db.execute("""
         CREATE TABLE IF NOT EXISTS ${TxtConstants.imageTableName}(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           imageTxt TEXT NOT NULL
         )
-      """
-    );
+      """);
   }
 
-  static Future<void>onDelete(Database db)async{
-    await db.execute(
-      """
+  static Future<void> onDelete(Database db) async {
+    await db.execute("""
         DROP TABLE IF EXISTS ${TxtConstants.imageTableName}
-      """
-    );
+      """);
   }
 
-  static Future<void>onUpgrade(Database db)async{
+  static Future<void> onUpgrade(Database db) async {
     await onDelete(db);
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllImages(Database db)async{
-    List<dynamic> data = await db.query(TxtConstants.imageTableName, orderBy: 'id DESC');
+  static Future<List<dynamic>> getAllImages(Database db) async {
+    List<dynamic> data = await db.query(
+      TxtConstants.imageTableName,
+      orderBy: 'id DESC',
+    );
     cusDebugPrint(data);
     return data;
   }
 
+  static Future<int> insertImage(Database db, String imagePath) async {
+    return await db.insert(TxtConstants.imageTableName, {
+      'imageTxt': imagePath,
+    });
+  }
+
+  static Future<String?> getImagePath(Database db, int imageId) async {
+    final rows = await db.query(
+      TxtConstants.imageTableName,
+      columns: const ['imageTxt'],
+      where: 'id = ?',
+      whereArgs: [imageId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['imageTxt'] as String?;
+  }
+
+  static Future<int> updateImagePath(
+    Database db, {
+    required int imageId,
+    required String imagePath,
+  }) async {
+    return db.update(
+      TxtConstants.imageTableName,
+      {'imageTxt': imagePath},
+      where: 'id = ?',
+      whereArgs: [imageId],
+    );
+  }
 }

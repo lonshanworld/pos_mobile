@@ -1,3 +1,4 @@
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../../constants/txtconstants.dart';
@@ -12,7 +13,7 @@ class GroupDbStorage{
         CREATE TABLE IF NOT EXISTS ${TxtConstants.groupTableName}(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
-          categoryId INTEGER REFERENCES ${TxtConstants.categoryTableName}(id) NOT NULL,
+          categoryId INTEGER REFERENCES ${TxtConstants.categoryTableName}(id),
           createTime TEXT NOT NULL,
           lastUpdateTime TEXT,
           deleteTime TEXT,
@@ -39,8 +40,18 @@ class GroupDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await db.query(TxtConstants.groupTableName, orderBy: 'id DESC', limit: limit, offset: offset);
+  }
+
+  static Future<List<dynamic>> getGroupCountByCategory(Database db) async {
+    return await db.rawQuery(
+      """
+        SELECT categoryId, COUNT(*) AS total
+        FROM ${TxtConstants.groupTableName}
+        GROUP BY categoryId
+      """,
+    );
   }
 
   static Future<List<dynamic>>getAllActiveData(Database db)async{
@@ -55,7 +66,7 @@ class GroupDbStorage{
     Database db,
     {
       required UserModel userModel,
-      required CategoryModel categoryModel,
+      required CategoryModel? categoryModel,
       required String groupName,
       required String? description,
       required DateTime dateTime,
@@ -73,7 +84,7 @@ class GroupDbStorage{
           )
           VALUES(?,?,?,?,?)
         """,
-        [groupName, categoryModel.id, dateTime.toString(), description, userModel.id]
+        [groupName, categoryModel?.id, dateTime.toString(), description, userModel.id]
     );
   }
 
@@ -93,6 +104,17 @@ class GroupDbStorage{
         """,
         [groupModel.id]
     );
+  }
+
+  static Future<GroupModel?> getGroupById(Database db, int id) async {
+    final List<dynamic> rows = await db.rawQuery(
+      """
+        SELECT * FROM ${TxtConstants.groupTableName} WHERE id = ?
+      """,
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return GroupModel.fromJson(rows.first);
   }
 
   static Future<int>updateGroupName(

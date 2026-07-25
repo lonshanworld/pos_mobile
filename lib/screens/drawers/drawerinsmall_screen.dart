@@ -23,7 +23,7 @@ class DrawerInSmallScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final UserModel? userModel= context.watch<UserDataCubit>().state.userModel;
+    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
 
     return userModel == null
         ?

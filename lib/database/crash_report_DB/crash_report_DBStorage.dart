@@ -5,7 +5,7 @@ class CrashReportDbStorage {
 
   static Future<void> onCreate(Database db) async {
     await db.execute('''
-      CREATE TABLE $tableName(
+      CREATE TABLE IF NOT EXISTS $tableName(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         errorMessage TEXT NOT NULL,
         stackTrace TEXT NOT NULL,

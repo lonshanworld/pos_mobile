@@ -9,6 +9,8 @@ class CusTextFieldLogin extends StatefulWidget {
   final TextStyle? txtStyle;
   final TextInputType txtInputType;
   final bool isPassword;
+  final ValueChanged<String>? onChanged;
+  final Widget? suffixIcon;
 
   const CusTextFieldLogin({
     super.key,
@@ -19,6 +21,8 @@ class CusTextFieldLogin extends StatefulWidget {
     required this.txtInputType,
     this.txtStyle,
     this.isPassword = false,
+    this.onChanged,
+    this.suffixIcon,
   });
 
   @override
@@ -39,6 +43,7 @@ class _CusTextFieldLoginState extends State<CusTextFieldLogin> {
     return TextField(
       cursorColor: Colors.grey,
       controller: widget.txtController,
+      onChanged: widget.onChanged,
       style: widget.txtStyle ?? Theme.of(context).textTheme.bodyLarge,
       keyboardType: widget.txtInputType,
       obscureText: _obscureText,
@@ -55,7 +60,7 @@ class _CusTextFieldLoginState extends State<CusTextFieldLogin> {
                   });
                 },
               )
-            : null,
+            : widget.suffixIcon,
         focusedBorder: const OutlineInputBorder(
           borderSide: BorderSide(
             color: Colors.grey,

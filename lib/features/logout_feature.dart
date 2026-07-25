@@ -9,12 +9,12 @@ import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 class Logout{
   static Future<bool> logout(BuildContext context)async{
     try{
-      Future.wait(
-        [
-          context.read<UserDataCubit>().logout(),
-        ],
-      );
-      context.read<HistoryCubit>().clearHistory();
+      final userDataCubit = context.read<UserDataCubit>();
+      final historyCubit = context.read<HistoryCubit>();
+      await Future.wait([
+        userDataCubit.logout(),
+      ]);
+      historyCubit.clearHistory();
       return true;
     }catch(err){
       return false;

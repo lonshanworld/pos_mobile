@@ -1,3 +1,4 @@
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
 import 'package:sqflite/sqflite.dart';
@@ -36,8 +37,19 @@ class CategoryDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await db.query(TxtConstants.categoryTableName, orderBy: 'id DESC', limit: limit, offset: offset);
+  }
+
+  static Future<int> getTotalCategoryCount(Database db) async {
+    final List<Map<String, Object?>> result = await db.rawQuery(
+      """
+        SELECT COUNT(*) AS total
+        FROM ${TxtConstants.categoryTableName}
+      """,
+    );
+    if (result.isEmpty) return 0;
+    return (result.first['total'] as int?) ?? 0;
   }
 
   static Future<List<dynamic>>getAllActiveData (Database db)async{
@@ -85,6 +97,17 @@ class CategoryDbStorage{
       """,
       [categoryModel.id]
     );
+  }
+
+  static Future<CategoryModel?> getCategoryById(Database db, int id) async {
+    final List<dynamic> rows = await db.rawQuery(
+      """
+        SELECT * FROM ${TxtConstants.categoryTableName} WHERE id = ?
+      """,
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return CategoryModel.fromJson(rows.first);
   }
 
   static Future<int>updateCategoryName(Database db, DateTime dateTime, CategoryModel categoryModel, String newName)async{

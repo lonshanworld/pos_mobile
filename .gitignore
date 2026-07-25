@@ -44,6 +44,5 @@ app.*.map.json
 /assets/.env
 /mobile-crash-backend/.env
 
-.github/workflows
 github_ci
 github_ci.pub

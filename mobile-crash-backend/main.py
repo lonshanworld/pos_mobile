@@ -145,6 +145,12 @@ async def get_stats(_: dict = Depends(verify_admin_token)):
     stats = await db.get_crash_report_stats()
     return stats
 
+@app.delete("/api/admin/reports/{report_id}")
+async def delete_report(report_id: int, _: dict = Depends(verify_admin_token)):
+    """Delete a crash report (admin only)"""
+    success = await db.delete_crash_report(report_id)
+    return {"success": success}
+
 @app.get("/api/admin/reports/{report_id}")
 async def get_report_detail(report_id: int, _: dict = Depends(verify_admin_token)):
     """Get crash report detail (admin only)"""

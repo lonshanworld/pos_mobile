@@ -18,7 +18,10 @@ class CusLeadingBackIconBtn extends StatelessWidget {
     return CusIconBtn(
       size: UIConstants.bigIcon,
       func: (){
-        Navigator.of(context).pop();
+        final navigator = Navigator.of(context);
+        if (navigator.canPop()) {
+          navigator.pop();
+        }
       },
       clr: uiController.getpureOppositeClr(themeModeType),
       icon: Icons.arrow_back,

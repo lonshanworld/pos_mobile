@@ -1,4 +1,5 @@
 import 'package:pos_mobile/constants/txtconstants.dart';
+import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/type_model.dart';
 import 'package:pos_mobile/models/user_model_folder/user_model.dart';
@@ -10,7 +11,7 @@ class TypeDbStorage{
       """
         CREATE TABLE IF NOT EXISTS ${TxtConstants.typeTableName}(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          groupId INTEGER REFERENCES ${TxtConstants.groupTableName}(id) NOT NULL,
+          groupId INTEGER REFERENCES ${TxtConstants.groupTableName}(id),
           name TEXT NOT NULL,
           createTime TEXT NOT NULL,
           lastUpdateTime TEXT,
@@ -41,8 +42,18 @@ class TypeDbStorage{
     await onCreate(db);
   }
 
-  static Future<List<dynamic>>getAllData(Database db, {int limit = 100, int offset = 0})async{
+  static Future<List<dynamic>>getAllData(Database db, {int limit = UIConstants.defaultPageLimit, int offset = 0})async{
     return await db.query(TxtConstants.typeTableName, orderBy: 'id DESC', limit: limit, offset: offset);
+  }
+
+  static Future<List<dynamic>> getTypeCountByGroup(Database db) async {
+    return await db.rawQuery(
+      """
+        SELECT groupId, COUNT(*) AS total
+        FROM ${TxtConstants.typeTableName}
+        GROUP BY groupId
+      """,
+    );
   }
 
   static Future<List<dynamic>>getAllActiveData(Database db)async{
@@ -58,7 +69,7 @@ class TypeDbStorage{
     {
       required String name,
       required String? generalDescription,
-      required GroupModel groupModel,
+      required GroupModel? groupModel,
       required DateTime dateTime,
       required UserModel userModel,
       required bool hasExpire,
@@ -77,7 +88,7 @@ class TypeDbStorage{
           )
           VALUES(?,?,?,?,?,?)
         """,
-        [name, groupModel.id, dateTime.toString(), userModel.id, generalDescription, hasExpire ? 1 : 0]
+        [name, groupModel?.id, dateTime.toString(), userModel.id, generalDescription, hasExpire ? 1 : 0]
     );
   }
 
@@ -96,6 +107,17 @@ class TypeDbStorage{
           SELECT * FROM ${TxtConstants.typeTableName} WHERE id = ?
         """,
         [typeModel.id]);
+  }
+
+  static Future<TypeModel?> getTypeById(Database db, int id) async {
+    final List<dynamic> rows = await db.rawQuery(
+      """
+        SELECT * FROM ${TxtConstants.typeTableName} WHERE id = ?
+      """,
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return TypeModel.fromJson(rows.first);
   }
 
   static Future<int>updateTypeName(

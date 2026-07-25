@@ -150,6 +150,25 @@ class Database:
             ''') as cursor:
                 by_platform = {row['platform']: row['count'] for row in await cursor.fetchall()}
             
+            # Recent 24h
+            yesterday = (datetime.utcnow() - timedelta(days=1)).isoformat()
+            async with db.execute('SELECT COUNT(*) as count FROM crash_reports WHERE received_at > ?', (yesterday,)) as cursor:
+                recent_24h = (await cursor.fetchone())['count']
+                
+            return {
+                'total': total,
+                'by_error_type': by_type,
+                'by_platform': by_platform,
+                'recent_24h': recent_24h
+            }
+
+    async def delete_crash_report(self, report_id: int) -> bool:
+        """Delete a crash report by ID"""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute('DELETE FROM crash_reports WHERE id = ?', (report_id,))
+            await db.commit()
+            return True
+            
             # Recent reports (last 24 hours)
             async with db.execute('''
                 SELECT COUNT(*) as count FROM crash_reports
