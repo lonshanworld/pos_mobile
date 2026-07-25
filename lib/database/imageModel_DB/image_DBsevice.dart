@@ -17,4 +17,16 @@ class ImageDbService {
   static Future<String?> getImagePath(Database db, int imageId) async {
     return await ImageDbStorage.getImagePath(db, imageId);
   }
+
+  static Future<int> updateImagePath(
+    Database db, {
+    required int imageId,
+    required String imagePath,
+  }) async {
+    return ImageDbStorage.updateImagePath(
+      db,
+      imageId: imageId,
+      imagePath: imagePath,
+    );
+  }
 }

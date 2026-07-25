@@ -22,6 +22,7 @@ import '../../../utils/formula.dart';
 import '../../../utils/ui_responsive_calculation.dart';
 import '../../../widgets/btns_folder/cusTxtIconBtn_widget.dart';
 import '../../../widgets/voucher_box_widget.dart';
+import 'voucher_full_view_screen.dart';
 
 class VoucherScreen extends StatefulWidget {
   final String? customerName;
@@ -327,6 +328,29 @@ class _VoucherScreenState extends State<VoucherScreen> {
     }
   }
 
+  void _openFullView() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VoucherFullViewScreen(
+          customerName: widget.customerName,
+          deliveryName: widget.deliveryName,
+          selectedUniqueItemList: widget.selectedUniqueItemList,
+          selectedItemModelList: widget.selectedItemModelList,
+          shoppingType: widget.shoppingType,
+          paymentMethod: widget.paymentMethod,
+          additionalPromotionAmount: widget.additionalPromotionAmount,
+          deliCharges: widget.deliCharges,
+          description: widget.description,
+          barCode: _barCode,
+          taxPercentage: widget.taxPercentage,
+          promotionModel: widget.promotionModel,
+          checkoutTime: widget.checkoutTime,
+          showAdditionalPromotion: showAdditionalPromotion,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final UIutils uIutils = UIutils();
@@ -375,17 +399,38 @@ class _VoucherScreenState extends State<VoucherScreen> {
               child: Column(
                 children: [
                   Container(
-                    height: 30,
+                    height: 48,
                     padding: const EdgeInsets.only(
                       top: UIConstants.mediumSpace,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CusTxtWidget(
-                          txtStyle: Theme.of(context).textTheme.bodyMedium!
-                              .copyWith(fontWeight: FontWeight.bold),
-                          txt: "Voucher / Invoice",
+                        uiController.sizedBox(
+                          cusHeight: 0,
+                          cusWidth: UIConstants.smallSpace,
+                        ),
+                        Expanded(
+                          child: CusTxtWidget(
+                            txtStyle: Theme.of(context).textTheme.bodyMedium!
+                                .copyWith(fontWeight: FontWeight.bold),
+                            txt: "Voucher / Invoice",
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _openFullView,
+                          icon: const Icon(Icons.open_in_full, size: 16),
+                          label: const Text('Click for full view'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
                         ),
                         // SizedBox(
                         //   child: Transform.scale(

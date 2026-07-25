@@ -14,6 +14,7 @@ import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/models/papersize_model.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
+import 'package:pos_mobile/services/public_document_storage.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
@@ -73,11 +74,17 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
   }
 
   Future<void> checkPermission() async {
-    Map<Permission, PermissionStatus> statuses = await [
+    final permissions = <Permission>[
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.locationWhenInUse,
-    ].request();
+    ];
+    if (Platform.isAndroid) {
+      // Android <= 12 uses storage permission; Android 13+ uses the media
+      // permission for images selected by the app.
+      permissions.addAll([Permission.storage, Permission.photos]);
+    }
+    final statuses = await permissions.request();
 
     if (statuses[Permission.bluetoothScan]!.isGranted &&
         statuses[Permission.bluetoothConnect]!.isGranted) {
@@ -391,6 +398,17 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     try {
       final pdfBytes = await generateVoucherPdf(printKey);
       if (pdfBytes == null) return null;
+
+      if (Platform.isAndroid) {
+        final cleanName = _sanitizeFileName(
+          fileName ?? 'voucher_${DateTime.now().millisecondsSinceEpoch}',
+        );
+        return await PublicDocumentStorage.saveBytes(
+          bytes: pdfBytes,
+          fileName: '$cleanName.pdf',
+          directory: 'vouchers',
+        );
+      }
 
       // Build save path: Documents/nanonux/vouchers/ on external storage
       Directory? vouchersDir;

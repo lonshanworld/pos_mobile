@@ -10,69 +10,69 @@ import 'package:pos_mobile/screens/home_screen.dart';
 import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/language_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/tax_settings_screen.dart';
 import 'package:pos_mobile/screens/transaction/stockIn/uniqueItem/uniqueitem_screen.dart';
 import 'package:pos_mobile/screens/print_barcode_screen.dart';
 
-class AppRouter{
-
-  Route onGenerateRoute(RouteSettings routeSettings){
+class AppRouter {
+  Route onGenerateRoute(RouteSettings routeSettings) {
     dynamic routeArgs = routeSettings.arguments;
 
-    switch(routeSettings.name){
-      case CheckUserScreen.routeName :
+    switch (routeSettings.name) {
+      case CheckUserScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return const CheckUserScreen();
-          }
+          },
         );
 
-      case KeyValidationScreen.routeName :
+      case KeyValidationScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return const KeyValidationScreen();
-          }
+          },
         );
 
-      case LoginScreen.routeName :
+      case LoginScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return LoginScreen(userLevel: routeArgs["userLevel"]);
-          }
+          },
         );
 
-      case MerchantSetupScreen.routeName :
+      case MerchantSetupScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return const MerchantSetupScreen();
-          }
+          },
         );
 
-      case AccountScreen.routeName :
+      case AccountScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return const AccountScreen();
           },
         );
 
-      case HomeScreen.routeName :
+      case HomeScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             return const HomeScreen();
-          }
+          },
         );
 
-      case UniqueItemScreen.routeName :
+      case UniqueItemScreen.routeName:
         return MaterialPageRoute(
-          builder: (BuildContext ctx){
+          builder: (BuildContext ctx) {
             ItemModel item = ItemModel.fromJson(routeArgs["item"]);
-            return UniqueItemScreen(item: item,);
-          }
+            return UniqueItemScreen(item: item);
+          },
         );
 
       case PrinterSettingsScreen.routeName:
         return MaterialPageRoute(
           builder: (BuildContext ctx) => const PrinterSettingsScreen(),
-          );
+        );
       case LanguageSettingsScreen.routeName:
         return MaterialPageRoute(
           builder: (BuildContext ctx) => const LanguageSettingsScreen(),
@@ -88,11 +88,16 @@ class AppRouter{
           builder: (BuildContext ctx) => const GeneralSettingsScreen(),
         );
 
-      default :
+      case TaxSettingsScreen.routeName:
         return MaterialPageRoute(
-            builder: (BuildContext ctx){
-              return const CheckUserScreen();
-            }
+          builder: (BuildContext ctx) => const TaxSettingsScreen(),
+        );
+
+      default:
+        return MaterialPageRoute(
+          builder: (BuildContext ctx) {
+            return const CheckUserScreen();
+          },
         );
     }
   }

@@ -26,15 +26,21 @@ class StockInHistoryWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
-    final List<UniqueItemModel> activeUniqueItemList =
-        context.watch<ItemCubit>().state.activeUniqueItemList;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
+    final List<UniqueItemModel> activeUniqueItemList = context
+        .watch<ItemCubit>()
+        .state
+        .activeUniqueItemList;
 
     return Card(
       elevation: 4,
       shadowColor: Colors.black12,
-      shape: const RoundedRectangleBorder(borderRadius: UIConstants.bigBorderRadius),
+      shape: const RoundedRectangleBorder(
+        borderRadius: UIConstants.bigBorderRadius,
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,9 +57,9 @@ class StockInHistoryWidget extends StatelessWidget {
               child: CusTxtWidget(
                 txt: stockInHistoryModel.dateTxt,
                 txtStyle: Theme.of(context).textTheme.titleLarge!.copyWith(
-                      color: uiController.getpureDirectClr(themeModeType),
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: uiController.getpureDirectClr(themeModeType),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           Container(
@@ -70,8 +76,9 @@ class StockInHistoryWidget extends StatelessWidget {
                     stockInHistoryModel.stockInList.length - 1 - index;
                 final e = stockInHistoryModel.stockInList[reversedIndex];
 
-                final UserModel? stockInPerson =
-                    context.read<UserDataCubit>().getSingleUser(e.createPersonId);
+                final UserModel? stockInPerson = context
+                    .read<UserDataCubit>()
+                    .getSingleUser(e.createPersonId);
                 final List<UniqueItemModel> filteredInActiveUniqueItemList =
                     context.read<ItemCubit>().filterInActiveUniqueItemList();
                 final List<UniqueItemModel> combineUniqueItemList = [
@@ -116,22 +123,24 @@ class StockInHistoryWidget extends StatelessWidget {
                   ),
                   title: CusTxtWidget(
                     txt: stockInPerson?.userName ?? 'Unknown User',
-                    txtStyle: Theme.of(context)
-                        .textTheme
-                        .titleMedium!
-                        .copyWith(fontWeight: FontWeight.w600),
+                    txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   subtitle: itemNames.isNotEmpty
                       ? CusTxtWidget(
-                          txt: itemNames.join(', '),
+                          txt: 'Code: ${e.code}\n${itemNames.join(', ')}',
                           txtStyle: Theme.of(context).textTheme.bodySmall!,
                         )
-                      : null,
+                      : CusTxtWidget(
+                          txt: 'Code: ${e.code}',
+                          txtStyle: Theme.of(context).textTheme.bodySmall!,
+                        ),
                   trailing: CusTxtWidget(
                     txt: '+$totalItems',
                     txtStyle: Theme.of(context).textTheme.titleLarge!.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 );
               },

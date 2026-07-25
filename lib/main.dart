@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_storage/get_storage.dart';
@@ -22,11 +24,14 @@ import 'package:pos_mobile/services/crash_report_sync_manager.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
 import 'package:pos_mobile/languages/app_language.dart';
+import 'package:pos_mobile/database/shopinfo_db/shop_info_storage.dart';
+import 'package:pos_mobile/services/public_document_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DBHelper.initiateAllDB();
   await GetStorage.init();
+  await _migrateFilesToPublicDocuments();
 
   // Load environment
   await dotenv.load(fileName: "assets/.env");
@@ -40,6 +45,40 @@ void main() async {
 
   // NOTE : don't put this at the top of runapp
   // configLoading();
+}
+
+Future<void> _migrateFilesToPublicDocuments() async {
+  try {
+    final migrated = await PublicDocumentStorage.migrateExistingFiles();
+    if (migrated.isEmpty) return;
+
+    for (final image in await DBHelper.getAllImages()) {
+      final oldPath = image['imageTxt'] as String?;
+      final newPath = oldPath == null ? null : migrated[oldPath];
+      if (newPath != null) {
+        await DBHelper.updateImagePath(
+          imageId: image['id'] as int,
+          imagePath: newPath,
+        );
+      }
+    }
+
+    final oldLogoPath = ShopInfoStorage.instance.getLogoPath();
+    final newLogoPath = oldLogoPath == null ? null : migrated[oldLogoPath];
+    if (newLogoPath != null) {
+      await ShopInfoStorage.instance.saveLogoPath(newLogoPath);
+    }
+
+    for (final oldPath in migrated.keys) {
+      final oldFile = File(oldPath);
+      if (await oldFile.exists()) {
+        await oldFile.delete();
+      }
+    }
+  } catch (_) {
+    // Migration is best effort. Existing app-private files remain usable if
+    // the device denies legacy storage access or public storage is unavailable.
+  }
 }
 
 // void configLoading() {
@@ -356,6 +395,10 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
     } else if (state == AppLifecycleState.resumed) {
       // Trigger crash report sync when app comes to foreground
       CrashReportSyncManager.instance.manualSync();
+
+      // Re-check Bluetooth and file/media access whenever the app is used
+      // again after being backgrounded.
+      context.read<BluetoothPrinterCubit>().checkPermission();
 
       // Auto-unlock or refresh key validation status when app comes to foreground
       final keyValidationCubit = context.read<KeyValidationCubit>();

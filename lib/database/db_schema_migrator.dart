@@ -12,25 +12,20 @@ import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
+import 'package:pos_mobile/features/code_generator_feature.dart';
 
 class DbColumnSpec {
   final String name;
   final String definition;
 
-  const DbColumnSpec({
-    required this.name,
-    required this.definition,
-  });
+  const DbColumnSpec({required this.name, required this.definition});
 }
 
 class DbTableSpec {
   final String tableName;
   final List<DbColumnSpec> columns;
 
-  const DbTableSpec({
-    required this.tableName,
-    required this.columns,
-  });
+  const DbTableSpec({required this.tableName, required this.columns});
 }
 
 class DbSchemaMigrator {
@@ -84,7 +79,8 @@ class DbSchemaMigrator {
         ),
         DbColumnSpec(
           name: 'createPersonId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'deletePersonId',
@@ -112,7 +108,8 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'description', definition: 'TEXT'),
         DbColumnSpec(
           name: 'createPersonId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'deletePersonId',
@@ -138,7 +135,8 @@ class DbSchemaMigrator {
         ),
         DbColumnSpec(
           name: 'createPersonId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'deletePersonId',
@@ -152,7 +150,8 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'generalDescription', definition: 'TEXT'),
         DbColumnSpec(
           name: 'generalRestrictionId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.restrictionTableName}(id)',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.restrictionTableName}(id)',
         ),
         DbColumnSpec(
           name: 'hasExpire',
@@ -166,7 +165,8 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'name', definition: 'TEXT NOT NULL'),
         DbColumnSpec(
           name: 'categoryId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id)',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.categoryTableName}(id)',
         ),
         DbColumnSpec(
           name: 'groupId',
@@ -174,7 +174,8 @@ class DbSchemaMigrator {
         ),
         DbColumnSpec(
           name: 'typeId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.typeTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.typeTableName}(id) NOT NULL',
         ),
         DbColumnSpec(name: 'createTime', definition: 'TEXT NOT NULL'),
         DbColumnSpec(name: 'lastUpdateTime', definition: 'TEXT'),
@@ -190,7 +191,8 @@ class DbSchemaMigrator {
         ),
         DbColumnSpec(
           name: 'createPersonId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'deletePersonId',
@@ -200,11 +202,21 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'code', definition: 'TEXT'),
         DbColumnSpec(
           name: 'restrictionId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.restrictionTableName}(id)',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.restrictionTableName}(id)',
         ),
-        DbColumnSpec(name: 'profitPrice', definition: 'REAL NOT NULL DEFAULT 0'),
-        DbColumnSpec(name: 'originalPrice', definition: 'REAL NOT NULL DEFAULT 0'),
-        DbColumnSpec(name: 'taxPercentage', definition: 'REAL NOT NULL DEFAULT 0'),
+        DbColumnSpec(
+          name: 'profitPrice',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
+        DbColumnSpec(
+          name: 'originalPrice',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
+        DbColumnSpec(
+          name: 'taxPercentage',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
         DbColumnSpec(
           name: 'imageId',
           definition: 'INTEGER REFERENCES ${TxtConstants.imageTableName}(id)',
@@ -220,15 +232,18 @@ class DbSchemaMigrator {
       columns: [
         DbColumnSpec(
           name: 'itemId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.itemTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.itemTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'stockInId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.stockInTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.stockInTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'stockOutId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.stockOutTableName}(id)',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.stockOutTableName}(id)',
         ),
         DbColumnSpec(name: 'createTime', definition: 'TEXT NOT NULL'),
         DbColumnSpec(name: 'lastUpdateTime', definition: 'TEXT'),
@@ -236,12 +251,22 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'itemManufactureDate', definition: 'TEXT'),
         DbColumnSpec(name: 'itemExpireDate', definition: 'TEXT'),
         DbColumnSpec(name: 'code', definition: 'TEXT'),
-        DbColumnSpec(name: 'originalPrice', definition: 'REAL NOT NULL DEFAULT 0'),
-        DbColumnSpec(name: 'profitPrice', definition: 'REAL NOT NULL DEFAULT 0'),
-        DbColumnSpec(name: 'taxPercentage', definition: 'REAL NOT NULL DEFAULT 0'),
+        DbColumnSpec(
+          name: 'originalPrice',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
+        DbColumnSpec(
+          name: 'profitPrice',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
+        DbColumnSpec(
+          name: 'taxPercentage',
+          definition: 'REAL NOT NULL DEFAULT 0',
+        ),
         DbColumnSpec(
           name: 'createPersonId',
-          definition: 'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
+          definition:
+              'INTEGER REFERENCES ${TxtConstants.userTableName}(id) NOT NULL',
         ),
         DbColumnSpec(
           name: 'deletePersonId',
@@ -258,6 +283,10 @@ class DbSchemaMigrator {
         DbColumnSpec(name: 'instanceBatchNumber', definition: 'TEXT'),
         DbColumnSpec(name: 'instanceImei', definition: 'TEXT'),
       ],
+    ),
+    DbTableSpec(
+      tableName: TxtConstants.stockInTableName,
+      columns: [DbColumnSpec(name: 'code', definition: 'TEXT')],
     ),
     DbTableSpec(
       tableName: TxtConstants.itemBusinessDetailTableName,
@@ -301,6 +330,7 @@ class DbSchemaMigrator {
       for (final tableSpec in _schemaSpecs) {
         await _ensureColumns(db, tableSpec);
       }
+      await _backfillStockInCodes(db);
       await _ensureIndexes(db);
     } catch (e) {
       cusDebugPrint('DB schema reconciliation failed: $e');
@@ -498,6 +528,23 @@ class DbSchemaMigrator {
     );
   }
 
+  static Future<void> _backfillStockInCodes(Database db) async {
+    final rows = await db.query(
+      TxtConstants.stockInTableName,
+      columns: const ['id'],
+      where: 'code IS NULL OR TRIM(code) = ?',
+      whereArgs: const [''],
+    );
+    for (final row in rows) {
+      await db.update(
+        TxtConstants.stockInTableName,
+        {'code': CodeGenerator.getUniqueCodeForStockIn()},
+        where: 'id = ?',
+        whereArgs: [row['id']],
+      );
+    }
+  }
+
   static Future<bool> _isColumnRequired(
     Database db,
     String tableName,
@@ -521,9 +568,6 @@ class DbSchemaMigrator {
     final List<Map<String, Object?>> rows = await db.rawQuery(
       'PRAGMA table_info($tableName)',
     );
-    return rows
-        .map((row) => row['name'])
-        .whereType<String>()
-        .toSet();
+    return rows.map((row) => row['name']).whereType<String>().toSet();
   }
 }

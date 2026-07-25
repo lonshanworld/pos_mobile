@@ -119,10 +119,11 @@ class UniqueItemBoxWidget extends StatelessWidget {
           '${uniqueItemModel.originalPrice.toStringAsFixed(0)} MMK',
         ),
         doubleRowStrings('Sell price', '${sellPrice.toStringAsFixed(0)} MMK'),
-        doubleRowStrings(
-          'Tax',
-          '${uniqueItemModel.taxPercentage.toStringAsFixed(1)}%',
-        ),
+        if (uniqueItemModel.taxPercentage > 0)
+          doubleRowStrings(
+            'Tax',
+            '${uniqueItemModel.taxPercentage.toStringAsFixed(1)}%',
+          ),
         if (uniqueItemModel.code != null && uniqueItemModel.code!.isNotEmpty)
           doubleRowStrings('Code', uniqueItemModel.code!),
         doubleRowStrings(

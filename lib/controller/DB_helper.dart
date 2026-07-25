@@ -6,6 +6,7 @@ import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_m
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
+import 'package:pos_mobile/database/imageModel_DB/image_DBStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
@@ -324,6 +325,21 @@ class DBHelper {
     return await ImageDbService.getImagePath(database!, imageId);
   }
 
+  static Future<List<dynamic>> getAllImages() async {
+    return ImageDbStorage.getAllImages(database!);
+  }
+
+  static Future<int> updateImagePath({
+    required int imageId,
+    required String imagePath,
+  }) async {
+    return ImageDbService.updateImagePath(
+      database!,
+      imageId: imageId,
+      imagePath: imagePath,
+    );
+  }
+
   static Future<List<ItemBusinessDetailModel>>
   getAllItemBusinessDetails() async {
     return await ItemBusinessDetailDbService.getAll(database!);
@@ -405,6 +421,29 @@ class DBHelper {
       promotionModel: promotionModel,
       checkoutTime: checkoutTime,
     );
+  }
+
+  static Future<void> clearAllTaxValues() async {
+    final db = database;
+    if (db == null) return;
+    await db.transaction((txn) async {
+      await _clearItemTaxValues(txn);
+      await txn.update(TxtConstants.stockOutTableName, {'taxPercentage': 0});
+    });
+  }
+
+  static Future<void> clearItemTaxValues() async {
+    final db = database;
+    if (db == null) return;
+    await db.transaction(_clearItemTaxValues);
+  }
+
+  static Future<void> _clearItemTaxValues(Transaction txn) async {
+    await txn.update(TxtConstants.itemTableName, {'taxPercentage': 0});
+    await txn.update(TxtConstants.uniqueItemTableName, {'taxPercentage': 0});
+    await txn.update(TxtConstants.moduleComponentItemTableName, {
+      'taxPercentage': 0,
+    });
   }
 
   static Future<bool> editCategoryName({

@@ -203,6 +203,8 @@ class ItemCubit extends Cubit<ItemState> {
     }
   }
 
+  Future<void> reloadItemData() => _initAllItemData();
+
   Future<void> reloadAllItem() async {
     await _initAllItemData();
   }

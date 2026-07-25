@@ -49,4 +49,17 @@ class ImageDbStorage {
     if (rows.isEmpty) return null;
     return rows.first['imageTxt'] as String?;
   }
+
+  static Future<int> updateImagePath(
+    Database db, {
+    required int imageId,
+    required String imagePath,
+  }) async {
+    return db.update(
+      TxtConstants.imageTableName,
+      {'imageTxt': imagePath},
+      where: 'id = ?',
+      whereArgs: [imageId],
+    );
+  }
 }

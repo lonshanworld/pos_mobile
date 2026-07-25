@@ -72,7 +72,6 @@ class AddMoreInfoStockOutScreen extends StatefulWidget {
 class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   final TextEditingController deliveryChargesController =
       TextEditingController();
-  final TextEditingController taxPercentageController = TextEditingController();
   final TextEditingController additionalPromotionAmountController =
       TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
@@ -104,8 +103,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
           .toString();
     }
 
-    taxPercentageController.text = widget.taxPercentageInfo.toString();
-
     descriptionController.text = widget.descriptionInfo ?? "";
     customerNameController.text = widget.customerNameInfo ?? "";
     deliveryNameController.text = widget.deliveryNameInfo ?? "";
@@ -114,9 +111,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     selectedPromotionModel = widget.promotionModel;
     checkoutTime = widget.checkoutTimeInfo;
     deliveryChargesController.addListener(() {
-      reloadScreen();
-    });
-    taxPercentageController.addListener(() {
       reloadScreen();
     });
     additionalPromotionAmountController.addListener(() {
@@ -136,7 +130,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   @override
   void dispose() {
     deliveryChargesController.dispose();
-    taxPercentageController.dispose();
     additionalPromotionAmountController.dispose();
     descriptionController.dispose();
     customerNameController.dispose();
@@ -153,6 +146,11 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     final BusinessType businessType = context.select(
       (ShopInfoCubit cubit) => cubit.state.businessType,
     );
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final checkoutTaxPercentage =
+        shopInfoState.taxEnabled && shopInfoState.checkoutTaxEnabled
+        ? shopInfoState.checkoutTaxPercentage
+        : 0.0;
     final List<PromotionModel> promotionList = context.select(
       (PromotionCubit cubit) => cubit.state.activePromotionList,
     );
@@ -242,9 +240,11 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
               final double? deliveryCharges = double.tryParse(
                 deliveryChargesController.text.trim(),
               );
-              final double? taxPercentage = double.tryParse(
-                taxPercentageController.text.trim(),
-              );
+              final shopInfo = context.read<ShopInfoCubit>().state;
+              final double taxPercentage =
+                  shopInfo.taxEnabled && shopInfo.checkoutTaxEnabled
+                  ? shopInfo.checkoutTaxPercentage
+                  : 0;
               final double? additionalPromotionAmount = double.tryParse(
                 additionalPromotionAmountController.text.trim(),
               );
@@ -254,27 +254,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text("Delivery charges must be a valid number."),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-                return;
-              }
-
-              if (taxPercentageController.text.trim().isNotEmpty &&
-                  taxPercentage == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Tax percentage must be a valid number."),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-                return;
-              }
-
-              if ((taxPercentage ?? 0) < 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Tax percentage cannot be negative."),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -296,7 +275,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
 
               widget.func(
                 deliveryChargesInfo: deliveryCharges,
-                taxPercentageInfo: taxPercentage ?? 0,
+                taxPercentageInfo: taxPercentage,
                 additionalPromotionAmountInfo: additionalPromotionAmount,
                 descriptionInfo: descriptionController.text.trim() == ""
                     ? null
@@ -447,15 +426,16 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 cusTxtWidgetBodyMedium("Payment Method"),
                 cusTxtWidgetBodyMedium(paymentMethod.name.toUpperCase()),
               ),
-              dataRow(
-                cusTxtWidgetBodyMedium("Tax (MMK)"),
-                cusTxtWidgetBodyMedium(
-                  CalculationFormula.getPercentageToMMK(
-                    getAllPrice(),
-                    double.tryParse(taxPercentageController.text.trim()) ?? 0,
-                  ).toString(),
+              if (shopInfoState.taxEnabled && shopInfoState.checkoutTaxEnabled)
+                dataRow(
+                  cusTxtWidgetBodyMedium("Tax (MMK)"),
+                  cusTxtWidgetBodyMedium(
+                    CalculationFormula.getPercentageToMMK(
+                      getAllPrice(),
+                      checkoutTaxPercentage,
+                    ).toString(),
+                  ),
                 ),
-              ),
               if (additionalPromotionAmountController.text.trim().isNotEmpty &&
                   additionalPromotionAmountController.text.trim() != "")
                 dataRow(
@@ -497,8 +477,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                       totalPrice: getAllPrice(),
                       taxPrice: CalculationFormula.getPercentageToMMK(
                         getAllPrice(),
-                        double.tryParse(taxPercentageController.text.trim()) ??
-                            0,
+                        checkoutTaxPercentage,
                       ),
                       additionalPromotionPrice:
                           double.tryParse(
@@ -566,11 +545,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 txtController: deliveryNameController,
                 hintTxt: "Enter deli-person name",
                 txtInputType: TextInputType.text,
-              ),
-              cusTxtFieldStockOut(
-                txtController: taxPercentageController,
-                hintTxt: "Enter tax percentage",
-                txtInputType: TextInputType.number,
               ),
               uiController.sizedBox(
                 cusHeight: UIConstants.mediumSpace,

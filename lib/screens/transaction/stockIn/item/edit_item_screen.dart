@@ -117,10 +117,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
         .watch<ThemeCubit>()
         .state
         .themeModeType;
-    final BusinessType businessType = context
-        .watch<ShopInfoCubit>()
-        .state
-        .businessType;
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final BusinessType businessType = shopInfoState.businessType;
+    final bool showItemTax =
+        shopInfoState.taxEnabled && shopInfoState.itemTaxEnabled;
     final bool allowExpiryTracking = businessType.allowsExpiryTracking;
     final businessDetail = context.read<ItemCubit>().getBusinessDetail(
       widget.itemModel.id,
@@ -383,11 +383,12 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 labelTxt: "MMK",
                 textEditingController: sellPriceController,
               ),
-              priceInputField(
-                hintTxt: "Enter new tax percentage",
-                labelTxt: "% percentage",
-                textEditingController: taxController,
-              ),
+              if (showItemTax)
+                priceInputField(
+                  hintTxt: "Enter new tax percentage",
+                  labelTxt: "% percentage",
+                  textEditingController: taxController,
+                ),
               uiController.sizedBox(
                 cusHeight: UIConstants.bigSpace,
                 cusWidth: null,
@@ -446,7 +447,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                       showValidationMessage("Choose a $typeLabel first");
                     } else if (itemNameController.text.trim().isEmpty) {
                       showValidationMessage("Item name should not be empty");
-                    } else if (businessType != BusinessType.food && originalPrice < 1) {
+                    } else if (businessType != BusinessType.food &&
+                        originalPrice < 1) {
                       showValidationMessage(
                         "Original price must be greater than zero",
                       );
@@ -474,7 +476,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         typeId: selectedTypeModel.id,
                         newOriginalPrice: originalPrice,
                         newProfitPrice: profitPrice,
-                        newTaxPercentage: taxPercentage,
+                        newTaxPercentage: showItemTax ? taxPercentage : 0,
                         needStock: businessType == BusinessType.food
                             ? _needStock
                             : true,

@@ -25,7 +25,7 @@ import "package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart";
 import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:image_picker/image_picker.dart";
-import "package:path_provider/path_provider.dart";
+import "package:pos_mobile/services/public_document_storage.dart";
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -105,6 +105,11 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   Future<void> _pickItemImage() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      // Keep the image-source actions opaque. The app-wide bottom-sheet theme
+      // is transparent, which otherwise lets the modal barrier wash out the
+      // entire item form behind it.
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      barrierColor: Colors.transparent,
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
@@ -128,15 +133,14 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     if (picked == null) return;
 
     try {
-      final supportDir = await getApplicationSupportDirectory();
-      final imageDir = Directory('${supportDir.path}/nanonux_item_images');
-      await imageDir.create(recursive: true);
       final ext = picked.path.contains('.')
           ? picked.path.split('.').last.toLowerCase()
           : 'jpg';
-      final destination =
-          '${imageDir.path}/item_${DateTime.now().microsecondsSinceEpoch}.$ext';
-      await File(picked.path).copy(destination);
+      final destination = await PublicDocumentStorage.copyFile(
+        sourcePath: picked.path,
+        fileName: 'item_${DateTime.now().microsecondsSinceEpoch}.$ext',
+        directory: 'item_images',
+      );
       if (mounted) setState(() => _selectedImagePath = destination);
     } catch (e) {
       if (!mounted) return;
@@ -158,6 +162,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         .watch<ShopInfoCubit>()
         .state
         .businessType;
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final bool showItemTax =
+        shopInfoState.taxEnabled && shopInfoState.itemTaxEnabled;
     final bool allowExpiryTracking = businessType.allowsExpiryTracking;
     final itemState = context.watch<ItemCubit>().state;
     final categoryLabel = BusinessHierarchyConfig.getLabel(
@@ -426,11 +433,12 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 labelTxt: "MMK",
                 textEditingController: sellPriceController,
               ),
-              priceInputField(
-                hintTxt: "Enter tax percentage",
-                labelTxt: "% percentage",
-                textEditingController: taxController,
-              ),
+              if (showItemTax)
+                priceInputField(
+                  hintTxt: "Enter tax percentage",
+                  labelTxt: "% percentage",
+                  textEditingController: taxController,
+                ),
               uiController.sizedBox(
                 cusHeight: UIConstants.bigSpace,
                 cusWidth: null,
@@ -453,7 +461,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       cusHeight: UIConstants.mediumSpace,
                       cusWidth: null,
                     ),
-                    if (taxPercentage > 0)
+                    if (showItemTax && taxPercentage > 0)
                       resultRow(
                         "Tax",
                         CalculationFormula.getPercentageToMMK(
@@ -570,7 +578,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                               sellPriceController.text.trim(),
                             ) ==
                             null ||
-                        double.tryParse(taxController.text.trim()) == null) {
+                        (showItemTax &&
+                            double.tryParse(taxController.text.trim()) ==
+                                null)) {
                       showValidationMessage(
                         "Sell price and tax must be valid numbers",
                       );
@@ -611,7 +621,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             allowExpiryTracking && selectedTypeModel.hasExpire,
                         profitPrice: profitPrice,
                         originalPrice: originalPrice,
-                        taxPercentage: taxPercentage,
+                        taxPercentage: showItemTax ? taxPercentage : 0,
                         needStock: businessType == BusinessType.food
                             ? _needStock
                             : true,
