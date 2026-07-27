@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
@@ -9,18 +11,36 @@ import 'package:pos_mobile/widgets/promotion/promotion_widget.dart';
 
 import '../../constants/uiConstants.dart';
 import '../../widgets/btns_folder/cusTxtIconBtn_widget.dart';
+import '../screen_data_loader.dart';
 
-class PromotionListScreen extends StatelessWidget {
-
+class PromotionListScreen extends StatefulWidget {
   final VoidCallback goToCreateScreen;
-  const PromotionListScreen({
-    super.key,
-    required this.goToCreateScreen,
-  });
+  const PromotionListScreen({super.key, required this.goToCreateScreen});
+
+  @override
+  State<PromotionListScreen> createState() => _PromotionListScreenState();
+}
+
+class _PromotionListScreenState extends State<PromotionListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.promotions(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<PromotionModel> promotionList = context.watch<PromotionCubit>().state.activePromotionList;
+    final List<PromotionModel> promotionList = context
+        .watch<PromotionCubit>()
+        .state
+        .activePromotionList;
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
 
     return Scaffold(
@@ -43,31 +63,35 @@ class PromotionListScreen extends StatelessWidget {
                   spacing: UIConstants.bigSpace,
                   runSpacing: UIConstants.bigSpace,
                   alignment: WrapAlignment.center,
-                  children: promotionList.map((e){
-                    return PromotionWidget(promotionModel: e, index: promotionList.indexOf(e) + 1);
+                  children: promotionList.map((e) {
+                    return PromotionWidget(
+                      promotionModel: e,
+                      index: promotionList.indexOf(e) + 1,
+                    );
                   }).toList(),
                 ),
               ),
             ),
           ),
-          if(userModel != null && userModel.userLevel == UserLevel.merchant)Positioned(
-            bottom: 30,
-            right: 30,
-            child: CusTxtIconElevatedBtn(
-              txt: "Create new promotion",
-              verticalpadding: UIConstants.mediumSpace,
-              horizontalpadding: UIConstants.bigSpace,
-              bdrRadius: UIConstants.mediumRadius,
-              bgClr: Colors.pinkAccent,
-              func: (){
-                goToCreateScreen();
-              },
-              txtStyle: Theme.of(context).textTheme.titleSmall!,
-              txtClr: Colors.white,
-              icon: Icons.add,
-              iconSize: UIConstants.normalNormalIconSize,
+          if (userModel != null && userModel.userLevel == UserLevel.merchant)
+            Positioned(
+              bottom: 30,
+              right: 30,
+              child: CusTxtIconElevatedBtn(
+                txt: "Create new promotion",
+                verticalpadding: UIConstants.mediumSpace,
+                horizontalpadding: UIConstants.bigSpace,
+                bdrRadius: UIConstants.mediumRadius,
+                bgClr: Colors.pinkAccent,
+                func: () {
+                  widget.goToCreateScreen();
+                },
+                txtStyle: Theme.of(context).textTheme.titleSmall!,
+                txtClr: Colors.white,
+                icon: Icons.add,
+                iconSize: UIConstants.normalNormalIconSize,
+              ),
             ),
-          ),
         ],
       ),
     );

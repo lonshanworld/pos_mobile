@@ -321,6 +321,14 @@
                     <option value="ios">iOS</option>
                     <option value="windows">Windows</option>
                 </select>
+                <select id="sourceFilter">
+                    <option value="">All Sources</option>
+                    <option value="mobile_frontend">Mobile frontend</option>
+                    <option value="web_frontend">Web frontend</option>
+                    <option value="pos_backend">POS backend</option>
+                </select>
+                <input id="versionFilter" placeholder="App/backend version" style="padding:0.5rem;border:2px solid #e0e0e0;border-radius:5px;">
+                <input id="requestFilter" placeholder="Request or transaction ID" style="padding:0.5rem;border:2px solid #e0e0e0;border-radius:5px;">
                 <button class="refresh-btn" onclick="loadReports()">Refresh</button>
             </div>
             <div id="reportsTable">
@@ -450,6 +458,12 @@
             let url = '/api/admin/reports?limit=50';
             if (errorType) url += `&error_type=${errorType}`;
             if (platform) url += `&platform=${platform}`;
+            const source = document.getElementById('sourceFilter').value;
+            const version = document.getElementById('versionFilter').value;
+            const request = document.getElementById('requestFilter').value;
+            if (source) url += `&source=${encodeURIComponent(source)}`;
+            if (version) url += `&app_version=${encodeURIComponent(version)}`;
+            if (request) url += `&request_id=${encodeURIComponent(request)}`;
             
             try {
                 const data = await apiCall(url);
@@ -475,6 +489,7 @@
                     <tr>
                         <th>Time</th>
                         <th>Type</th>
+                        <th>Source</th>
                         <th>Platform</th>
                         <th>Version</th>
                         <th>Error</th>
@@ -488,6 +503,7 @@
                         <tr>
                             <td>${new Date(report.received_at).toLocaleString()}</td>
                             <td><span class="error-type ${report.error_type.toLowerCase()}">${report.error_type}</span></td>
+                            <td>${escapeHtml(report.source || 'mobile_frontend')}<br><small>${escapeHtml(report.request_id || report.transaction_id || '')}</small></td>
                             <td><span class="platform-badge">${report.platform}</span></td>
                             <td>${report.app_version}</td>
                             <td>${escapeHtml(report.error_message.substring(0, 100))}...</td>
@@ -495,6 +511,7 @@
                             <td><span class="status-badge status-${report.status}">${report.status}</span></td>
                             <td>
                                 <button class="refresh-btn" onclick="viewDetail(${report.id})">Detail</button>
+                                <button class="refresh-btn" onclick="reviewReport(${report.id})">Review</button>
                                 <button class="logout-btn" style="padding: 0.5rem; margin-left: 5px;" onclick="deleteReport(${report.id})">Delete</button>
                             </td>
                         </tr>
@@ -522,6 +539,11 @@
                 console.error('Failed to delete report:', err);
                 alert('Error deleting report');
             }
+        }
+
+        async function reviewReport(id) {
+            const response = await apiCall(`/api/admin/reports/${id}/status`, 'POST', {status: 'reviewed'});
+            if (response && response.success) loadReports();
         }
 
         // Keys Functions
@@ -679,6 +701,9 @@
         // Event listeners
         document.getElementById('errorTypeFilter').addEventListener('change', loadReports);
         document.getElementById('platformFilter').addEventListener('change', loadReports);
+        document.getElementById('sourceFilter').addEventListener('change', loadReports);
+        document.getElementById('versionFilter').addEventListener('change', loadReports);
+        document.getElementById('requestFilter').addEventListener('change', loadReports);
 
         // Initial load
         loadStats();

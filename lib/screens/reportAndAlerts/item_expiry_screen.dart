@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
@@ -11,6 +13,7 @@ import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/item_model_folder/item_model.dart';
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class ItemExpiryScreen extends StatefulWidget {
   const ItemExpiryScreen({super.key});
@@ -35,6 +38,14 @@ class _ItemExpiryScreenState extends State<ItemExpiryScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.shopInfo(context),
+    ]);
   }
 
   @override

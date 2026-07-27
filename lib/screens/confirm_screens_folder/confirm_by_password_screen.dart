@@ -5,9 +5,7 @@ import 'package:pos_mobile/blocs/confirm_by_password_bloc/confirm_by_password_cu
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 
-
-class ConfirmByPasswordScreen extends StatelessWidget {
-
+class ConfirmByPasswordScreen extends StatefulWidget {
   final String title;
   final String txt;
   final VoidCallback successFunc;
@@ -20,30 +18,56 @@ class ConfirmByPasswordScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  State<ConfirmByPasswordScreen> createState() =>
+      _ConfirmByPasswordScreenState();
+}
 
+class _ConfirmByPasswordScreenState extends State<ConfirmByPasswordScreen> {
+  bool _obscurePassword = true;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: const CusLeadingBackIconBtn(),
         centerTitle: true,
-        title: Text(
-          title
-        ),
+        title: Text(widget.title),
       ),
       body: Column(
         children: [
           CusTxtWidget(
             txtStyle: Theme.of(context).textTheme.bodyMedium!,
-            txt: txt,
+            txt: widget.txt,
           ),
           BlocBuilder<ConfirmByPasswordCubit, ConfirmByPasswordState>(
-            builder: (ctx, state){
-              return Pinput(
-                length: state.userModel!.password.length,
-                controller: ctx.read<ConfirmByPasswordCubit>().pinController,
-                onCompleted: (String data){
-                  ctx.read<ConfirmByPasswordCubit>().confirmFunc();
-                },
+            builder: (ctx, state) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Pinput(
+                    length: state.userModel!.password.length,
+                    controller: ctx
+                        .read<ConfirmByPasswordCubit>()
+                        .pinController,
+                    obscureText: _obscurePassword,
+                    onCompleted: (String data) {
+                      ctx.read<ConfirmByPasswordCubit>().confirmFunc();
+                    },
+                  ),
+                  IconButton(
+                    tooltip: _obscurePassword
+                        ? 'Show password'
+                        : 'Hide password',
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () => setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    }),
+                  ),
+                ],
               );
             },
           ),

@@ -125,7 +125,12 @@ class UniqueItemDbStorage {
       final double originalPrice =
           spec?.originalPrice ?? itemModel.originalPrice;
       final double profitPrice = spec?.profitPrice ?? itemModel.profitPrice;
-      final String? unitCode = spec?.code ?? code;
+      final rawUnitCode = spec?.code ?? code;
+      final trimmedUnitCode = rawUnitCode?.trim();
+      final String? unitCode =
+          trimmedUnitCode == null || trimmedUnitCode.isEmpty
+          ? null
+          : trimmedUnitCode;
 
       batch.rawInsert(
         """

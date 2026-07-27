@@ -321,7 +321,10 @@ class ItemBoxWidget extends StatelessWidget {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            ItemImageWidget(imageId: itemModel.imageId),
+                            ItemImageWidget(
+                              imageId: itemModel.imageId,
+                              imageUrl: itemModel.imageUrl,
+                            ),
                             // Stock Count Badge
                             Positioned(
                               top: 8,

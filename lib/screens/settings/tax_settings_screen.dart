@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -5,8 +7,9 @@ import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
 import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
+import 'package:pos_mobile/services/pos_repository.dart';
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class TaxSettingsScreen extends StatefulWidget {
   static const String routeName = '/tax_settings';
@@ -23,6 +26,7 @@ class _TaxSettingsScreenState extends State<TaxSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(loadData());
     _checkoutTaxController = TextEditingController(
       text: context
           .read<ShopInfoCubit>()
@@ -30,6 +34,14 @@ class _TaxSettingsScreenState extends State<TaxSettingsScreen> {
           .checkoutTaxPercentage
           .toString(),
     );
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.shopInfo(context),
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.transactions(context),
+    ]);
   }
 
   @override
@@ -42,7 +54,10 @@ class _TaxSettingsScreenState extends State<TaxSettingsScreen> {
     final shopCubit = context.read<ShopInfoCubit>();
     await shopCubit.updateTaxEnabled(value);
     if (!value) {
-      await DBHelper.clearAllTaxValues();
+      await PosRepository.instance.writeWithMode(
+        local: LocalPosRepository.clearAllTaxValues,
+        remote: PosRepository.instance.resetAllTaxes,
+      );
       if (mounted) await context.read<ItemCubit>().reloadItemData();
       if (mounted) await context.read<TransactionsCubit>().reloadList();
     }
@@ -82,7 +97,10 @@ class _TaxSettingsScreenState extends State<TaxSettingsScreen> {
               onChanged: (value) async {
                 await context.read<ShopInfoCubit>().updateItemTaxEnabled(value);
                 if (!value) {
-                  await DBHelper.clearItemTaxValues();
+                  await PosRepository.instance.writeWithMode(
+                    local: LocalPosRepository.clearItemTaxValues,
+                    remote: PosRepository.instance.resetItemTaxes,
+                  );
                   if (mounted) await context.read<ItemCubit>().reloadItemData();
                 }
               },

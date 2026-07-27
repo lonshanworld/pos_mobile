@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
@@ -13,11 +15,10 @@ import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class CreateGroupScreen extends StatefulWidget {
-  const CreateGroupScreen({
-    super.key,
-  });
+  const CreateGroupScreen({super.key});
 
   @override
   State<CreateGroupScreen> createState() => _CreateGroupScreenState();
@@ -27,6 +28,18 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final TextEditingController groupNameController = TextEditingController();
   final TextEditingController textAreaController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
 
   @override
   void dispose() {
@@ -42,10 +55,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -58,39 +68,48 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: UIConstants.bigSpace,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               CusTextFieldLogin(
                 txtController: groupNameController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter new Group name",
                 txtInputType: TextInputType.text,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace + UIConstants.mediumSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace + UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: CusTxtWidget(
-                  txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                    color: Colors.grey
-                  ),
+                  txtStyle: Theme.of(
+                    context,
+                  ).textTheme.titleSmall!.copyWith(color: Colors.grey),
                   txt: "Optional",
                 ),
               ),
-              uiController.sizedBox(cusHeight: UIConstants.smallSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.smallSpace,
+                cusWidth: null,
+              ),
               CusTextArea(
                 txtController: textAreaController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter description",
-                txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Colors.grey,
-                ),
+                txtStyle: Theme.of(
+                  context,
+                ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
               ),
 
               Align(
@@ -98,23 +117,25 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 child: CusTxtOnlyBtn(
                   textStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Create",
-                  func: ()async{
-                    if(groupNameController.text.trim().isEmpty){
+                  func: () async {
+                    if (groupNameController.text.trim().isEmpty) {
                       showValidationMessage("Group name should not be empty");
-                    }else{
+                    } else {
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      final value = await context.read<ItemCubit>().createNewGroup(
-                        userModel: userModel,
-                        groupName: groupNameController.text.trim(),
-                        description:
-                            (textAreaController.text.trim() == "" ||
+                      final value = await context
+                          .read<ItemCubit>()
+                          .createNewGroup(
+                            userModel: userModel,
+                            groupName: groupNameController.text.trim(),
+                            description:
+                                (textAreaController.text.trim() == "" ||
                                     textAreaController.text.trim().isEmpty)
                                 ? null
                                 : textAreaController.text.trim(),
-                      );
+                          );
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess(
                           "Success !",
                           showDialog: false,
@@ -122,7 +143,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         }
-                      }else{
+                      } else {
                         context.read<LoadingCubit>().setFail("Fail !");
                       }
                     }
@@ -137,4 +158,3 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     );
   }
 }
-

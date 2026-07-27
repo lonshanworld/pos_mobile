@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/transactions_bloc/transactions_cubit.dart';
@@ -6,6 +8,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stockin_history_model.dart';
 import 'package:pos_mobile/widgets/transaction_history_widgets_folder/stockin_history_widget.dart';
 import 'package:pos_mobile/screens/history/transactions_history/stock_in_export_service.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 import '../../../constants/uiConstants.dart';
 import '../../../utils/txt_formatters.dart';
@@ -26,7 +29,10 @@ class _StockInHistoryScreenState extends State<StockInHistoryScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    unawaited(loadData());
   }
+
+  Future<void> loadData() => ScreenDataLoader.transactions(context);
 
   @override
   void dispose() {

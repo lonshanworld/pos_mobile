@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
@@ -6,17 +8,28 @@ import "package:pos_mobile/models/item_model_folder/uniqueItem_model.dart";
 import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
 import "package:pos_mobile/widgets/itemBox/uniqueitem_box_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 import "../../../../constants/uiConstants.dart";
 
-class UniqueItemScreen extends StatelessWidget {
+class UniqueItemScreen extends StatefulWidget {
   static const String routeName = "/uniqueItemScreen";
 
   final ItemModel item;
-  const UniqueItemScreen({
-    super.key,
-    required this.item,
-  });
+  const UniqueItemScreen({super.key, required this.item});
+
+  @override
+  State<UniqueItemScreen> createState() => _UniqueItemScreenState();
+}
+
+class _UniqueItemScreenState extends State<UniqueItemScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.items(context);
 
   @override
   Widget build(BuildContext context) {
@@ -24,29 +37,33 @@ class UniqueItemScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.name),
+        title: Text(widget.item.name),
         leading: const CusLeadingBackIconBtn(),
       ),
       body: Center(
         child: SingleChildScrollView(
           child: BlocBuilder<ItemCubit, ItemState>(
-            builder: (ctx, state){
-              final List<UniqueItemModel> activeUniqueItemList = ctx.read<ItemCubit>().getSelectedUniqueItemList(item.id);
-              return  activeUniqueItemList.isEmpty 
-                  ?
-              const Center(
-                child: NoItemWidget(noItemTxt: "There is no item"),
-              )
-                  :
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: UIConstants.bigSpace,
-                runSpacing: UIConstants.bigSpace,
-                children: activeUniqueItemList.map((e) => UniqueItemBoxWidget(
-                  uniqueItemModel: e,
-                  index: activeUniqueItemList.indexOf(e),
-                )).toList(),
-              );
+            builder: (ctx, state) {
+              final List<UniqueItemModel> activeUniqueItemList = ctx
+                  .read<ItemCubit>()
+                  .getSelectedUniqueItemList(widget.item.id);
+              return activeUniqueItemList.isEmpty
+                  ? const Center(
+                      child: NoItemWidget(noItemTxt: "There is no item"),
+                    )
+                  : Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: UIConstants.bigSpace,
+                      runSpacing: UIConstants.bigSpace,
+                      children: activeUniqueItemList
+                          .map(
+                            (e) => UniqueItemBoxWidget(
+                              uniqueItemModel: e,
+                              index: activeUniqueItemList.indexOf(e),
+                            ),
+                          )
+                          .toList(),
+                    );
             },
           ),
         ),

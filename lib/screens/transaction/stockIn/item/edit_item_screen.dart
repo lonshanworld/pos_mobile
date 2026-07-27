@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
@@ -22,6 +27,10 @@ import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import '../../../../widgets/cusTxt_widget.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pos_mobile/services/image_upload_service.dart';
+import 'package:pos_mobile/services/public_document_storage.dart';
 
 class EditItemScreen extends StatefulWidget {
   final ItemModel itemModel;
@@ -46,10 +55,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
   int? _selectedCategoryId;
   int? _selectedGroupId;
   int? _selectedTypeId;
+  String? _selectedImagePath;
+  String? _selectedImageSourceMimeType;
 
   @override
   void initState() {
     super.initState();
+    unawaited(loadData());
     itemNameController.text = widget.itemModel.name;
     originalPriceController.text = widget.itemModel.originalPrice.toString();
     sellPriceController.text =
@@ -100,6 +112,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
     });
   }
 
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.shopInfo(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
+
   @override
   void dispose() {
     itemNameController.dispose();
@@ -107,6 +127,59 @@ class _EditItemScreenState extends State<EditItemScreen> {
     sellPriceController.dispose();
     taxController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickItemImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take with camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: ImageUploadService.maxDimension.toDouble(),
+      maxHeight: ImageUploadService.maxDimension.toDouble(),
+      imageQuality: 88,
+    );
+    if (picked == null) return;
+    try {
+      final prepared = await ImageUploadService.prepare(picked);
+      final path = kIsWeb
+          ? prepared.dataUrl
+          : await PublicDocumentStorage.saveBytes(
+              bytes: prepared.bytes,
+              fileName: prepared.fileName,
+              directory: 'item_images',
+            );
+      if (mounted) {
+        setState(() {
+          _selectedImagePath = path;
+          _selectedImageSourceMimeType = prepared.sourceMimeType;
+        });
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save item image: $error')),
+      );
+    }
   }
 
   @override
@@ -426,6 +499,47 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 cusHeight: UIConstants.mediumSpace,
                 cusWidth: null,
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Item image (optional)',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: UIConstants.smallSpace),
+              Row(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    color: Colors.grey.withValues(alpha: 0.05),
+                    child: _selectedImagePath == null
+                        ? const Center(child: Icon(Icons.inventory_2_rounded))
+                        : kIsWeb && _selectedImagePath!.startsWith('data:')
+                        ? Image.memory(
+                            base64Decode(
+                              _selectedImagePath!.substring(
+                                _selectedImagePath!.indexOf(',') + 1,
+                              ),
+                            ),
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(_selectedImagePath!),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  const SizedBox(width: UIConstants.mediumSpace),
+                  OutlinedButton.icon(
+                    onPressed: _pickItemImage,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Replace image'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: UIConstants.mediumSpace),
               BusinessItemDetailForm(
                 key: _businessFormKey,
                 businessType: businessType,
@@ -483,6 +597,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         newCode: itemBarcode,
                         existingBusinessDetail: businessDetail,
                         businessDetail: detail,
+                        imagePath: _selectedImagePath,
+                        imageSourceMimeType: _selectedImageSourceMimeType,
                       );
 
                       if (!mounted) return;

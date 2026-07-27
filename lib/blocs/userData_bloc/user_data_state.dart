@@ -6,11 +6,15 @@ abstract class UserDataState {
   final List<UserModel> allUserModelList;
   final List<UserModel> activeUserModelList;
   final bool isInitialized;
+  final bool merchantExists;
+  final String? setupStatusError;
   const UserDataState({
     required this.userModel,
     required this.allUserModelList,
     required this.activeUserModelList,
     required this.isInitialized,
+    this.merchantExists = false,
+    this.setupStatusError,
   });
 }
 
@@ -20,5 +24,7 @@ class UserData extends UserDataState {
     required super.allUserModelList,
     required super.activeUserModelList,
     required super.isInitialized,
+    super.merchantExists,
+    super.setupStatusError,
   });
 }

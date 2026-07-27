@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/bluetooth_printer_bloc/bluetooth_printer_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
@@ -7,8 +8,10 @@ import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/language_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/tax_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/sync_settings_screen.dart';
 import 'package:pos_mobile/languages/app_strings.dart';
 import 'package:pos_mobile/languages/app_language.dart';
+import 'package:pos_mobile/services/network_environment.dart';
 
 import '../blocs/theme_bloc/theme_cubit.dart';
 import '../blocs/userData_bloc/user_data_cubit.dart';
@@ -76,32 +79,48 @@ class SettingScreen extends StatelessWidget {
             const SizedBox(height: UIConstants.mediumSpace),
 
             // ── General Settings Card ──
-            _SettingHubCard(
-              icon: Icons.tune_outlined,
-              title: strings.generalSettings,
-              subtitle: isOwner
-                  ? strings.shopInfoBusinessTypeLogoSecurity
-                  : strings.viewShopInformation,
-              statusDot: null,
-              accentColor: accent,
-              themeModeType: themeModeType,
-              uiController: uiController,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(GeneralSettingsScreen.routeName),
-            ),
-            const SizedBox(height: UIConstants.mediumSpace),
-            _SettingHubCard(
-              icon: Icons.percent_outlined,
-              title: 'Tax Settings',
-              subtitle: 'Control item and checkout tax',
-              statusDot: null,
-              accentColor: Colors.green,
-              themeModeType: themeModeType,
-              uiController: uiController,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(TaxSettingsScreen.routeName),
-            ),
+            if (isOwner) ...[
+              _SettingHubCard(
+                icon: Icons.tune_outlined,
+                title: strings.generalSettings,
+                subtitle: strings.shopInfoBusinessTypeLogoSecurity,
+                statusDot: null,
+                accentColor: accent,
+                themeModeType: themeModeType,
+                uiController: uiController,
+                onTap: () => Navigator.of(
+                  context,
+                ).pushNamed(GeneralSettingsScreen.routeName),
+              ),
+              const SizedBox(height: UIConstants.mediumSpace),
+              _SettingHubCard(
+                icon: Icons.percent_outlined,
+                title: 'Tax Settings',
+                subtitle: 'Control item and checkout tax',
+                statusDot: null,
+                accentColor: Colors.green,
+                themeModeType: themeModeType,
+                uiController: uiController,
+                onTap: () => Navigator.of(
+                  context,
+                ).pushNamed(TaxSettingsScreen.routeName),
+              ),
+            ],
+            if (!kIsWeb && NetworkConfiguration.usesBackend) ...[
+              const SizedBox(height: UIConstants.mediumSpace),
+              _SettingHubCard(
+                icon: Icons.sync_outlined,
+                title: 'Sync Settings',
+                subtitle: 'View pending data and sync manually',
+                statusDot: null,
+                accentColor: Colors.teal,
+                themeModeType: themeModeType,
+                uiController: uiController,
+                onTap: () => Navigator.of(
+                  context,
+                ).pushNamed(SyncSettingsScreen.routeName),
+              ),
+            ],
             const SizedBox(height: UIConstants.mediumSpace),
             _SettingHubCard(
               icon: Icons.language_outlined,

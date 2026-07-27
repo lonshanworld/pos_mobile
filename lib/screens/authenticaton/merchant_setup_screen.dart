@@ -37,10 +37,7 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -57,31 +54,44 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
     } else if (password.isEmpty) {
       _showMessage("Password cannot be empty");
       return;
+    } else if (password.length < 8) {
+      _showMessage("Password must be at least 8 characters");
+      return;
     }
 
     setState(() => _isLoading = true);
 
-    final success = await context.read<UserDataCubit>().createNewUser(
-      userName: userName,
-      password: password,
-      userLevel: UserLevel.merchant,
-    );
+    bool success = false;
+    try {
+      success = await context.read<UserDataCubit>().createNewUser(
+        userName: userName,
+        password: password,
+        userLevel: UserLevel.merchant,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showMessage(
+        "Unable to create account. Check the backend connection and try again.",
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {
       if (!mounted) return;
-      await context.read<ShopInfoCubit>().updateBusinessType(_selectedBusinessType);
+      await context.read<ShopInfoCubit>().updateBusinessType(
+        _selectedBusinessType,
+      );
 
       // Mark first time setup as complete
       if (!mounted) return;
       await context.read<KeyValidationCubit>().completeFirstTimeSetup();
-      
+
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        CheckUserScreen.routeName,
-      );
+      Navigator.of(context).pushReplacementNamed(CheckUserScreen.routeName);
     } else {
       _showMessage("Failed to create account. Username may already be taken.");
     }
@@ -102,23 +112,32 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            
               const LogoImageWidget(widthandheight: 150),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Text(
                 "First-time Setup",
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               uiController.sizedBox(
-                  cusHeight: UIConstants.mediumSpace, cusWidth: null),
+                cusHeight: UIConstants.mediumSpace,
+                cusWidth: null,
+              ),
               Text(
                 "Create your merchant account to get started",
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: UIConstants.bigSpace,
+                ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: uIutils.txtFieldLoginWidth(500),
@@ -131,7 +150,10 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                   ),
                 ),
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: UIConstants.bigSpace,
@@ -145,7 +167,10 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                   txtInputType: TextInputType.text,
                 ),
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: UIConstants.bigSpace,
@@ -157,9 +182,13 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                   horizontalPadding: 20,
                   hintTxt: "Enter password",
                   txtInputType: TextInputType.text,
+                  isPassword: true,
                 ),
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace * 1.5, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace * 1.5,
+                cusWidth: null,
+              ),
               _isLoading
                   ? const CircularProgressIndicator()
                   : CusTxtElevatedBtn(
@@ -172,10 +201,11 @@ class _MerchantSetupScreenState extends State<MerchantSetupScreen> {
                       txtStyle: Theme.of(context).textTheme.bodyLarge!,
                       txtClr: Colors.white,
                     ),
-                uiController.sizedBox(
-                  cusHeight: uiController.getDeviceHeight / 11, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: uiController.getDeviceHeight / 11,
+                cusWidth: null,
+              ),
             ],
-            
           ),
         ),
       ),

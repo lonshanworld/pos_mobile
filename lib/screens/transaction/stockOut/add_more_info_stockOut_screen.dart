@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
@@ -20,6 +22,7 @@ import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../utils/checkout_helpers.dart';
 import '../../../utils/formula.dart';
 import '../../../widgets/cusTxt_widget.dart';
+import '../../screen_data_loader.dart';
 
 class AddMoreInfoStockOutScreen extends StatefulWidget {
   final Function({
@@ -92,6 +95,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(loadData());
 
     if (widget.deliveryChargesInfo != null) {
       deliveryChargesController.text = widget.deliveryChargesInfo.toString();
@@ -125,6 +129,14 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     deliveryNameController.addListener(() {
       reloadScreen();
     });
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.promotions(context),
+      ScreenDataLoader.shopInfo(context),
+    ]);
   }
 
   @override

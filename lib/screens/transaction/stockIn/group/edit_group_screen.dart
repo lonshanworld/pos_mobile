@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 
@@ -10,14 +12,11 @@ import "../../../../models/user_model_folder/user_model.dart";
 import "../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart";
 import "../../../../widgets/btns_folder/leadingBackIconBtn.dart";
 import "../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 class EditGroupScreen extends StatefulWidget {
-
   final GroupModel groupModel;
-  const EditGroupScreen({
-    super.key,
-    required this.groupModel,
-  });
+  const EditGroupScreen({super.key, required this.groupModel});
 
   @override
   State<EditGroupScreen> createState() => _EditGroupScreenState();
@@ -26,15 +25,22 @@ class EditGroupScreen extends StatefulWidget {
 class _EditGroupScreenState extends State<EditGroupScreen> {
   final TextEditingController groupNameController = TextEditingController();
 
-
   @override
   void initState() {
     super.initState();
-    if(mounted){
+    unawaited(loadData());
+    if (mounted) {
       setState(() {
         groupNameController.text = widget.groupModel.name;
       });
     }
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+    ]);
   }
 
   @override
@@ -49,21 +55,15 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
-
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-          "Update Group",
-        ),
+        title: const Text("Update Group"),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(
@@ -76,7 +76,8 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
               CusTextFieldLogin(
                 txtController: groupNameController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter new Group name",
                 txtInputType: TextInputType.text,
               ),
@@ -85,19 +86,21 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                 child: CusTxtOnlyBtn(
                   textStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Update",
-                  func: ()async{
-                    if(groupNameController.text.trim().isEmpty){
+                  func: () async {
+                    if (groupNameController.text.trim().isEmpty) {
                       showValidationMessage("Group name should not be empty");
-                    }else{
+                    } else {
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      final value = await context.read<ItemCubit>().editGroupName(
-                        userModel: userModel,
-                        newName: groupNameController.text.trim(),
-                        groupModel: widget.groupModel,
-                      );
+                      final value = await context
+                          .read<ItemCubit>()
+                          .editGroupName(
+                            userModel: userModel,
+                            newName: groupNameController.text.trim(),
+                            groupModel: widget.groupModel,
+                          );
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess(
                           "Success !",
                           showDialog: false,
@@ -105,7 +108,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         }
-                      }else{
+                      } else {
                         context.read<LoadingCubit>().setFail("Fail !");
                       }
                     }

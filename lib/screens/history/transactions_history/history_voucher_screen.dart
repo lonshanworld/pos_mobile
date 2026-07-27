@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
@@ -21,6 +23,7 @@ import '../../../error_handlers/error_handler.dart';
 import '../../../models/customer_model.dart';
 import '../../../widgets/voucher_box_widget.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class HistoryVoucherScreen extends StatefulWidget {
   final StockOutModel stockOutModel;
@@ -38,6 +41,15 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
   void initState() {
     super.initState();
     _printKey = GlobalKey();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.transactions(context),
+      ScreenDataLoader.promotions(context),
+    ]);
   }
 
   void _showSavedPathToast(BuildContext context, String savedPath) {
@@ -136,15 +148,17 @@ class _HistoryVoucherScreenState extends State<HistoryVoucherScreen> {
           );
     final promotionCubit = context.read<PromotionCubit>();
     final stockOutPromotion = promotionCubit.state.stockOutPromotionList
-        .firstWhereOrNull((element) => element.stockOutId == widget.stockOutModel.id);
+        .firstWhereOrNull(
+          (element) => element.stockOutId == widget.stockOutModel.id,
+        );
     final PromotionModel? promotionModel = stockOutPromotion == null
         ? null
         : promotionCubit.state.activePromotionList.firstWhereOrNull(
-              (element) => element.id == stockOutPromotion.promotionId,
-            ) ??
-            promotionCubit.state.inActivePromotionList.firstWhereOrNull(
-              (element) => element.id == stockOutPromotion.promotionId,
-            );
+                (element) => element.id == stockOutPromotion.promotionId,
+              ) ??
+              promotionCubit.state.inActivePromotionList.firstWhereOrNull(
+                (element) => element.id == stockOutPromotion.promotionId,
+              );
 
     return Scaffold(
       appBar: AppBar(

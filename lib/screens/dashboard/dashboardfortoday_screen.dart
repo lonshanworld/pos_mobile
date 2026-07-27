@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/screens/dashboard/dashboard_stockOut_widget.dart';
@@ -7,8 +9,9 @@ import '../../blocs/userData_bloc/user_data_cubit.dart';
 import '../../constants/uiConstants.dart';
 import '../../models/user_model_folder/user_model.dart';
 import '../../widgets/loading_widget.dart';
+import '../screen_data_loader.dart';
 
-class DashBoardForTodayScreen extends StatelessWidget {
+class DashBoardForTodayScreen extends StatefulWidget {
   static const String routeName = "/dashboard";
   static const double desktopBreakpoint = 1024;
   static const double tabletBreakpoint = 600;
@@ -16,8 +19,39 @@ class DashBoardForTodayScreen extends StatelessWidget {
   const DashBoardForTodayScreen({super.key});
 
   @override
+  State<DashBoardForTodayScreen> createState() =>
+      _DashBoardForTodayScreenState();
+}
+
+class _DashBoardForTodayScreenState extends State<DashBoardForTodayScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.users(context),
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.transactions(context),
+    ]);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final UserModel? userModel = context.select((UserDataCubit cubit) => cubit.state.userModel);
+    return const _DashboardContent();
+  }
+}
+
+class _DashboardContent extends StatelessWidget {
+  const _DashboardContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final UserModel? userModel = context.select(
+      (UserDataCubit cubit) => cubit.state.userModel,
+    );
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double screenWidth = mediaQuery.size.width;
     final Orientation orientation = mediaQuery.orientation;
@@ -30,24 +64,29 @@ class DashBoardForTodayScreen extends StatelessWidget {
             : LayoutBuilder(
                 builder: (BuildContext ctx, BoxConstraints constraints) {
                   // Determine layout based on screen width and orientation
-                  final bool isDesktop = screenWidth >= desktopBreakpoint;
-                  final bool isTablet = screenWidth >= tabletBreakpoint && screenWidth < desktopBreakpoint;
+                  final bool isDesktop =
+                      screenWidth >= DashBoardForTodayScreen.desktopBreakpoint;
+                  final bool isTablet =
+                      screenWidth >= DashBoardForTodayScreen.tabletBreakpoint &&
+                      screenWidth < DashBoardForTodayScreen.desktopBreakpoint;
                   final bool isLandscape = orientation == Orientation.landscape;
 
                   // Calculate responsive padding
-                  final double horizontalPadding = isDesktop 
+                  final double horizontalPadding = isDesktop
                       ? UIConstants.bigSpace * 2
-                      : isTablet 
-                          ? UIConstants.bigSpace 
-                          : UIConstants.mediumSpace;
-                  
-                  final double verticalPadding = isLandscape 
-                      ? UIConstants.smallSpace 
+                      : isTablet
+                      ? UIConstants.bigSpace
+                      : UIConstants.mediumSpace;
+
+                  final double verticalPadding = isLandscape
+                      ? UIConstants.smallSpace
                       : UIConstants.mediumSpace;
 
                   // Calculate max width for side-by-side layout
-                  final double availableWidth = constraints.maxWidth - (horizontalPadding * 2);
-                  final bool showSideBySide = isDesktop || (isTablet && !isLandscape);
+                  final double availableWidth =
+                      constraints.maxWidth - (horizontalPadding * 2);
+                  final bool showSideBySide =
+                      isDesktop || (isTablet && !isLandscape);
 
                   return Padding(
                     padding: EdgeInsets.symmetric(
@@ -78,7 +117,9 @@ class DashBoardForTodayScreen extends StatelessWidget {
         ),
         // Vertical Divider
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: UIConstants.mediumSpace),
+          margin: const EdgeInsets.symmetric(
+            horizontal: UIConstants.mediumSpace,
+          ),
           width: 1,
           decoration: BoxDecoration(
             gradient: LinearGradient(

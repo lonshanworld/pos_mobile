@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 import 'package:pos_mobile/services/key_validation_service.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
+import 'package:pos_mobile/services/network_environment.dart';
 
 part 'key_validation_state.dart';
 
@@ -26,6 +27,11 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
   }
 
   Future<void> _initialize() async {
+    if (_skipLicenseChecks) {
+      final isFirstTime = _storage.read(_firstTimeSetupKey) ?? true;
+      emit(state.copyWith(isKeyValidated: true, isFirstTimeSetup: isFirstTime));
+      return;
+    }
     await _checkInstallDate();
     await _checkIfAlreadyValidated();
     if (state.isKeyValidated) {
@@ -34,6 +40,11 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
     _checkExpiration();
   }
 
+  /// Online and hybrid builds use the POS backend directly and do not use
+  /// the separate mobile-crash-backend license service.
+  bool get _skipLicenseChecks =>
+      NetworkConfiguration.environment != ApplicationNetworkEnvironment.offline;
+
   Future<void> _checkInstallDate() async {
     if (_storage.read(_installDateKey) == null) {
       await _storage.write(_installDateKey, DateTime.now().toIso8601String());
@@ -41,6 +52,7 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
   }
 
   void _checkExpiration() {
+    if (_skipLicenseChecks) return;
     if (appEnv != 'production') {
       final installDateStr = _storage.read(_installDateKey);
       if (installDateStr != null) {
@@ -62,13 +74,17 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
   /// Check if the app key is already validated on this device
   Future<void> _checkIfAlreadyValidated() async {
     try {
+      if (_skipLicenseChecks) {
+        final isFirstTime = _storage.read(_firstTimeSetupKey) ?? true;
+        emit(
+          state.copyWith(isKeyValidated: true, isFirstTimeSetup: isFirstTime),
+        );
+        return;
+      }
       if (appEnv != 'production') {
         final isFirstTime = _storage.read(_firstTimeSetupKey) ?? true;
         emit(
-          state.copyWith(
-            isKeyValidated: true,
-            isFirstTimeSetup: isFirstTime,
-          ),
+          state.copyWith(isKeyValidated: true, isFirstTimeSetup: isFirstTime),
         );
         return;
       }
@@ -90,6 +106,7 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
 
   /// Verify the stored key with the server to check if it's still valid or if duplicates exist
   Future<void> verifyKeyWithServer() async {
+    if (_skipLicenseChecks) return;
     final key = _storage.read(_activatedKeyKey) as String?;
     if (key == null || key.isEmpty) {
       return;
@@ -179,6 +196,17 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
 
   /// Validate the user's key input
   Future<void> validateKey(String keyInput) async {
+    if (_skipLicenseChecks) {
+      emit(
+        state.copyWith(
+          isKeyValidated: true,
+          isAppLocked: false,
+          isLoading: false,
+          errorMessage: null,
+        ),
+      );
+      return;
+    }
     if (appEnv != 'production') return;
 
     if (keyInput.isEmpty) {
@@ -292,6 +320,7 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
 
   /// Check if device already has a validated key
   Future<bool> isDeviceAlreadyValidated() async {
+    if (_skipLicenseChecks) return true;
     try {
       final deviceId = await _getDeviceId();
       return await KeyValidationService.checkDeviceKeyStatus(

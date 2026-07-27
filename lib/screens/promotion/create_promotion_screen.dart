@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:numberpicker/numberpicker.dart';
@@ -16,14 +18,11 @@ import '../../constants/uiConstants.dart';
 import '../../controller/ui_controller.dart';
 import '../../utils/ui_responsive_calculation.dart';
 import '../../widgets/btns_folder/cusIconBtn_widget.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class CreatePromotionScreen extends StatefulWidget {
-
   final VoidCallback goBackToListScreen;
-  const CreatePromotionScreen({
-    super.key,
-    required this.goBackToListScreen,
-  });
+  const CreatePromotionScreen({super.key, required this.goBackToListScreen});
 
   @override
   State<CreatePromotionScreen> createState() => _CreatePromotionScreenState();
@@ -31,23 +30,36 @@ class CreatePromotionScreen extends StatefulWidget {
 
 class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
   final TextEditingController promotionNameController = TextEditingController();
-  final TextEditingController promotionDescriptionController = TextEditingController();
-  final TextEditingController promotionPriceController = TextEditingController();
+  final TextEditingController promotionDescriptionController =
+      TextEditingController();
+  final TextEditingController promotionPriceController =
+      TextEditingController();
   int? promotionPercentage;
   double? promotionPrice;
   SetPromotion setPromotion = SetPromotion.percentage;
 
-
   @override
   void initState() {
     super.initState();
+    unawaited(loadData());
     promotionPriceController.addListener(() {
-      if(mounted){
+      if (mounted) {
         setState(() {
-          promotionPrice = promotionPriceController.text.trim() == "" ? null : double.tryParse(promotionPriceController.text.trim()) == 0 ? null : double.tryParse(promotionPriceController.text.trim());
+          promotionPrice = promotionPriceController.text.trim() == ""
+              ? null
+              : double.tryParse(promotionPriceController.text.trim()) == 0
+              ? null
+              : double.tryParse(promotionPriceController.text.trim());
         });
       }
     });
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.promotions(context),
+      ScreenDataLoader.users(context),
+    ]);
   }
 
   @override
@@ -60,28 +72,31 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final UIController uiController = UIController.instance;
     final UIutils uIutils = UIutils();
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
-    void clearAllPromotionData(){
+    void clearAllPromotionData() {
       promotionPercentage = null;
       promotionPrice = null;
       promotionPriceController.clear();
     }
 
-
-    Widget promotionTextField(TextEditingController controller, String labetTxt, TextInputType inputType ){
+    Widget promotionTextField(
+      TextEditingController controller,
+      String labetTxt,
+      TextInputType inputType,
+    ) {
       return CusTextFieldLogin(
         txtController: controller,
         verticalPadding: UIConstants.mediumSpace,
@@ -96,13 +111,11 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
         centerTitle: true,
         title: const Text(
           "Create new promotion",
-          style: TextStyle(
-            color: Colors.grey,
-          ),
+          style: TextStyle(color: Colors.grey),
         ),
         leading: CusIconBtn(
           size: UIConstants.bigIcon,
-          func: (){
+          func: () {
             widget.goBackToListScreen();
           },
           clr: uiController.getpureOppositeClr(themeModeType),
@@ -119,19 +132,27 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
             child: Column(
               children: [
                 uiController.sizedBox(
-                    cusHeight: uiController.getDeviceHeight / 10, cusWidth: null),
+                  cusHeight: uiController.getDeviceHeight / 10,
+                  cusWidth: null,
+                ),
                 promotionTextField(
                   promotionNameController,
                   "Enter promotion title",
-                  TextInputType.text
+                  TextInputType.text,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
                 promotionTextField(
                   promotionDescriptionController,
                   "Enter description",
                   TextInputType.text,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
                 CusTxtWidget(
                   txtStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Choose promotion type to apply",
@@ -140,22 +161,31 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-
                     DropdownButton(
-                      dropdownColor: uiController.getpureDirectClr(themeModeType),
+                      dropdownColor: uiController.getpureDirectClr(
+                        themeModeType,
+                      ),
                       borderRadius: UIConstants.mediumBorderRadius,
                       value: setPromotion,
-                      items: SetPromotion.values.map((e) => DropdownMenuItem<SetPromotion>(
-                        value: e,
-                        child: CusTxtWidget(
-                          txtStyle: Theme.of(context).textTheme.titleSmall!,
-                          txt: e == SetPromotion.percentage ? "With percentage (%)" : "With price (MMK)",
-                        ),
-                      )).toList(),
-                      onChanged: (data){
-                        if(data != null){
+                      items: SetPromotion.values
+                          .map(
+                            (e) => DropdownMenuItem<SetPromotion>(
+                              value: e,
+                              child: CusTxtWidget(
+                                txtStyle: Theme.of(
+                                  context,
+                                ).textTheme.titleSmall!,
+                                txt: e == SetPromotion.percentage
+                                    ? "With percentage (%)"
+                                    : "With price (MMK)",
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (data) {
+                        if (data != null) {
                           clearAllPromotionData();
-                          if(mounted){
+                          if (mounted) {
                             setState(() {
                               setPromotion = data;
                             });
@@ -163,107 +193,131 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                         }
                       },
                     ),
-                    uiController.sizedBox(cusHeight: null, cusWidth: UIConstants.mediumSpace),
+                    uiController.sizedBox(
+                      cusHeight: null,
+                      cusWidth: UIConstants.mediumSpace,
+                    ),
                     Icon(
                       Icons.touch_app,
                       size: UIConstants.normalNormalIconSize,
                       color: uiController.getpureOppositeClr(themeModeType),
                     ),
-
                   ],
                 ),
-                if(setPromotion == SetPromotion.mmk)uiController.sizedBox(cusHeight: UIConstants.bigSpace , cusWidth: null),
-                if(setPromotion == SetPromotion.mmk)promotionTextField(
-                  promotionPriceController,
-                  "Enter promotion amount (MMK)",
-                  TextInputType.number,
-                ),
-                if(setPromotion == SetPromotion.percentage)Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    CusTxtWidget(
-                      txtStyle: Theme.of(context).textTheme.titleSmall!,
-                      txt: "Choose percentage",
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                          borderRadius:UIConstants.bigBorderRadius,
+                if (setPromotion == SetPromotion.mmk)
+                  uiController.sizedBox(
+                    cusHeight: UIConstants.bigSpace,
+                    cusWidth: null,
+                  ),
+                if (setPromotion == SetPromotion.mmk)
+                  promotionTextField(
+                    promotionPriceController,
+                    "Enter promotion amount (MMK)",
+                    TextInputType.number,
+                  ),
+                if (setPromotion == SetPromotion.percentage)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CusTxtWidget(
+                        txtStyle: Theme.of(context).textTheme.titleSmall!,
+                        txt: "Choose percentage",
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: UIConstants.bigBorderRadius,
                           border: Border.all(
                             color: Colors.pinkAccent,
                             width: 1,
-                          )
-                      ),
-                      child: NumberPicker(
-                        minValue: 0,
-                        maxValue: 100,
-                        textMapper: (data){
-                          cusDebugPrint(data);
-                          return "$data %";
-                        },
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.4),
+                          ),
                         ),
-                        selectedTextStyle: Theme.of(context).textTheme.titleMedium!,
-                        textStyle: Theme.of(context).textTheme.bodyMedium,
-                        value: promotionPercentage ?? 0,
-                        onChanged: (data){
-                          if(mounted){
-
-                            setState(() {
-                              if(data == 0){
-                                promotionPercentage == null;
-                              }else{
-                                promotionPercentage = data;
-                              }
-                            });
-                          }
-                        },
+                        child: NumberPicker(
+                          minValue: 0,
+                          maxValue: 100,
+                          textMapper: (data) {
+                            cusDebugPrint(data);
+                            return "$data %";
+                          },
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.4),
+                          ),
+                          selectedTextStyle: Theme.of(
+                            context,
+                          ).textTheme.titleMedium!,
+                          textStyle: Theme.of(context).textTheme.bodyMedium,
+                          value: promotionPercentage ?? 0,
+                          onChanged: (data) {
+                            if (mounted) {
+                              setState(() {
+                                if (data == 0) {
+                                  promotionPercentage == null;
+                                } else {
+                                  promotionPercentage = data;
+                                }
+                              });
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace,
+                  cusWidth: null,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
                 CusTxtElevatedBtn(
                   txt: "Create",
                   verticalpadding: UIConstants.mediumSpace,
                   horizontalpadding: UIConstants.bigSpace,
                   bdrRadius: UIConstants.mediumRadius,
                   bgClr: Colors.pinkAccent,
-                  func: ()async{
-                    if(promotionNameController.text.trim().isEmpty){
-                      showValidationMessage("Promotion title should not be empty");
-                    }else if(promotionPrice == null && promotionPercentage == null){
+                  func: () async {
+                    if (promotionNameController.text.trim().isEmpty) {
+                      showValidationMessage(
+                        "Promotion title should not be empty",
+                      );
+                    } else if (promotionPrice == null &&
+                        promotionPercentage == null) {
                       showValidationMessage(
                         setPromotion == SetPromotion.mmk
                             ? "Promotion price should not be empty"
                             : "Promotion percentage should not be empty",
                       );
-                    }else{
-
+                    } else {
                       context.read<LoadingCubit>().setLoading("Creating ...");
-                      final value = await context.read<PromotionCubit>().addNewPromotion(
-                        promotionName: promotionNameController.text.trim(),
-                        promotionDescription: promotionDescriptionController.text.trim(),
-                        promotionPercentage: promotionPercentage == 0 ? null : promotionPercentage?.toDouble(),
-                        promotionPrice: promotionPrice == 0 ? null : promotionPrice,
-                        userModel: userModel!,
-                      );
+                      final value = await context
+                          .read<PromotionCubit>()
+                          .addNewPromotion(
+                            promotionName: promotionNameController.text.trim(),
+                            promotionDescription: promotionDescriptionController
+                                .text
+                                .trim(),
+                            promotionPercentage: promotionPercentage == 0
+                                ? null
+                                : promotionPercentage?.toDouble(),
+                            promotionPrice: promotionPrice == 0
+                                ? null
+                                : promotionPrice,
+                            userModel: userModel!,
+                          );
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess("Success !");
                         widget.goBackToListScreen();
-                      }else{
+                      } else {
                         context.read<LoadingCubit>().setFail("Fail !");
                       }
                     }
-
                   },
                   txtStyle: Theme.of(context).textTheme.titleSmall!,
                   txtClr: Colors.white,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
               ],
             ),
           ),

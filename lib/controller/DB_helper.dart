@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:pos_mobile/database/alerts_DB/alert_DbService.dart';
 import 'package:pos_mobile/database/crash_report_DB/crash_report_DBService.dart';
@@ -8,6 +9,7 @@ import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
+import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_storage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/Item_DbStorage.dart';
@@ -28,10 +30,12 @@ import 'package:pos_mobile/database/restrictionModel_DB/restriction_DBservice.da
 import 'package:pos_mobile/database/transactionModel_DB/transaction_DBservice.dart';
 import 'package:pos_mobile/database/userModel_DB/user_DBService.dart';
 import 'package:pos_mobile/database/db_schema_migrator.dart';
+import 'package:pos_mobile/database/shopinfo_db/shop_info_storage.dart';
 import 'package:pos_mobile/models/customer_model.dart';
 
 import 'package:pos_mobile/models/crash_report_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
+import 'package:pos_mobile/constants/txtconstants.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
 import 'package:pos_mobile/models/itemModel_with_UniqueItemcount.dart';
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
@@ -46,7 +50,6 @@ import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../constants/enums.dart';
-import '../constants/txtconstants.dart';
 import '../models/deliver_model_folder/delivery_model.dart';
 import '../models/deliver_model_folder/delivery_person_model.dart';
 import '../models/groupingItem_models_folders/type_model.dart';
@@ -57,7 +60,9 @@ import '../models/promotion_model_folder/promotion_model.dart';
 import '../models/transaction_model_folder/stockout_model_folder/stock_out_item_model.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 
-class DBHelper {
+/// The legacy SQLite implementation. Business Blocs should use PosRepository;
+/// DBHelper remains as a compatibility alias for local infrastructure.
+class LocalPosRepository {
   static Database? database;
 
   static Future<String> getDbpath(String tableName) async {
@@ -76,7 +81,7 @@ class DBHelper {
       path,
       version: 2,
       onCreate: _onCreate,
-      onConfigure: DBHelper.dbConfig,
+      onConfigure: LocalPosRepository.dbConfig,
       onUpgrade: _onUpgrade,
       onOpen: _onOpen,
     );
@@ -128,6 +133,426 @@ class DBHelper {
 
   static Future<void> _prepareDatabase(Database db) async {
     await DbSchemaMigrator.reconcile(db);
+    await db.execute('''CREATE TABLE IF NOT EXISTS pending_operations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation_id TEXT NOT NULL UNIQUE,
+      operation_type TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      device_id TEXT,
+      company_id TEXT,
+      shop_id TEXT,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      sync_status TEXT NOT NULL DEFAULT 'pending',
+      last_error TEXT
+    )''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_pending_operations_status ON pending_operations(sync_status)',
+    );
+    await db.execute('''CREATE TABLE IF NOT EXISTS server_cache (
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (entity_type, entity_id)
+    )''');
+  }
+
+  static Future<int> enqueuePendingOperation(String operationJson) async {
+    final operation = jsonDecode(operationJson) as Map<String, dynamic>;
+    return database!.insert('pending_operations', {
+      'operation_id': operation['operation_id'],
+      'operation_type': operation['operation_type'],
+      'entity_type': operation['entity_type'],
+      'entity_id': operation['entity_id'],
+      'payload': jsonEncode(operation['payload']),
+      'created_at': operation['created_at'],
+      'device_id': operation['device_id'],
+      'company_id': operation['company_id'],
+      'shop_id': operation['shop_id'],
+      'retry_count': operation['retry_count'] ?? 0,
+      'sync_status': operation['sync_status'] ?? 'pending',
+      'last_error': operation['last_error'],
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  static Future<List<Map<String, dynamic>>> getPendingOperations() =>
+      database!.query(
+        'pending_operations',
+        where: "sync_status != ?",
+        whereArgs: ['synchronized'],
+        orderBy: 'id',
+      );
+
+  static Future<void> cacheServerRecord({
+    required String entityType,
+    required String entityId,
+    required String payload,
+    required String updatedAt,
+  }) async {
+    await database!.insert(
+      'server_cache',
+      {
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'payload': payload,
+        'updated_at': updatedAt,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Materialize backend change-log records into the legacy SQLite cache.
+  /// `server_cache` remains the lossless envelope, while these projections
+  /// keep existing offline Blocs immediately consistent after a refresh.
+  static Future<void> applyServerChange({
+    required String entity,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) async {
+    final db = database!;
+    final deleted = operation == 'delete' || payload['deleted_at'] != null;
+    final id = payload['id'];
+    if (id is! int) return;
+    final active = deleted ? 0 : 1;
+    final createdAt = payload['created_at'] ?? DateTime.now().toIso8601String();
+    final updatedAt = payload['updated_at'];
+    final createdBy = payload['created_by'] ?? 1;
+    if (entity == 'user') {
+      // Backend users do not expose password hashes. Preserve an existing
+      // local password when one exists; a newly cached backend user remains
+      // available for account lists but cannot be used for offline login
+      // until the user authenticates against the backend.
+      final existing = await db.query(
+        TxtConstants.userTableName,
+        columns: const [
+          'password',
+          'userLoginTime',
+          'userLogoutTime',
+          'imageId',
+        ],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      final existingUser = existing.isEmpty ? const <String, dynamic>{} : existing.first;
+      await db.insert(TxtConstants.userTableName, {
+        'id': id,
+        'userName': payload['username'] ?? '',
+        'password': existingUser['password'] ?? '',
+        'userLevel': payload['role'] == 'owner' ? 'merchant' : 'staff',
+        'userCreateTime': payload['created_at'] ?? DateTime.now().toIso8601String(),
+        'userLoginTime': existingUser['userLoginTime'],
+        'userLogoutTime': existingUser['userLogoutTime'],
+        'activeStatus': payload['active'] == false || deleted ? 0 : 1,
+        'imageId': existingUser['imageId'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'catalog') {
+      final kind = payload['kind'];
+      final table = switch (kind) {
+        'category' => TxtConstants.categoryTableName,
+        'group' => TxtConstants.groupTableName,
+        'type' => TxtConstants.typeTableName,
+        _ => null,
+      };
+      if (table == null) return;
+      await db.insert(table, {
+        'id': id,
+        'name': payload['name'] ?? '',
+        'createTime': createdAt,
+        'lastUpdateTime': updatedAt,
+        'deleteTime': payload['deleted_at'],
+        'activeStatus': active,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'item') {
+      await db.insert(TxtConstants.itemTableName, {
+        'id': id,
+        'name': payload['name'] ?? '',
+        'categoryId': payload['category_id'],
+        'groupId': payload['group_id'],
+        'typeId': payload['type_id'] ?? 0,
+        'createTime': createdAt,
+        'lastUpdateTime': updatedAt,
+        'deleteTime': payload['deleted_at'],
+        'activeStatus': active,
+        'description': payload['description'],
+        'hasExpire': payload['has_expire'] == true ? 1 : (payload['has_expire'] ?? 0),
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'code': payload['code'],
+        'profitPrice': payload['profit_price'] ?? 0,
+        'originalPrice': payload['original_price'] ?? 0,
+        'taxPercentage': payload['tax_percentage'] ?? 0,
+        'need_stock': payload['need_stock'] == true ? 1 : (payload['need_stock'] ?? 1),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'unique_item') {
+      await db.insert(TxtConstants.uniqueItemTableName, {
+        'id': id,
+        'itemId': payload['item_id'],
+        'stockInId': payload['stock_in_id'],
+        'stockOutId': payload['stock_out_id'],
+        'createTime': createdAt,
+        'lastUpdateTime': updatedAt,
+        'deleteTime': payload['deleted_at'],
+        'itemManufactureDate': payload['manufacture_date'],
+        'itemExpireDate': payload['expire_date'],
+        'code': payload['barcode'],
+        'originalPrice': payload['original_price'] ?? 0,
+        'profitPrice': payload['profit_price'] ?? 0,
+        'taxPercentage': payload['tax_percentage'] ?? 0,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'activeStatus': active,
+        'getItemFromWhere': null,
+        'moduleCount': null,
+        'instanceLength': null,
+        'instanceWidth': null,
+        'instanceBatchNumber': payload['batch_number'],
+        'instanceImei': payload['imei'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'stock_in') {
+      await db.insert(TxtConstants.stockInTableName, {
+        'id': id,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'createTime': createdAt,
+        'code': payload['code'],
+        'lastUpdateTime': updatedAt,
+        'deleteTime': payload['deleted_at'],
+        'activeStatus': active,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'stock_out') {
+      await db.insert(TxtConstants.stockOutTableName, {
+        'id': id,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'createTime': createdAt,
+        'lastUpdateTime': updatedAt,
+        'deleteTime': payload['deleted_at'],
+        'description': payload['description'],
+        'shoppingType': payload['shopping_type'] ?? 'shop',
+        'paymentMethod': payload['payment_method'] ?? 'cash',
+        'additionalPromotionAmount': payload['discount'],
+        'taxPercentage': payload['tax'],
+        'activeStatus': active,
+        'code': payload['code'] ?? '',
+        'customerId': payload['customer_id'],
+        'deliveryPersonId': null,
+        'deliveryModelId': null,
+        'finalTotalPrice': payload['total'] ?? 0,
+        'customerCash': payload['customer_cash'],
+        'refunds': payload['refunds'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'stock_out_item') {
+      await db.insert(TxtConstants.stockOutItemTableName, {
+        'id': id,
+        'stockOutId': payload['stock_out_id'],
+        'itemId': payload['item_id'],
+        'count': payload['count'] ?? 0,
+        'originalPrice': payload['original_price'] ?? 0,
+        'sellPrice': payload['sell_price'] ?? 0,
+        'finalSellPrice': payload['final_sell_price'] ?? 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'promotion_target') {
+      final targetType = payload['target_type'];
+      final targetId = payload['target_id'];
+      final promotionId = payload['promotion_id'];
+      if (targetId is! int || promotionId is! int) return;
+      if (targetType == 'item') {
+        if (deleted) {
+          await db.delete(
+            TxtConstants.itemPromotionTableName,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        } else {
+          await db.insert(TxtConstants.itemPromotionTableName, {
+            'id': id,
+            'itemId': targetId,
+            'promotionId': promotionId,
+            'createTime': createdAt,
+            'deleteTime': payload['deleted_at'],
+            'createPersonId': createdBy,
+            'deletePersonId': payload['updated_by'],
+            'activeStatus': active,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      } else if (targetType == 'type') {
+        if (deleted) {
+          await db.delete(
+            TxtConstants.typePromotionTableName,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        } else {
+          await db.insert(TxtConstants.typePromotionTableName, {
+            'id': id,
+            'typeId': targetId,
+            'promotionId': promotionId,
+            'createTime': createdAt,
+            'deleteTime': payload['deleted_at'],
+            'createPersonId': createdBy,
+            'deletePersonId': payload['updated_by'],
+            'activeStatus': active,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      } else if (targetType == 'stock_out') {
+        if (deleted) {
+          await db.delete(
+            TxtConstants.stockOutPromotionTableName,
+            where: 'stockOutId = ? AND promotionId = ?',
+            whereArgs: [targetId, promotionId],
+          );
+        } else {
+          await db.insert(TxtConstants.stockOutPromotionTableName, {
+            'stockOutId': targetId,
+            'promotionId': promotionId,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+    } else if (entity == 'restriction') {
+      await db.insert(TxtConstants.restrictionTableName, {
+        'id': id,
+        'title': payload['name'] ?? '',
+        'reason': payload['description'] ?? '',
+        'createTime': createdAt,
+        'deleteTime': payload['deleted_at'],
+        'lastUpdateTime': updatedAt,
+        'activeStatus': payload['active'] == false || deleted ? 0 : 1,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'promotion') {
+      await db.insert(TxtConstants.promotionTableName, {
+        'id': id,
+        'promotionName': payload['name'] ?? '',
+        'promotionDescription': payload['description'] ?? '--',
+        'promotionPercentage': payload['percentage'],
+        'promotionPrice': payload['fixed_price'],
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'activeStatus': active,
+        'promotionCode': payload['code'],
+        'createTime': createdAt,
+        'deleteTime': payload['deleted_at'],
+        'lastUpdateTime': updatedAt,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'item_business_detail') {
+      final details = Map<String, dynamic>.from(payload['details'] as Map? ?? const {});
+      details['id'] = id;
+      details['itemId'] = payload['item_id'];
+      await ItemBusinessDetailDbStorage.upsert(db, ItemBusinessDetailModel.fromJson(details));
+    } else if (entity == 'customer') {
+      if (deleted) {
+        await db.delete(
+          TxtConstants.customerTableName,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      } else {
+        await db.insert(TxtConstants.customerTableName, {
+          'id': id,
+          'name': payload['name'],
+          'address': payload['address'],
+          'phoneNo': payload['phone'],
+          'request': payload['request'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    } else if (entity == 'delivery_person') {
+      await db.insert(TxtConstants.deliveryPersonTableName, {
+        'id': id,
+        'name': payload['name'],
+        'address': payload['address'],
+        'phoneNo': payload['phone'],
+        'request': payload['request'],
+        'activeStatus': payload['active'] == false || deleted ? 0 : 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'delivery') {
+      if (deleted) {
+        await db.delete(
+          TxtConstants.deliveryModelTableName,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      } else {
+        await db.insert(TxtConstants.deliveryModelTableName, {
+          'id': id,
+          'startAddress': payload['start_address'],
+          'endAddress': payload['end_address'],
+          'deliveryCharges': payload['charges'],
+          'startDeliveryTime': payload['start_time'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    } else if (entity == 'alert') {
+      await db.insert(TxtConstants.alertTableName, {
+        'id': id,
+        'createTime': createdAt,
+        'deleteTime': payload['deleted_at'],
+        'lastUpdateTime': updatedAt,
+        'createPersonId': createdBy,
+        'deletePersonId': payload['updated_by'],
+        'title': payload['title'] ?? '',
+        'description': payload['description'] ?? '',
+        'targetAudienceType': payload['target_audience_type'] ?? 'all',
+        'importanceLevel': payload['importance_level'] ?? 'normal',
+        'activeStatus': active,
+        'colorCode': payload['color_code'],
+        'completeStatus': payload['complete'] == true ? 1 : 0,
+        'completePersonId': payload['updated_by'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else if (entity == 'image') {
+      final itemId = payload['item_id'];
+      if (deleted) {
+        await db.delete(
+          TxtConstants.imageTableName,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      } else {
+        await db.insert(TxtConstants.imageTableName, {
+          'id': id,
+          'imageTxt': payload['path'] ?? 'server-image:$id',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      if (itemId is int) {
+        await db.update(
+          TxtConstants.itemTableName,
+          {'imageId': deleted ? null : id},
+          where: 'id = ?',
+          whereArgs: [itemId],
+        );
+      }
+    } else if (entity == 'setting') {
+      final key = payload['key']?.toString();
+      final value = payload['value']?.toString();
+      if (key != null) await _applyShopSetting(key, value);
+    }
+  }
+
+  static Future<void> _applyShopSetting(String key, String? value) async {
+    final storage = ShopInfoStorage.instance;
+    switch (key) {
+      case 'shopInfo_shopName': if (value != null) await storage.saveShopName(value);
+      case 'shopInfo_shopAddress': if (value != null) await storage.saveShopAddress(value);
+      case 'shopInfo_phNum': if (value != null) await storage.savePhNum(value);
+      case 'shopInfo_noReturnNote': if (value != null) await storage.saveNoReturnNote(value);
+      case 'shopInfo_taxEnabled': await storage.saveTaxEnabled(value == 'true');
+      case 'shopInfo_itemTaxEnabled': await storage.saveItemTaxEnabled(value == 'true');
+      case 'shopInfo_checkoutTaxEnabled': await storage.saveCheckoutTaxEnabled(value == 'true');
+      case 'shopInfo_checkoutTaxPercentage':
+        final parsed = double.tryParse(value ?? '');
+        if (parsed != null) await storage.saveCheckoutTaxPercentage(parsed);
+      case 'shopInfo_logoPath': await storage.saveLogoPath(value);
+      case 'shopInfo_logoSizeRatio':
+        final parsed = double.tryParse(value ?? '');
+        if (parsed != null) await storage.saveLogoSizeRatio(parsed);
+      case 'shopInfo_includeQrCode': await storage.saveIncludeQrCode(value == 'true');
+      case 'shopInfo_includeLogo': await storage.saveIncludeLogo(value != 'false');
+    }
   }
 
   static Future<List<UniqueItemModel>> getAllUniqueItems({
@@ -185,6 +610,18 @@ class DBHelper {
   static Future<List<UpdateHistoryModel>> getHistoryList() async {
     List<dynamic> dataList = await HistoryDBService.getAllHistory(database!);
     return dataList.map((e) => UpdateHistoryModel.fromJson(e)).toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllAlerts({
+    int limit = UIConstants.defaultPageLimit,
+    int offset = 0,
+  }) async {
+    final rows = await AlertDbService.getAllAlerts(
+      database!,
+      limit: limit,
+      offset: offset,
+    );
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }
 
   static Future<int> saveCrashReport(CrashReportModel report) async {
@@ -828,3 +1265,6 @@ class DBHelper {
     return await GroupingItemDbService.getTypeCountByGroup(database!);
   }
 }
+
+/// Backward-compatible name for native/database services that still use it.
+typedef DBHelper = LocalPosRepository;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/utils/debug_print.dart';
@@ -18,6 +20,7 @@ import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextArea_widget.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import '../../../../widgets/cusTxt_widget.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class CreateTypeScreen extends StatefulWidget {
   const CreateTypeScreen({super.key});
@@ -30,6 +33,20 @@ class _CreateTypeScreenState extends State<CreateTypeScreen> {
   final TextEditingController typeNameController = TextEditingController();
   final TextEditingController textAreaController = TextEditingController();
   bool hasExpire = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+      ScreenDataLoader.shopInfo(context),
+    ]);
+  }
 
   @override
   void dispose() {

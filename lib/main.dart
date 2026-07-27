@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:pos_mobile/blocs/bluetooth_printer_bloc/bluetooth_printer_cubit.dart';
@@ -16,25 +18,32 @@ import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/blocs/key_validation_bloc/key_validation_cubit.dart';
 import 'package:pos_mobile/constants/business_type_utils.dart';
 import 'package:pos_mobile/constants/enums.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/globalkeys.dart';
 import 'package:pos_mobile/routes/router.dart';
+import 'package:pos_mobile/routes/web_route_observer.dart';
 import 'package:pos_mobile/services/crash_report_sync_manager.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pos_mobile/utils/crash_reporter.dart';
 import 'package:pos_mobile/languages/app_language.dart';
 import 'package:pos_mobile/database/shopinfo_db/shop_info_storage.dart';
 import 'package:pos_mobile/services/public_document_storage.dart';
+import 'package:pos_mobile/services/network_environment.dart';
+import 'package:pos_mobile/services/pos_repository.dart';
+import 'package:pos_mobile/services/pos_data_reload_service.dart';
+import 'package:pos_mobile/blocs/sync_bloc/sync_status_cubit.dart';
+import 'package:pos_mobile/widgets/sync_status_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DBHelper.initiateAllDB();
-  await GetStorage.init();
-  await _migrateFilesToPublicDocuments();
-
-  // Load environment
   await dotenv.load(fileName: "assets/.env");
+  await NetworkConfiguration.initialize();
+  await GetStorage.init();
+  await PosRepository.instance.initialize();
+  // Web is an online-only admin client; sqflite is not available there.
+  if (!kIsWeb) await DBHelper.initiateAllDB();
+  // The lifecycle cubit owns the singleton sync manager once the app starts.
+  await _migrateFilesToPublicDocuments();
   final String appEnv = dotenv.env['APPLICATION_ENVIRONMENT'] ?? 'production';
 
   await CrashReporter.initialize(
@@ -48,6 +57,7 @@ void main() async {
 }
 
 Future<void> _migrateFilesToPublicDocuments() async {
+  if (kIsWeb) return;
   try {
     final migrated = await PublicDocumentStorage.migrateExistingFiles();
     if (migrated.isEmpty) return;
@@ -196,6 +206,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (ctx) => ShopInfoCubit(),
           lazy: false,
         ),
+        BlocProvider<SyncStatusCubit>(
+          create: (ctx) => SyncStatusCubit(
+            onChangesApplied: () => PosDataReloadService.reloadAll(ctx),
+          ),
+          lazy: false,
+        ),
         BlocProvider<ConfirmByPasswordCubit>(
           create: (ctx) {
             return ConfirmByPasswordCubit(
@@ -220,6 +236,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   title: 'POS Mobile',
                   locale: Locale(ctx.watch<LanguageCubit>().state.code),
                   debugShowCheckedModeBanner: false,
+                  navigatorObservers: [WebRouteObserver()],
                   theme: _uiController.cusThemeData(ThemeModeType.light),
                   darkTheme: allowsThemeToggle
                       ? _uiController.cusThemeData(ThemeModeType.dark)
@@ -378,7 +395,8 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
     WidgetsBinding.instance.addObserver(this);
 
     // Initialize crash report sync manager
-    CrashReportSyncManager.instance.initialize();
+    if (!kIsWeb) CrashReportSyncManager.instance.initialize();
+    context.read<SyncStatusCubit>().initialize();
   }
 
   @override
@@ -396,6 +414,11 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
       // Trigger crash report sync when app comes to foreground
       CrashReportSyncManager.instance.manualSync();
 
+      // A backend can recover without the device changing Wi-Fi/mobile
+      // connectivity. Retry the hybrid outbox whenever the app returns to
+      // the foreground while preserving the web client's online-only mode.
+      unawaited(context.read<SyncStatusCubit>().retry());
+
       // Re-check Bluetooth and file/media access whenever the app is used
       // again after being backgrounded.
       context.read<BluetoothPrinterCubit>().checkPermission();
@@ -410,7 +433,21 @@ class _LifecycleAwareAppState extends State<_LifecycleAwareApp>
 
   @override
   Widget build(BuildContext context) {
-    return widget.child;
+    return Stack(
+      alignment: Alignment.topLeft,
+      children: [
+        widget.child,
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: SyncStatusBanner(),
+          ),
+        ),
+      ],
+    );
   }
 }
 

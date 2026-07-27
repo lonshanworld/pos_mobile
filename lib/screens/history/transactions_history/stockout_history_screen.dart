@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
@@ -9,6 +11,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder/stockout_history_model.dart';
 import 'package:pos_mobile/widgets/transaction_history_widgets_folder/stockout_history_widget.dart';
 import 'package:pos_mobile/screens/barcode_scanner_screen.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 import '../../../constants/uiConstants.dart';
 import '../../../utils/formula.dart';
@@ -30,7 +33,10 @@ class _StockOutHistoryScreenState extends State<StockOutHistoryScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    unawaited(loadData());
   }
+
+  Future<void> loadData() => ScreenDataLoader.transactions(context);
 
   @override
   void dispose() {

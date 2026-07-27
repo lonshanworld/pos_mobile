@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/loading_bloc/loading_cubit.dart';
@@ -11,19 +13,16 @@ import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 import 'package:pos_mobile/widgets/promotion/promotion_widget.dart';
 
-
 import '../../../../models/user_model_folder/user_model.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class AddPromotionToItemScreen extends StatefulWidget {
-
   final ItemModel itemModel;
-  const AddPromotionToItemScreen({
-    super.key,
-    required this.itemModel,
-  });
+  const AddPromotionToItemScreen({super.key, required this.itemModel});
 
   @override
-  State<AddPromotionToItemScreen> createState() => _AddPromotionToItemScreenState();
+  State<AddPromotionToItemScreen> createState() =>
+      _AddPromotionToItemScreenState();
 }
 
 class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
@@ -31,16 +30,30 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
   PromotionModel? selectedPromotion;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.promotions(context),
+      ScreenDataLoader.users(context),
+      ScreenDataLoader.items(context),
+    ]);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<PromotionModel> promotionList = context.watch<PromotionCubit>().state.activePromotionList;
+    final List<PromotionModel> promotionList = context
+        .watch<PromotionCubit>()
+        .state
+        .activePromotionList;
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -53,22 +66,20 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.only(
-              bottom: UIConstants.mediumSpace,
-            ),
+            padding: const EdgeInsets.only(bottom: UIConstants.mediumSpace),
             child: CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleMedium!.copyWith(
-                color: Colors.grey,
-              ),
+              txtStyle: Theme.of(
+                context,
+              ).textTheme.titleMedium!.copyWith(color: Colors.grey),
               txt: "Choose one promotion",
             ),
           ),
           Expanded(
             child: ListView(
-              children: promotionList.map((e){
+              children: promotionList.map((e) {
                 return InkWell(
-                  onTap: (){
-                    if(mounted){
+                  onTap: () {
+                    if (mounted) {
                       setState(() {
                         selectedIndex = promotionList.indexOf(e);
                         selectedPromotion = e;
@@ -78,7 +89,9 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
                   child: Container(
                     width: double.maxFinite,
                     height: 150,
-                    color: selectedIndex == promotionList.indexOf(e) ? Colors.green.withValues(alpha: 0.4) : Colors.transparent,
+                    color: selectedIndex == promotionList.indexOf(e)
+                        ? Colors.green.withValues(alpha: 0.4)
+                        : Colors.transparent,
                     padding: const EdgeInsets.symmetric(
                       horizontal: UIConstants.bigSpace,
                       vertical: UIConstants.mediumSpace,
@@ -92,19 +105,21 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
                           right: 0,
                           child: IgnorePointer(
                             child: PromotionWidget(
-                                promotionModel: e,
-                                index: promotionList.indexOf(e) + 1),
+                              promotionModel: e,
+                              index: promotionList.indexOf(e) + 1,
+                            ),
                           ),
                         ),
-                        if(selectedIndex == promotionList.indexOf(e))const Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: UIConstants.normalNormalIconSize,
+                        if (selectedIndex == promotionList.indexOf(e))
+                          const Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: UIConstants.normalNormalIconSize,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -115,9 +130,7 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
           Container(
             width: 100,
             height: 80,
-            padding:const EdgeInsets.symmetric(
-              vertical: UIConstants.bigSpace
-            ),
+            padding: const EdgeInsets.symmetric(vertical: UIConstants.bigSpace),
             child: CusTxtIconElevatedBtn(
               txt: "Add",
               verticalpadding: UIConstants.smallSpace,
@@ -126,27 +139,30 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
               bgClr: Colors.greenAccent,
               txtStyle: Theme.of(context).textTheme.titleSmall!,
               txtClr: Colors.black,
-              func: ()async{
-                if(selectedPromotion == null){
-                  showValidationMessage("Please select a promotion before adding");
-                }else{
-                  context.read<LoadingCubit>().setLoading("Adding ...");
-                  final value = await context.read<PromotionCubit>().attachItemWithPromotion(
-                    userModel: userModel!,
-                    promotionId: selectedPromotion!.id,
-                    itemId: widget.itemModel.id,
+              func: () async {
+                if (selectedPromotion == null) {
+                  showValidationMessage(
+                    "Please select a promotion before adding",
                   );
+                } else {
+                  context.read<LoadingCubit>().setLoading("Adding ...");
+                  final value = await context
+                      .read<PromotionCubit>()
+                      .attachItemWithPromotion(
+                        userModel: userModel!,
+                        promotionId: selectedPromotion!.id,
+                        itemId: widget.itemModel.id,
+                      );
 
                   if (!mounted) return;
-                  if(value){
+                  if (value) {
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop();
                     }
                     context.read<LoadingCubit>().setSuccess("Success !");
-                  }else{
+                  } else {
                     context.read<LoadingCubit>().setFail("Failed !");
                   }
-
                 }
               },
               icon: Icons.add,
@@ -155,7 +171,6 @@ class _AddPromotionToItemScreenState extends State<AddPromotionToItemScreen> {
           ),
         ],
       ),
-
     );
   }
 }

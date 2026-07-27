@@ -1,8 +1,6 @@
-
-
 import '../../../constants/enums.dart';
 
-class StockOutModel{
+class StockOutModel {
   final int id;
 
   final int createPersonId; // NOTE : foreign key
@@ -51,53 +49,56 @@ class StockOutModel{
     required this.refunds,
   });
 
-  StockOutModel.fromJson(Map<String,dynamic> jsonData) :
-    id = jsonData["id"],
+  StockOutModel.fromJson(Map<String, dynamic> jsonData)
+    : id = jsonData["id"],
 
-    createPersonId = jsonData["createPersonId"],
-    deletePersonId = jsonData["deletePersonId"],
-    createTime = DateTime.parse(jsonData["createTime"]),
-    deleteTime = jsonData["deleteTime"] == null ? null : DateTime.parse(jsonData["deleteTime"]),
-    // customerName = jsonData["customerName"],
-    description = jsonData["description"],
-    shoppingType = ShoppingType.values.byName(jsonData["shoppingType"]),
-    paymentMethod = PaymentMethod.values.byName(jsonData["paymentMethod"]),
-    // deliveryCharges = jsonData["deliveryCharges"],
-    additionalPromotionAmount = jsonData["additionalPromotionAmount"],
-    taxPercentage = jsonData["taxPercentage"],
-    activeStatus = jsonData["activeStatus"] == 1 ? true : false,
+      createPersonId = jsonData["createPersonId"],
+      deletePersonId = jsonData["deletePersonId"],
+      createTime = DateTime.parse(jsonData["createTime"]),
+      deleteTime = jsonData["deleteTime"] == null
+          ? null
+          : DateTime.parse(jsonData["deleteTime"]),
+      // customerName = jsonData["customerName"],
+      description = jsonData["description"],
+      shoppingType = ShoppingType.values.byName(jsonData["shoppingType"]),
+      paymentMethod = PaymentMethod.values.byName(jsonData["paymentMethod"]),
+      // deliveryCharges = jsonData["deliveryCharges"],
+      additionalPromotionAmount = jsonData["additionalPromotionAmount"],
+      taxPercentage = jsonData["taxPercentage"],
+      activeStatus = jsonData["activeStatus"] == 1 ? true : false,
 
-    lastUpdateTime = jsonData["lastUpdateTime"],
-    code = jsonData["code"],
-    customerId = jsonData["customerId"],
-    deliveryPersonId = jsonData["deliveryPersonId"],
-    deliveryModelId = jsonData["deliveryModelId"],
-    finalTotalPrice = jsonData["finalTotalPrice"],
-    customerCash = jsonData["customerCash"],
-    refunds = jsonData["refunds"];
+      lastUpdateTime = jsonData["lastUpdateTime"] == null
+          ? null
+          : DateTime.parse(jsonData["lastUpdateTime"]),
+      code = jsonData["code"],
+      customerId = jsonData["customerId"],
+      deliveryPersonId = jsonData["deliveryPersonId"],
+      deliveryModelId = jsonData["deliveryModelId"],
+      finalTotalPrice = jsonData["finalTotalPrice"],
+      customerCash = jsonData["customerCash"],
+      refunds = jsonData["refunds"];
 
-
-  Map<String,dynamic> toJson()=>{
-    "id" : id,
-    "createPersonId" : createPersonId,
-    "deletePersonId" : deletePersonId,
-    "createTime" : createTime.toString(),
-    "deleteTime" : deleteTime.toString(),
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "createPersonId": createPersonId,
+    "deletePersonId": deletePersonId,
+    "createTime": createTime.toString(),
+    "deleteTime": deleteTime.toString(),
     // "customerName" : customerName,
-    "description" : description,
-    "shoppingType" : shoppingType.name,
-    "paymentMethod" : paymentMethod.name,
+    "description": description,
+    "shoppingType": shoppingType.name,
+    "paymentMethod": paymentMethod.name,
     // "deliveryCharges" : deliveryCharges,
-    "additionalPromotionAmount" : additionalPromotionAmount,
-    "taxPercentage" : taxPercentage,
-    "activeStatus" : activeStatus ? 1 : 0,
-    "lastUpdateTime" : lastUpdateTime.toString(),
-    "code" : code,
-    "customerId" : customerId,
-    "deliveryModelId" : deliveryModelId,
-    "deliveryPersonId" : deliveryPersonId,
-    "finalTotalPrice" : finalTotalPrice,
-    "customerCash" : customerCash,
-    "refunds" : refunds,
+    "additionalPromotionAmount": additionalPromotionAmount,
+    "taxPercentage": taxPercentage,
+    "activeStatus": activeStatus ? 1 : 0,
+    "lastUpdateTime": lastUpdateTime.toString(),
+    "code": code,
+    "customerId": customerId,
+    "deliveryModelId": deliveryModelId,
+    "deliveryPersonId": deliveryPersonId,
+    "finalTotalPrice": finalTotalPrice,
+    "customerCash": customerCash,
+    "refunds": refunds,
   };
 }

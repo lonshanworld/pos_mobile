@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
@@ -12,6 +14,7 @@ import "package:pos_mobile/screens/transaction/stockIn/item/create_item_screen.d
 import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/itemBox/item_box_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 class ItemCatalogScreen extends StatefulWidget {
   final bool isStorage;
@@ -27,6 +30,14 @@ class _ItemCatalogScreenState extends State<ItemCatalogScreen> {
   int? _selectedCategoryId;
   int? _selectedGroupId;
   int? _selectedTypeId;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.items(context);
 
   @override
   void dispose() {

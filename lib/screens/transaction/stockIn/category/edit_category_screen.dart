@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
@@ -11,14 +13,11 @@ import '../../../../models/user_model_folder/user_model.dart';
 import '../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart';
 import '../../../../widgets/btns_folder/leadingBackIconBtn.dart';
 import '../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class EditCategoryScreen extends StatefulWidget {
-
   final CategoryModel categoryModel;
-  const EditCategoryScreen({
-    super.key,
-    required this.categoryModel,
-  });
+  const EditCategoryScreen({super.key, required this.categoryModel});
 
   @override
   State<EditCategoryScreen> createState() => _EditCategoryScreenState();
@@ -27,15 +26,22 @@ class EditCategoryScreen extends StatefulWidget {
 class _EditCategoryScreenState extends State<EditCategoryScreen> {
   final TextEditingController categoryNameController = TextEditingController();
 
-
   @override
   void initState() {
     super.initState();
-    if(mounted){
+    unawaited(loadData());
+    if (mounted) {
       setState(() {
         categoryNameController.text = widget.categoryModel.name;
       });
     }
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+    ]);
   }
 
   @override
@@ -51,56 +57,57 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
-
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-            "Update Category"
-        ),
+        title: const Text("Update Category"),
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: UIConstants.bigSpace,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: UIConstants.bigSpace),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               CusTextFieldLogin(
                 txtController: categoryNameController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter new Category name",
                 txtInputType: TextInputType.text,
               ),
-              uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+              uiController.sizedBox(
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Align(
                 alignment: Alignment.centerRight,
                 child: CusTxtOnlyBtn(
                   textStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Update",
-                  func: ()async{
-                    if(categoryNameController.text.trim().isEmpty){
+                  func: () async {
+                    if (categoryNameController.text.trim().isEmpty) {
                       showValidationMessage("Category name cannot be empty");
-                    }else{
+                    } else {
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      final value = await context.read<ItemCubit>().editCategoryName(
-                        name: categoryNameController.text.trim(),
-                        userModel: userModel,
-                        categoryModel: widget.categoryModel,
-                      );
+                      final value = await context
+                          .read<ItemCubit>()
+                          .editCategoryName(
+                            name: categoryNameController.text.trim(),
+                            userModel: userModel,
+                            categoryModel: widget.categoryModel,
+                          );
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess(
                           "Success !",
                           showDialog: false,
@@ -108,7 +115,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         }
-                      }else{
+                      } else {
                         context.read<LoadingCubit>().setFail("Fail !");
                       }
                     }

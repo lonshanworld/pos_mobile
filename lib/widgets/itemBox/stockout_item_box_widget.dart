@@ -7,7 +7,7 @@ import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/theme_bloc/theme_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
+import 'package:pos_mobile/services/pos_repository.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/group_model.dart';
@@ -62,7 +62,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
   Future<_StockOutItemParents?> _loadParents() async {
     try {
-      final TypeModel? typeModel = await DBHelper.getTypeById(
+      final TypeModel? typeModel = await PosRepository.instance.fetchTypeById(
         widget.itemModel.typeId,
       );
       if (typeModel == null) {
@@ -76,13 +76,13 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
           widget.itemModel.groupId ?? typeModel.groupId;
       final GroupModel? groupModel = resolvedGroupId == null
           ? null
-          : await DBHelper.getGroupById(resolvedGroupId);
+          : await PosRepository.instance.fetchGroupById(resolvedGroupId);
 
       final int? resolvedCategoryId =
           widget.itemModel.categoryId ?? groupModel?.categoryId;
       final CategoryModel? categoryModel = resolvedCategoryId == null
           ? null
-          : await DBHelper.getCategoryById(resolvedCategoryId);
+          : await PosRepository.instance.fetchCategoryById(resolvedCategoryId);
 
       return _StockOutItemParents(
         typeModel: typeModel,
@@ -759,6 +759,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                               color: Colors.grey.withValues(alpha: 0.05),
                               child: ItemImageWidget(
                                 imageId: widget.itemModel.imageId,
+                                imageUrl: widget.itemModel.imageUrl,
                                 fallbackIcon: Icons.inventory_2,
                                 fallbackIconSize: iconSize,
                               ),

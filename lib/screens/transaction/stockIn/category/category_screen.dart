@@ -1,6 +1,10 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
+import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
+import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/screens/transaction/stockIn/category/create_category_screen.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
@@ -9,6 +13,7 @@ import "package:pos_mobile/widgets/itemBox/create_item_btn_widget.dart";
 import "package:pos_mobile/widgets/noitem_widget.dart";
 import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 class CategoryScreen extends StatefulWidget {
   final bool isStorage;
@@ -25,7 +30,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    unawaited(loadData());
   }
+
+  Future<void> loadData() => ScreenDataLoader.items(context);
 
   @override
   void dispose() {
@@ -61,6 +69,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
       businessType,
       HierarchyLevel.category,
     );
+    final canCreate =
+        widget.isStorage &&
+        context.watch<UserDataCubit>().state.userModel?.userLevel ==
+            UserLevel.merchant;
 
     return Scaffold(
       body: Column(
@@ -128,7 +140,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       },
                     ),
                   ),
-                if (widget.isStorage)
+                if (canCreate)
                   CreateItemBtnWidget(
                     txt: "Create $categoryLabel",
                     widget: const CreateCategoryScreen(),

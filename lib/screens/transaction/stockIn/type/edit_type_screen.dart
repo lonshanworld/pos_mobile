@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 
@@ -10,14 +12,11 @@ import "../../../../models/user_model_folder/user_model.dart";
 import "../../../../widgets/btns_folder/cusTextOnlyBtn_widget.dart";
 import "../../../../widgets/btns_folder/leadingBackIconBtn.dart";
 import "../../../../widgets/cusTextField/cusTextFieldLogin_widget.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 class EditTypeScreen extends StatefulWidget {
-
   final TypeModel typeModel;
-  const EditTypeScreen({
-    super.key,
-    required this.typeModel,
-  });
+  const EditTypeScreen({super.key, required this.typeModel});
 
   @override
   State<EditTypeScreen> createState() => _EditTypeScreenState();
@@ -26,15 +25,22 @@ class EditTypeScreen extends StatefulWidget {
 class _EditTypeScreenState extends State<EditTypeScreen> {
   final TextEditingController typeNameController = TextEditingController();
 
-
   @override
   void initState() {
     super.initState();
-    if(mounted){
+    unawaited(loadData());
+    if (mounted) {
       setState(() {
         typeNameController.text = widget.typeModel.name;
       });
     }
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+    ]);
   }
 
   @override
@@ -49,10 +55,7 @@ class _EditTypeScreenState extends State<EditTypeScreen> {
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
@@ -60,9 +63,7 @@ class _EditTypeScreenState extends State<EditTypeScreen> {
       appBar: AppBar(
         centerTitle: true,
         leading: const CusLeadingBackIconBtn(),
-        title: const Text(
-          "Update Type",
-        ),
+        title: const Text("Update Type"),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(
@@ -75,7 +76,8 @@ class _EditTypeScreenState extends State<EditTypeScreen> {
               CusTextFieldLogin(
                 txtController: typeNameController,
                 verticalPadding: UIConstants.mediumSpace,
-                horizontalPadding: UIConstants.bigSpace + UIConstants.mediumSpace,
+                horizontalPadding:
+                    UIConstants.bigSpace + UIConstants.mediumSpace,
                 hintTxt: "Enter new Type name",
                 txtInputType: TextInputType.text,
               ),
@@ -84,19 +86,21 @@ class _EditTypeScreenState extends State<EditTypeScreen> {
                 child: CusTxtOnlyBtn(
                   textStyle: Theme.of(context).textTheme.titleSmall!,
                   txt: "Update",
-                  func: ()async{
-                    if(typeNameController.text.trim().isEmpty){
+                  func: () async {
+                    if (typeNameController.text.trim().isEmpty) {
                       showValidationMessage("Type name should not be empty");
-                    }else{
+                    } else {
                       context.read<LoadingCubit>().setLoading("Updating ...");
-                      final value = await context.read<ItemCubit>().editTypeName(
-                        userModel: userModel,
-                        newName: typeNameController.text.trim(),
-                        typeModel: widget.typeModel,
-                      );
+                      final value = await context
+                          .read<ItemCubit>()
+                          .editTypeName(
+                            userModel: userModel,
+                            newName: typeNameController.text.trim(),
+                            typeModel: widget.typeModel,
+                          );
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess(
                           "Success !",
                           showDialog: false,
@@ -104,7 +108,7 @@ class _EditTypeScreenState extends State<EditTypeScreen> {
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         }
-                      }else{
+                      } else {
                         context.read<LoadingCubit>().setFail("Fail !");
                       }
                     }

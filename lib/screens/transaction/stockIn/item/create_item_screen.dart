@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:collection/collection.dart";
@@ -12,7 +15,7 @@ import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
-import "package:pos_mobile/controller/DB_helper.dart";
+import "package:pos_mobile/services/pos_repository.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
@@ -26,6 +29,8 @@ import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:image_picker/image_picker.dart";
 import "package:pos_mobile/services/public_document_storage.dart";
+import "package:pos_mobile/services/image_upload_service.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -51,10 +56,12 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   double taxPercentage = 0;
   bool _needStock = true;
   String? _selectedImagePath;
+  String? _selectedImageSourceMimeType;
 
   @override
   void initState() {
     super.initState();
+    unawaited(loadData());
 
     originalPriceController.addListener(() {
       setState(() {
@@ -90,6 +97,14 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         taxPercentage = double.tryParse(taxController.text.trim()) ?? 0;
       });
     });
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.shopInfo(context),
+      ScreenDataLoader.users(context),
+    ]);
   }
 
   @override
@@ -129,19 +144,29 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     );
     if (source == null) return;
 
-    final picked = await ImagePicker().pickImage(source: source);
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: ImageUploadService.maxDimension.toDouble(),
+      maxHeight: ImageUploadService.maxDimension.toDouble(),
+      imageQuality: 88,
+    );
     if (picked == null) return;
 
     try {
-      final ext = picked.path.contains('.')
-          ? picked.path.split('.').last.toLowerCase()
-          : 'jpg';
-      final destination = await PublicDocumentStorage.copyFile(
-        sourcePath: picked.path,
-        fileName: 'item_${DateTime.now().microsecondsSinceEpoch}.$ext',
-        directory: 'item_images',
-      );
-      if (mounted) setState(() => _selectedImagePath = destination);
+      final prepared = await ImageUploadService.prepare(picked);
+      final destination = kIsWeb
+          ? prepared.dataUrl
+          : await PublicDocumentStorage.saveBytes(
+              bytes: prepared.bytes,
+              fileName: prepared.fileName,
+              directory: 'item_images',
+            );
+      if (mounted) {
+        setState(() {
+          _selectedImagePath = destination;
+          _selectedImageSourceMimeType = prepared.sourceMimeType;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -535,6 +560,16 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                               color: Colors.grey.withValues(alpha: 0.25),
                             ),
                           )
+                        : kIsWeb && _selectedImagePath!.startsWith('data:')
+                        ? Image.memory(
+                            base64Decode(
+                              _selectedImagePath!.substring(
+                                _selectedImagePath!.indexOf(',') + 1,
+                              ),
+                            ),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(),
+                          )
                         : Image.file(
                             File(_selectedImagePath!),
                             fit: BoxFit.cover,
@@ -601,7 +636,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       final itemBarcode = _businessFormKey.currentState
                           ?.buildItemBarcode();
                       if (itemBarcode != null &&
-                          !await DBHelper.isBarcodeAvailable(itemBarcode)) {
+                          !await PosRepository.instance.isBarcodeAvailable(
+                            itemBarcode,
+                          )) {
                         showValidationMessage(
                           'This barcode is already in use. Please enter a different barcode.',
                         );
@@ -627,6 +664,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             : true,
                         code: itemBarcode,
                         imagePath: _selectedImagePath,
+                        imageSourceMimeType: _selectedImageSourceMimeType,
                         businessDetail: businessDetail,
                       );
 

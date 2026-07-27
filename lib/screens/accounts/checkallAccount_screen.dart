@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
@@ -5,26 +7,40 @@ import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
-
-
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 import "package:pos_mobile/widgets/btns_folder/cusTxtIconBtn_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
 import "package:pos_mobile/widgets/tables_folder/user_table_folder/userModelTable.dart";
 
-class CheckAllAccountScreen extends StatelessWidget {
-
+class CheckAllAccountScreen extends StatefulWidget {
   final VoidCallback goToCreateScreen;
-  const CheckAllAccountScreen({
-    super.key,
-    required this.goToCreateScreen,
-  });
+  const CheckAllAccountScreen({super.key, required this.goToCreateScreen});
+
+  @override
+  State<CheckAllAccountScreen> createState() => _CheckAllAccountScreenState();
+}
+
+class _CheckAllAccountScreenState extends State<CheckAllAccountScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.users(context);
 
   @override
   Widget build(BuildContext context) {
-    final List<UserModel> userList = context.select((UserDataCubit cubit) => cubit.state.allUserModelList);
-    final UserModel? owner = context.select((UserDataCubit cubit) => cubit.state.userModel);
-    final bool isOwner = owner?.userLevel == UserLevel.merchant || owner?.userLevel == UserLevel.superAdmin;
+    final List<UserModel> userList = context.select(
+      (UserDataCubit cubit) => cubit.state.allUserModelList,
+    );
+    final UserModel? owner = context.select(
+      (UserDataCubit cubit) => cubit.state.userModel,
+    );
+    final bool isOwner =
+        owner?.userLevel == UserLevel.merchant ||
+        owner?.userLevel == UserLevel.superAdmin;
     final UIController uiController = UIController.instance;
 
     Future<void> showResetPasswordDialog() async {
@@ -45,6 +61,8 @@ class CheckAllAccountScreen extends StatelessWidget {
       final passController = TextEditingController();
       final confirmController = TextEditingController();
       UserModel selectedUser = eligibleUsers.first;
+      bool obscurePassword = true;
+      bool obscureConfirmation = true;
 
       await showDialog(
         context: context,
@@ -63,7 +81,9 @@ class CheckAllAccountScreen extends StatelessWidget {
                           .map(
                             (e) => DropdownMenuItem<UserModel>(
                               value: e,
-                              child: Text("${e.userName} (${e.userLevel.name})"),
+                              child: Text(
+                                "${e.userName} (${e.userLevel.name})",
+                              ),
                             ),
                           )
                           .toList(),
@@ -78,14 +98,38 @@ class CheckAllAccountScreen extends StatelessWidget {
                     const SizedBox(height: UIConstants.mediumSpace),
                     TextField(
                       controller: passController,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: "New password"),
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: "New password",
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setLocalState(
+                            () => obscurePassword = !obscurePassword,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: UIConstants.mediumSpace),
                     TextField(
                       controller: confirmController,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: "Confirm password"),
+                      obscureText: obscureConfirmation,
+                      decoration: InputDecoration(
+                        labelText: "Confirm password",
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureConfirmation
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setLocalState(
+                            () => obscureConfirmation = !obscureConfirmation,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -96,11 +140,13 @@ class CheckAllAccountScreen extends StatelessWidget {
                   ),
                   FilledButton(
                     onPressed: () async {
-                      final msg = await context.read<UserDataCubit>().resetUserPasswordByOwner(
-                        targetUserId: selectedUser.id,
-                        newPassword: passController.text.trim(),
-                        confirmPassword: confirmController.text.trim(),
-                      );
+                      final msg = await context
+                          .read<UserDataCubit>()
+                          .resetUserPasswordByOwner(
+                            targetUserId: selectedUser.id,
+                            newPassword: passController.text.trim(),
+                            confirmPassword: confirmController.text.trim(),
+                          );
                       if (!context.mounted) return;
                       Navigator.of(ctx).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,7 +216,7 @@ class CheckAllAccountScreen extends StatelessWidget {
             bottom: 0,
             right: 0,
             left: 0,
-            child:  Column(
+            child: Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -199,19 +245,27 @@ class CheckAllAccountScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.mediumSpace, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.mediumSpace,
+                  cusWidth: null,
+                ),
                 Expanded(
                   child: Column(
                     children: [
                       SingleChildScrollView(
                         scrollDirection: Axis.vertical,
-                        child: UserTable(userList: userList, showPassword: true,),
+                        child: UserTable(
+                          userList: userList,
+                          showPassword: true,
+                        ),
                       ),
-                      uiController.sizedBox(cusHeight: UIConstants.bigSpace * 6, cusWidth: null),
+                      uiController.sizedBox(
+                        cusHeight: UIConstants.bigSpace * 6,
+                        cusWidth: null,
+                      ),
                     ],
                   ),
                 ),
-
               ],
             ),
           ),
@@ -224,8 +278,8 @@ class CheckAllAccountScreen extends StatelessWidget {
               horizontalpadding: UIConstants.bigSpace,
               bdrRadius: UIConstants.mediumRadius,
               bgClr: Colors.teal,
-              func: ()async{
-                goToCreateScreen();
+              func: () async {
+                widget.goToCreateScreen();
               },
               txtStyle: Theme.of(context).textTheme.titleSmall!,
               txtClr: Colors.white,

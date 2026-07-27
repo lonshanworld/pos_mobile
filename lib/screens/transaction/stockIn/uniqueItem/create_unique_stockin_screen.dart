@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/item_bloc/item_cubit.dart';
@@ -9,7 +11,7 @@ import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/constants/business_type_utils.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
+import 'package:pos_mobile/services/pos_repository.dart';
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/error_handlers/item_folder/no_selected_id_error_widget.dart';
 import 'package:pos_mobile/models/groupingItem_models_folders/category_model.dart';
@@ -29,6 +31,7 @@ import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 import 'package:pos_mobile/widgets/cusTxt_widget.dart';
 import 'package:pos_mobile/widgets/cus_datepicker_withtxtfield_widget.dart';
 import 'package:pos_mobile/widgets/stock_in_unit_fields.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class CreateUniqueStockInScreen extends StatefulWidget {
   final ItemModel itemModel;
@@ -116,12 +119,24 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
   void initState() {
     super.initState();
     moreItem = 0;
+    unawaited(loadData());
     _parentsFuture = _loadParents();
     _loadBusinessDetail();
   }
 
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.transactions(context),
+      ScreenDataLoader.shopInfo(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
+
   Future<void> _loadBusinessDetail() async {
-    final detail = await DBHelper.getItemBusinessDetail(widget.itemModel.id);
+    final detail = await PosRepository.instance.fetchBusinessDetail(
+      widget.itemModel.id,
+    );
     if (mounted) {
       setState(() {
         _businessDetail = detail;
@@ -152,7 +167,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
 
   Future<_UniqueItemParents?> _loadParents() async {
     try {
-      final TypeModel? typeModel = await DBHelper.getTypeById(
+      final TypeModel? typeModel = await PosRepository.instance.fetchTypeById(
         widget.itemModel.typeId,
       );
       if (typeModel == null) return null;
@@ -161,13 +176,13 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
           widget.itemModel.groupId ?? typeModel.groupId;
       final GroupModel? groupModel = resolvedGroupId == null
           ? null
-          : await DBHelper.getGroupById(resolvedGroupId);
+          : await PosRepository.instance.fetchGroupById(resolvedGroupId);
 
       final int? resolvedCategoryId =
           widget.itemModel.categoryId ?? groupModel?.categoryId;
       final CategoryModel? categoryModel = resolvedCategoryId == null
           ? null
-          : await DBHelper.getCategoryById(resolvedCategoryId);
+          : await PosRepository.instance.fetchCategoryById(resolvedCategoryId);
 
       return _UniqueItemParents(
         typeModel: typeModel,
@@ -407,7 +422,7 @@ class _CreateUniqueStockInScreenState extends State<CreateUniqueStockInScreen> {
           return;
         }
 
-        if (!await DBHelper.isBarcodeAvailable(barcode)) {
+        if (!await PosRepository.instance.isBarcodeAvailable(barcode)) {
           showValidationMessage('Barcode already exists: $barcode');
           return;
         }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/blocs/promotion_bloc/promotion_cubit.dart';
@@ -23,6 +25,7 @@ import '../../../utils/ui_responsive_calculation.dart';
 import '../../../widgets/btns_folder/cusTxtIconBtn_widget.dart';
 import '../../../widgets/voucher_box_widget.dart';
 import 'voucher_full_view_screen.dart';
+import '../../screen_data_loader.dart';
 
 class VoucherScreen extends StatefulWidget {
   final String? customerName;
@@ -72,7 +75,10 @@ class _VoucherScreenState extends State<VoucherScreen> {
     super.initState();
     _printKey = GlobalKey();
     _barCode = CodeGenerator.getUniqueCodeForStockOut();
+    unawaited(loadData());
   }
+
+  Future<void> loadData() => ScreenDataLoader.promotions(context);
 
   void _showSavedPathToast(BuildContext context, String savedPath) {
     ScaffoldMessenger.of(context).showSnackBar(

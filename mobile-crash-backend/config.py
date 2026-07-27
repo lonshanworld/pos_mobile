@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # Admin credentials
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "changeme")
+
+    # Application/reporting credentials. Keep these server-side only.
+    BACKEND_REPORT_TOKEN: str = os.getenv("BACKEND_REPORT_TOKEN", "")
+    MAX_REPORTS_PER_REQUEST: int = 50
+    MAX_FIELD_LENGTH: int = 16_000
     
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 10

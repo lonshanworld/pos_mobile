@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -46,9 +47,8 @@ async def verify_mobile_token(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Security(security)
 ) -> str:
-    """Verify mobile API token using device_id"""
+    """Verify a registered frontend license client (legacy device IDs remain valid)."""
     device_id = credentials.credentials
-    # Check if this device_id is registered to any active key
     key_info = await db.get_key_by_device_id(device_id)
     if not key_info:
         raise HTTPException(
@@ -56,7 +56,26 @@ async def verify_mobile_token(
             detail="Invalid device ID or not registered",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    state = (key_info.get("license_state") or ("locked" if key_info.get("status") == "locked" else "valid")).lower()
+    if state != "valid":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"License is {state}")
     return device_id
+
+
+async def verify_report_token(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> str:
+    """Authenticate either a registered frontend client or the server token."""
+    token = credentials.credentials
+    if settings.BACKEND_REPORT_TOKEN and secrets.compare_digest(token, settings.BACKEND_REPORT_TOKEN):
+        return "pos_backend"
+    key_info = await db.get_key_by_device_id(token)
+    if not key_info:
+        raise HTTPException(status_code=401, detail="Invalid report credential", headers={"WWW-Authenticate": "Bearer"})
+    state = (key_info.get("license_state") or ("locked" if key_info.get("status") == "locked" else "valid")).lower()
+    if state != "valid":
+        raise HTTPException(status_code=403, detail=f"License is {state}")
+    return token
 
 def verify_admin_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
     """Verify admin JWT token"""

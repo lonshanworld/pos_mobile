@@ -1,9 +1,9 @@
+import 'package:pos_mobile/services/pos_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
 import "package:collection/collection.dart";
 import 'package:pos_mobile/utils/debug_print.dart';
 import 'package:pos_mobile/utils/formula.dart';
@@ -55,32 +55,54 @@ class ItemCubit extends Cubit<ItemState> {
           hasMoreGroup: true,
           isLoadingMoreGroup: false,
         ),
-      ) {
-    _initAllItemData();
-  }
+      );
 
   Future<void> _initAllItemData() async {
     try {
-      final Map<String, List> data = await DBHelper.getAllItemData(
-        limit: UIConstants.defaultPageLimit,
-        offset: 0,
+      final data = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllItemData(
+          limit: UIConstants.defaultPageLimit,
+          offset: 0,
+        ),
+        remote: () => PosRepository.instance.fetchLegacyItemData(),
       );
-      final businessDetails = await DBHelper.getAllItemBusinessDetails();
+      final businessDetails = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllItemBusinessDetails(),
+        remote: () => PosRepository.instance.fetchBusinessDetails(),
+      );
       _businessDetailMap = {
         for (final detail in businessDetails) detail.itemId: detail,
       };
-      final int totalCategoryCount = await DBHelper.getTotalCategoryCount();
-      final Map<int, int> categoryGroupCountMap =
-          await DBHelper.getGroupCountByCategory();
-      final Map<int, int> groupTypeCountMap =
-          await DBHelper.getTypeCountByGroup();
+      final totalCategoryCount = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getTotalCategoryCount(),
+        remote: () async => data['category']?.length ?? 0,
+      );
+      final categoryGroupCountMap = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getGroupCountByCategory(),
+        remote: () async => <int, int>{},
+      );
+      final groupTypeCountMap = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getTypeCountByGroup(),
+        remote: () async => <int, int>{},
+      );
       final List<CategoryModel> allActiveCategoryList =
-          _filterActiveCategoryList(await DBHelper.getAllActiveCategories());
+          _filterActiveCategoryList(
+            await PosRepository.instance.readWithMode(
+              local: () => LocalPosRepository.getAllActiveCategories(),
+              remote: () async => data['category'] as List<CategoryModel>,
+            ),
+          );
       final List<GroupModel> allActiveGroupList = _filterActiveGroupList(
-        await DBHelper.getAllActiveGroups(),
+        await PosRepository.instance.readWithMode(
+          local: () => LocalPosRepository.getAllActiveGroups(),
+          remote: () async => data['group'] as List<GroupModel>,
+        ),
       );
       final List<TypeModel> allActiveTypeList = _filterActiveTypeList(
-        await DBHelper.getAllActiveTypes(),
+        await PosRepository.instance.readWithMode(
+          local: () => LocalPosRepository.getAllActiveTypes(),
+          remote: () async => data['type'] as List<TypeModel>,
+        ),
       );
 
       final List<CategoryModel> rawCategoryList =
@@ -228,9 +250,15 @@ class ItemCubit extends Cubit<ItemState> {
 
     try {
       final int newOffset = state.categoryOffset + UIConstants.defaultPageLimit;
-      List<CategoryModel> moreCategories = await DBHelper.getAllCategories(
-        limit: UIConstants.defaultPageLimit,
-        offset: newOffset,
+      final moreCategories = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllCategories(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
+        remote: () => PosRepository.instance.fetchCategories(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
       );
 
       List<CategoryModel> newActiveCategoryList = List.from(
@@ -271,9 +299,15 @@ class ItemCubit extends Cubit<ItemState> {
 
     try {
       final int newOffset = state.groupOffset + UIConstants.defaultPageLimit;
-      List<GroupModel> moreGroups = await DBHelper.getAllGroups(
-        limit: UIConstants.defaultPageLimit,
-        offset: newOffset,
+      final moreGroups = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllGroups(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
+        remote: () => PosRepository.instance.fetchGroups(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
       );
 
       List<GroupModel> newActiveGroupList = List.from(state.activeGroupList);
@@ -372,7 +406,14 @@ class ItemCubit extends Cubit<ItemState> {
     String categoryName,
   ) async {
     try {
-      bool value = await DBHelper.createNewCategory(userModel, categoryName);
+      final value = await PosRepository.instance.writeWithMode(
+        local: () =>
+            LocalPosRepository.createNewCategory(userModel, categoryName),
+        remote: () => PosRepository.instance.createCatalog(
+          kind: 'category',
+          name: categoryName,
+        ),
+      );
       await _initAllItemData();
       return value;
     } catch (e) {
@@ -388,11 +429,19 @@ class ItemCubit extends Cubit<ItemState> {
     required String? description,
   }) async {
     try {
-      bool value = await DBHelper.createNewGroup(
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupName: groupName,
-        description: description,
+      final value = await PosRepository.instance.writeWithMode(
+        local: () => LocalPosRepository.createNewGroup(
+          userModel: userModel,
+          categoryModel: categoryModel,
+          groupName: groupName,
+          description: description,
+        ),
+        remote: () => PosRepository.instance.createCatalog(
+          kind: 'group',
+          name: groupName,
+          parentId: categoryModel?.id,
+          description: description,
+        ),
       );
       await _initAllItemData();
       return value;
@@ -411,16 +460,25 @@ class ItemCubit extends Cubit<ItemState> {
     required bool hasExpire,
   }) async {
     try {
-      bool value = await DBHelper.createNewType(
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupModel: groupModel,
-        typeName: typeName,
-        generalDescription:
-            (generalDescription == null || generalDescription == "")
-            ? null
-            : generalDescription,
-        hasExpire: hasExpire,
+      final value = await PosRepository.instance.writeWithMode(
+        local: () => LocalPosRepository.createNewType(
+          userModel: userModel,
+          categoryModel: categoryModel,
+          groupModel: groupModel,
+          typeName: typeName,
+          generalDescription:
+              (generalDescription == null || generalDescription == "")
+              ? null
+              : generalDescription,
+          hasExpire: hasExpire,
+        ),
+        remote: () => PosRepository.instance.createCatalog(
+          kind: 'type',
+          name: typeName,
+          parentId: groupModel?.id,
+          description: generalDescription,
+          hasExpire: hasExpire,
+        ),
       );
       await _initAllItemData();
       return value;
@@ -444,56 +502,86 @@ class ItemCubit extends Cubit<ItemState> {
     required bool needStock,
     required String? code,
     String? imagePath,
+    String? imageSourceMimeType,
     ItemBusinessDetailModel? businessDetail,
   }) async {
     try {
-      final int itemId = await DBHelper.createNewItem(
-        userModel: userModel,
-        categoryId: categoryId,
-        groupId: groupId,
-        typeModel: typeModel,
-        name: name,
-        description: description,
-        hasExpire: hasExpire,
-        profitPrice: profitPrice,
-        originalPrice: originalPrice,
-        taxPercentage: taxPercentage,
-        needStock: needStock,
-        code: code,
+      final int itemId = await PosRepository.instance.writeWithMode(
+        local: () => LocalPosRepository.createNewItem(
+          userModel: userModel,
+          categoryId: categoryId,
+          groupId: groupId,
+          typeModel: typeModel,
+          name: name,
+          description: description,
+          hasExpire: hasExpire,
+          profitPrice: profitPrice,
+          originalPrice: originalPrice,
+          taxPercentage: taxPercentage,
+          needStock: needStock,
+          code: code,
+        ),
+        remote: () => PosRepository.instance.createItem(
+          name: name,
+          typeId: typeModel.id,
+          categoryId: categoryId,
+          groupId: groupId,
+          code: code,
+          originalPrice: originalPrice,
+          profitPrice: profitPrice,
+          taxPercentage: taxPercentage,
+          hasExpire: hasExpire,
+          needStock: needStock,
+          description: description,
+        ),
       );
+      // The item_create outbox operation has no server id yet, so dependent
+      // image/business-detail operations are deferred until refresh.
+      if (itemId == -1) return true;
       if (itemId <= 0) return false;
       if (imagePath != null) {
-        final imageId = await DBHelper.saveItemImage(
-          itemId: itemId,
-          imagePath: imagePath,
+        final imageId = await PosRepository.instance.writeWithMode(
+          remote: () => PosRepository.instance.uploadImage(
+            imagePath: imagePath,
+            itemId: itemId,
+            sourceMimeType: imageSourceMimeType,
+          ),
+          local: () => LocalPosRepository.saveItemImage(
+            itemId: itemId,
+            imagePath: imagePath,
+          ),
         );
-        if (imageId <= 0) return false;
+        // -1 means the hybrid upload was queued and the local cache was
+        // updated by writeWithMode; only zero is a real failure.
+        if (imageId == 0) return false;
       }
       if (businessDetail != null && !businessDetail.isEmpty) {
-        await DBHelper.saveItemBusinessDetail(
-          ItemBusinessDetailModel(
-            id: businessDetail.id,
-            itemId: itemId,
-            clothingColor: businessDetail.clothingColor,
-            measurementLength: businessDetail.measurementLength,
-            measurementWidth: businessDetail.measurementWidth,
-            measurementUnit: businessDetail.measurementUnit,
-            pricePerMeasurementUnit: businessDetail.pricePerMeasurementUnit,
-            brand: businessDetail.brand,
-            deviceCategory: businessDetail.deviceCategory,
-            deviceColor: businessDetail.deviceColor,
-            ram: businessDetail.ram,
-            rom: businessDetail.rom,
-            modelNumber: businessDetail.modelNumber,
-            weightValue: businessDetail.weightValue,
-            weightUnit: businessDetail.weightUnit,
-            packSize: businessDetail.packSize,
-            isOrganic: businessDetail.isOrganic,
-            shelfLifeDays: businessDetail.shelfLifeDays,
-            dosage: businessDetail.dosage,
-            activeIngredient: businessDetail.activeIngredient,
-            manufacturer: businessDetail.manufacturer,
-          ),
+        final detail = ItemBusinessDetailModel(
+          id: businessDetail.id,
+          itemId: itemId,
+          clothingColor: businessDetail.clothingColor,
+          measurementLength: businessDetail.measurementLength,
+          measurementWidth: businessDetail.measurementWidth,
+          measurementUnit: businessDetail.measurementUnit,
+          pricePerMeasurementUnit: businessDetail.pricePerMeasurementUnit,
+          brand: businessDetail.brand,
+          deviceCategory: businessDetail.deviceCategory,
+          deviceColor: businessDetail.deviceColor,
+          ram: businessDetail.ram,
+          rom: businessDetail.rom,
+          modelNumber: businessDetail.modelNumber,
+          weightValue: businessDetail.weightValue,
+          weightUnit: businessDetail.weightUnit,
+          packSize: businessDetail.packSize,
+          isOrganic: businessDetail.isOrganic,
+          shelfLifeDays: businessDetail.shelfLifeDays,
+          dosage: businessDetail.dosage,
+          activeIngredient: businessDetail.activeIngredient,
+          manufacturer: businessDetail.manufacturer,
+        );
+        await PosRepository.instance.writeWithMode(
+          local: () => LocalPosRepository.saveItemBusinessDetail(detail),
+          remote: () => PosRepository.instance.saveBusinessDetailRemote(detail),
         );
       }
       await _initAllItemData();
@@ -505,7 +593,10 @@ class ItemCubit extends Cubit<ItemState> {
   }
 
   Future<bool> saveItemBusinessDetail(ItemBusinessDetailModel detail) async {
-    final ok = await DBHelper.saveItemBusinessDetail(detail);
+    final ok = await PosRepository.instance.writeWithMode(
+      local: () => LocalPosRepository.saveItemBusinessDetail(detail),
+      remote: () => PosRepository.instance.saveBusinessDetailRemote(detail),
+    );
     if (ok) {
       if (detail.isEmpty) {
         _businessDetailMap.remove(detail.itemId);
@@ -664,10 +755,17 @@ class ItemCubit extends Cubit<ItemState> {
     required UserModel userModel,
     required CategoryModel categoryModel,
   }) async {
-    bool value = await DBHelper.editCategoryName(
-      name: name,
-      userModel: userModel,
-      categoryModel: categoryModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.updateCatalog(
+        categoryModel.id,
+        kind: 'category',
+        name: name,
+      ),
+      local: () => LocalPosRepository.editCategoryName(
+        name: name,
+        userModel: userModel,
+        categoryModel: categoryModel,
+      ),
     );
     await _initAllItemData();
     return value;
@@ -678,10 +776,19 @@ class ItemCubit extends Cubit<ItemState> {
     required UserModel userModel,
     required GroupModel groupModel,
   }) async {
-    bool value = await DBHelper.editGroupName(
-      newName: newName,
-      userModel: userModel,
-      groupModel: groupModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.updateCatalog(
+        groupModel.id,
+        kind: 'group',
+        name: newName,
+        parentId: groupModel.categoryId,
+        description: groupModel.description,
+      ),
+      local: () => LocalPosRepository.editGroupName(
+        newName: newName,
+        userModel: userModel,
+        groupModel: groupModel,
+      ),
     );
     await _initAllItemData();
     return value;
@@ -692,10 +799,19 @@ class ItemCubit extends Cubit<ItemState> {
     required UserModel userModel,
     required TypeModel typeModel,
   }) async {
-    bool value = await DBHelper.editType(
-      newName: newName,
-      userModel: userModel,
-      typeModel: typeModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.updateCatalog(
+        typeModel.id,
+        kind: 'type',
+        name: newName,
+        parentId: typeModel.groupId,
+        description: typeModel.generalDescription,
+      ),
+      local: () => LocalPosRepository.editType(
+        newName: newName,
+        userModel: userModel,
+        typeModel: typeModel,
+      ),
     );
     await _initAllItemData();
     return value;
@@ -716,6 +832,8 @@ class ItemCubit extends Cubit<ItemState> {
     required String? newCode,
     ItemBusinessDetailModel? existingBusinessDetail,
     ItemBusinessDetailModel? businessDetail,
+    String? imagePath,
+    String? imageSourceMimeType,
   }) async {
     List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(
       itemModel.id,
@@ -726,19 +844,33 @@ class ItemCubit extends Cubit<ItemState> {
           .where((unit) => _matchesFullPieceSize(unit, existingBusinessDetail!))
           .toList();
     }
-    bool value = await DBHelper.editItem(
-      userModel: userModel,
-      itemModel: itemModel,
-      uniqueItemList: uniqueItemList,
-      newName: newName,
-      categoryId: categoryId,
-      groupId: groupId,
-      typeId: typeId,
-      newOriginalPrice: newOriginalPrice,
-      newProfitPrice: newProfitPrice,
-      newTaxPercentage: newTaxPercentage,
-      needStock: needStock,
-      newCode: newCode,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.updateItem(
+        itemModel.id,
+        name: newName,
+        typeId: typeId,
+        categoryId: categoryId,
+        groupId: groupId,
+        code: newCode,
+        originalPrice: newOriginalPrice,
+        profitPrice: newProfitPrice,
+        taxPercentage: newTaxPercentage,
+        needStock: needStock,
+      ),
+      local: () => LocalPosRepository.editItem(
+        userModel: userModel,
+        itemModel: itemModel,
+        uniqueItemList: uniqueItemList,
+        newName: newName,
+        categoryId: categoryId,
+        groupId: groupId,
+        typeId: typeId,
+        newOriginalPrice: newOriginalPrice,
+        newProfitPrice: newProfitPrice,
+        newTaxPercentage: newTaxPercentage,
+        needStock: needStock,
+        newCode: newCode,
+      ),
     );
     if (value && businessDetail != null) {
       await saveItemBusinessDetail(
@@ -767,6 +899,20 @@ class ItemCubit extends Cubit<ItemState> {
         ),
       );
     }
+    if (value && imagePath != null) {
+      final imageId = await PosRepository.instance.writeWithMode(
+        remote: () => PosRepository.instance.uploadImage(
+          imagePath: imagePath,
+          itemId: itemModel.id,
+          sourceMimeType: imageSourceMimeType,
+        ),
+        local: () => LocalPosRepository.saveItemImage(
+          itemId: itemModel.id,
+          imagePath: imagePath,
+        ),
+      );
+      if (imageId == 0) return false;
+    }
     await _initAllItemData();
     return value;
   }
@@ -777,27 +923,42 @@ class ItemCubit extends Cubit<ItemState> {
     UserModel userModel,
     CategoryModel categoryModel,
   ) async {
-    bool value = await DBHelper.deleteCategory(
-      userModel: userModel,
-      categoryModel: categoryModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.deleteResource(
+        '/api/v1/catalogs/${categoryModel.id}',
+      ),
+      local: () => LocalPosRepository.deleteCategory(
+        userModel: userModel,
+        categoryModel: categoryModel,
+      ),
     );
     await _initAllItemData();
     return value;
   }
 
   Future<bool> deleteGroup(UserModel userModel, GroupModel groupModel) async {
-    bool value = await DBHelper.deleteGroup(
-      userModel: userModel,
-      groupModel: groupModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.deleteResource(
+        '/api/v1/catalogs/${groupModel.id}',
+      ),
+      local: () => LocalPosRepository.deleteGroup(
+        userModel: userModel,
+        groupModel: groupModel,
+      ),
     );
     await _initAllItemData();
     return value;
   }
 
   Future<bool> deleteType(UserModel userModel, TypeModel typeModel) async {
-    bool value = await DBHelper.deleteType(
-      userModel: userModel,
-      typeModel: typeModel,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.deleteResource(
+        '/api/v1/catalogs/${typeModel.id}',
+      ),
+      local: () => LocalPosRepository.deleteType(
+        userModel: userModel,
+        typeModel: typeModel,
+      ),
     );
     await _initAllItemData();
     return value;
@@ -807,10 +968,15 @@ class ItemCubit extends Cubit<ItemState> {
     List<UniqueItemModel> uniqueItemList = getSelectedUniqueItemList(
       itemModel.id,
     );
-    bool value = await DBHelper.deleteItem(
-      userModel: userModel,
-      itemModel: itemModel,
-      uniqueItemList: uniqueItemList,
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.deleteResource(
+        '/api/v1/items/${itemModel.id}',
+      ),
+      local: () => LocalPosRepository.deleteItem(
+        userModel: userModel,
+        itemModel: itemModel,
+        uniqueItemList: uniqueItemList,
+      ),
     );
     await _initAllItemData();
     return value;
@@ -857,7 +1023,13 @@ class ItemCubit extends Cubit<ItemState> {
     UniqueItemModel uniqueItemModel,
     UserModel userModel,
   ) async {
-    bool value = await DBHelper.deleteUniqueItem(uniqueItemModel, userModel);
+    final value = await PosRepository.instance.writeWithMode(
+      remote: () => PosRepository.instance.deleteResource(
+        '/api/v1/unique-items/${uniqueItemModel.id}',
+      ),
+      local: () =>
+          LocalPosRepository.deleteUniqueItem(uniqueItemModel, userModel),
+    );
     if (value) reloadAllItem();
     return value;
   }

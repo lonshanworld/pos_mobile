@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/loading_bloc/loading_cubit.dart";
@@ -6,21 +8,18 @@ import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 import "package:pos_mobile/utils/ui_responsive_calculation.dart";
 import "package:pos_mobile/widgets/btns_folder/cusIconBtn_widget.dart";
 import "package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart";
 
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
-
+import 'package:pos_mobile/services/pos_api_client.dart';
 
 class CreateUserScreen extends StatefulWidget {
-
   final VoidCallback goBack;
-  const CreateUserScreen({
-    super.key,
-    required this.goBack,
-  });
+  const CreateUserScreen({super.key, required this.goBack});
 
   @override
   State<CreateUserScreen> createState() => _CreateUserScreenState();
@@ -31,6 +30,13 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   final TextEditingController passwordController = TextEditingController();
   UserLevel? selectedUserLevel;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.users(context);
 
   @override
   void dispose() {
@@ -41,38 +47,31 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+    final ThemeModeType themeModeType = context.select(
+      (ThemeCubit cubit) => cubit.state.themeModeType,
+    );
     final UIController uiController = UIController.instance;
     // final double deviceWidth = uiController.getDeviceWidth;
     final UIutils uIutils = UIutils();
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
-
-    List<UserLevel> cusUserLevel = [
-      UserLevel.staff,
-      UserLevel.merchant,
-    ];
+    List<UserLevel> cusUserLevel = [UserLevel.staff, UserLevel.merchant];
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: const Text(
           "Create new user account",
-          style: TextStyle(
-            color: Colors.grey,
-          ),
+          style: TextStyle(color: Colors.grey),
         ),
         leading: CusIconBtn(
           size: UIConstants.bigIcon,
-          func: (){
+          func: () {
             widget.goBack();
           },
           clr: uiController.getpureOppositeClr(themeModeType),
@@ -80,7 +79,6 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
         ),
       ),
       body: Center(
-
         child: SingleChildScrollView(
           child: Container(
             width: uIutils.createUserAccountScreenWidthTextField(),
@@ -91,7 +89,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 uiController.sizedBox(
-                    cusHeight: uiController.getDeviceHeight / 8, cusWidth: null),
+                  cusHeight: uiController.getDeviceHeight / 8,
+                  cusWidth: null,
+                ),
                 CusTextFieldLogin(
                   txtController: userNameController,
                   verticalPadding: UIConstants.mediumSpace,
@@ -100,7 +100,10 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   txtStyle: Theme.of(context).textTheme.bodyMedium,
                   txtInputType: TextInputType.text,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
                 CusTextFieldLogin(
                   txtController: passwordController,
                   verticalPadding: UIConstants.mediumSpace,
@@ -108,8 +111,12 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   hintTxt: "Enter new password",
                   txtStyle: Theme.of(context).textTheme.bodyMedium,
                   txtInputType: TextInputType.text,
+                  isPassword: true,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
                 DropdownButton(
                   dropdownColor: uiController.getpureDirectClr(themeModeType),
                   borderRadius: UIConstants.mediumBorderRadius,
@@ -118,62 +125,89 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                     "Choose user level",
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
-                  items: cusUserLevel.map((e) => DropdownMenuItem<UserLevel>(
-                    value: e,
-                    child: Text(
-                      e.name,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  )).toList(),
-                  onChanged: (data){
+                  items: cusUserLevel
+                      .map(
+                        (e) => DropdownMenuItem<UserLevel>(
+                          value: e,
+                          child: Text(
+                            e.name,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (data) {
                     setState(() {
                       selectedUserLevel = data;
                     });
                   },
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace,
+                  cusWidth: null,
+                ),
                 CusTxtElevatedBtn(
                   txt: "Create now",
                   verticalpadding: UIConstants.mediumSpace,
                   horizontalpadding: UIConstants.bigSpace,
                   bdrRadius: UIConstants.mediumRadius,
                   bgClr: Colors.teal,
-                  func: ()async{
-                    if(userNameController.text.trim().isEmpty || passwordController.text.trim().isEmpty || selectedUserLevel == null){
-                      if(userNameController.text.trim().isEmpty && passwordController.text.trim().isEmpty){
+                  func: () async {
+                    if (userNameController.text.trim().isEmpty ||
+                        passwordController.text.trim().isEmpty ||
+                        selectedUserLevel == null) {
+                      if (userNameController.text.trim().isEmpty &&
+                          passwordController.text.trim().isEmpty) {
                         showValidationMessage("All forms must be filled");
-                      }else if(userNameController.text.trim().isEmpty){
+                      } else if (userNameController.text.trim().isEmpty) {
                         showValidationMessage("Username cannot be empty");
-                      }else if(passwordController.text.trim().isEmpty){
+                      } else if (passwordController.text.trim().isEmpty) {
                         showValidationMessage("Password cannot be empty");
-                      }else if(selectedUserLevel == null){
+                      } else if (selectedUserLevel == null) {
                         showValidationMessage("User role must be chosen");
-                      }else{
+                      } else {
                         showValidationMessage("All forms must be filled");
                       }
-                    }else{
+                    } else {
                       context.read<LoadingCubit>().setLoading("Creating ...");
 
-                      final value = await context.read<UserDataCubit>().createNewUser(
-                        userName: userNameController.text.trim(),
-                        password: passwordController.text.trim(),
-                        userLevel: selectedUserLevel!,
-                      );
+                      bool value = false;
+                      String? errorMessage;
+                      try {
+                        value = await context
+                            .read<UserDataCubit>()
+                            .createNewUser(
+                              userName: userNameController.text.trim(),
+                              password: passwordController.text.trim(),
+                              userLevel: selectedUserLevel!,
+                            );
+                      } on PosApiException catch (error) {
+                        errorMessage = error.message;
+                      } catch (_) {
+                        errorMessage = 'Unable to create the account.';
+                      }
 
                       if (!mounted) return;
-                      if(value){
+                      if (value) {
                         context.read<LoadingCubit>().setSuccess("Success !");
                         widget.goBack();
-                      }else{
-                        context.read<LoadingCubit>().setFail("Failed !");
+                      } else {
+                        context.read<LoadingCubit>().setFail(
+                          errorMessage ?? 'Unable to create the account.',
+                        );
+                        showValidationMessage(
+                          errorMessage ?? 'Unable to create the account.',
+                        );
                       }
                     }
-
                   },
                   txtStyle: Theme.of(context).textTheme.titleSmall!,
                   txtClr: Colors.white,
                 ),
-                uiController.sizedBox(cusHeight: UIConstants.bigSpace * 2, cusWidth: null),
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 2,
+                  cusWidth: null,
+                ),
               ],
             ),
           ),

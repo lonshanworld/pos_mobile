@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:pos_mobile/blocs/item_bloc/item_cubit.dart";
@@ -7,6 +9,7 @@ import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 import "package:pos_mobile/widgets/btns_folder/cusTextOnlyBtn_widget.dart";
 import 'package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart';
 
@@ -22,6 +25,19 @@ class CreateCategoryScreen extends StatefulWidget {
 class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   final TextEditingController categoryNameController = TextEditingController();
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
 
   @override
   void dispose() {

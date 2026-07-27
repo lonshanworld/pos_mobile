@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
@@ -11,13 +13,44 @@ import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/dividers/cus_divider_widget.dart';
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 import 'package:pos_mobile/services/public_document_storage.dart';
+import 'package:pos_mobile/services/image_upload_service.dart';
+import 'package:pos_mobile/services/network_environment.dart';
+import 'package:pos_mobile/services/pos_repository.dart';
 
 import '../../controller/ui_controller.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
-class GeneralSettingsScreen extends StatelessWidget {
+class GeneralSettingsScreen extends StatefulWidget {
   static const String routeName = '/general_settings';
 
   const GeneralSettingsScreen({super.key});
+
+  @override
+  State<GeneralSettingsScreen> createState() => _GeneralSettingsScreenState();
+}
+
+class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.shopInfo(context),
+      ScreenDataLoader.users(context),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const _GeneralSettingsContent();
+  }
+}
+
+class _GeneralSettingsContent extends StatelessWidget {
+  const _GeneralSettingsContent();
 
   Future<void> _showEditShopInfoDialog(
     BuildContext context,
@@ -88,20 +121,67 @@ class GeneralSettingsScreen extends StatelessWidget {
   }
 
   Future<void> _pickShopLogo(BuildContext context) async {
-    final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take with camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final XFile? picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: ImageUploadService.maxDimension.toDouble(),
+      maxHeight: ImageUploadService.maxDimension.toDouble(),
+      imageQuality: 88,
+    );
     if (picked == null) return;
 
     try {
-      final ext = picked.path.split('.').last.toLowerCase();
-      final destPath = await PublicDocumentStorage.copyFile(
-        sourcePath: picked.path,
-        fileName: 'logo.$ext',
-        directory: 'shop_logo',
-      );
+      final prepared = await ImageUploadService.prepare(picked);
+      final destPath = kIsWeb
+          ? prepared.dataUrl
+          : await PublicDocumentStorage.saveBytes(
+              bytes: prepared.bytes,
+              fileName: 'logo.jpg',
+              directory: 'shop_logo',
+            );
 
       if (!context.mounted) return;
-      await context.read<ShopInfoCubit>().updateLogoPath(destPath);
+      final shopInfo = context.read<ShopInfoCubit>();
+      if (NetworkConfiguration.usesBackend) {
+        final imageId = await PosRepository.instance.uploadImage(
+          imagePath: destPath,
+          purpose: 'logo',
+          sourceMimeType: prepared.sourceMimeType,
+        );
+        if (imageId > 0) {
+          await shopInfo.updateLogoPath(
+            PosRepository.instance.publicImageUrl(imageId),
+          );
+          return;
+        }
+        // Hybrid mode queued the image. Keep the local copy visible without
+        // publishing a device path to the server settings table.
+        await shopInfo.setLocalLogoPath(destPath);
+        return;
+      }
+      await shopInfo.updateLogoPath(destPath);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,68 +197,104 @@ class GeneralSettingsScreen extends StatelessWidget {
     final currentController = TextEditingController();
     final newController = TextEditingController();
     final confirmController = TextEditingController();
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
 
     await showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Change Owner Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Current password',
-                ),
-              ),
-              const SizedBox(height: UIConstants.mediumSpace),
-              TextField(
-                controller: newController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'New password'),
-              ),
-              const SizedBox(height: UIConstants.mediumSpace),
-              TextField(
-                controller: confirmController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm new password',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final msg = await context
-                    .read<UserDataCubit>()
-                    .changeOwnerPassword(
-                      currentPassword: currentController.text.trim(),
-                      newPassword: newController.text.trim(),
-                      confirmPassword: confirmController.text.trim(),
-                    );
-
-                if (!context.mounted) return;
-                Navigator.of(ctx).pop();
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      msg ?? 'Owner password updated successfully.',
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) {
+            return AlertDialog(
+              title: const Text('Change Owner Password'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: currentController,
+                    obscureText: obscureCurrent,
+                    decoration: InputDecoration(
+                      labelText: 'Current password',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureCurrent
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setLocalState(
+                          () => obscureCurrent = !obscureCurrent,
+                        ),
+                      ),
                     ),
-                    behavior: SnackBarBehavior.floating,
                   ),
-                );
-              },
-              child: const Text('Update'),
-            ),
-          ],
+                  const SizedBox(height: UIConstants.mediumSpace),
+                  TextField(
+                    controller: newController,
+                    obscureText: obscureNew,
+                    decoration: InputDecoration(
+                      labelText: 'New password',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () =>
+                            setLocalState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: UIConstants.mediumSpace),
+                  TextField(
+                    controller: confirmController,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm new password',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setLocalState(
+                          () => obscureConfirm = !obscureConfirm,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final msg = await context
+                        .read<UserDataCubit>()
+                        .changeOwnerPassword(
+                          currentPassword: currentController.text.trim(),
+                          newPassword: newController.text.trim(),
+                          confirmPassword: confirmController.text.trim(),
+                        );
+
+                    if (!context.mounted) return;
+                    Navigator.of(ctx).pop();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          msg ?? 'Owner password updated successfully.',
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

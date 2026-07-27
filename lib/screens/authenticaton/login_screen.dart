@@ -1,19 +1,16 @@
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
-import "package:pos_mobile/blocs/history_bloc/history_cubit.dart";
-
-
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
-
+import "package:pos_mobile/blocs/sync_bloc/sync_status_cubit.dart";
 
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 
 import 'package:pos_mobile/controller/ui_controller.dart';
 import 'package:pos_mobile/services/crash_report_sync_manager.dart';
-
+import 'package:pos_mobile/services/pos_data_reload_service.dart';
 
 import "package:pos_mobile/screens/home_screen.dart";
 
@@ -24,16 +21,11 @@ import 'package:pos_mobile/widgets/btns_folder/cusTxtElevatedButton_widget.dart'
 import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
 
-
-
 class LoginScreen extends StatefulWidget {
   static const String routeName = "/loginscreen";
 
   final UserLevel userLevel;
-  const LoginScreen({
-    super.key,
-    required this.userLevel,
-  });
+  const LoginScreen({super.key, required this.userLevel});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -55,22 +47,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final UIController uiController = UIController.instance;
     // final DBHelper dbController = DBHelper.instance;
     final UIutils uIutils = UIutils();
-    final ThemeModeType themeModeType = context.select((ThemeCubit cubit) => cubit.state.themeModeType);
+    final ThemeModeType themeModeType = context.select(
+      (ThemeCubit cubit) => cubit.state.themeModeType,
+    );
 
     void showValidationMessage(String message) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        leading: const CusLeadingBackIconBtn(),
-      ),
+      appBar: AppBar(leading: const CusLeadingBackIconBtn()),
       body: SingleChildScrollView(
         child: Center(
           child: Column(
@@ -79,14 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisSize: MainAxisSize.max,
             children: [
               uiController.sizedBox(
-                  cusHeight: uiController.getDeviceHeight / 11, cusWidth: null),
-              if(widget.userLevel != UserLevel.superAdmin)const Center(
-                child: LogoImageWidget(
-                  widthandheight: 200,
-                ),
+                cusHeight: uiController.getDeviceHeight / 11,
+                cusWidth: null,
               ),
-              if(widget.userLevel != UserLevel.superAdmin)uiController.sizedBox(
-                  cusHeight: UIConstants.bigSpace * 3, cusWidth: null),
+              if (widget.userLevel != UserLevel.superAdmin)
+                const Center(child: LogoImageWidget(widthandheight: 200)),
+              if (widget.userLevel != UserLevel.superAdmin)
+                uiController.sizedBox(
+                  cusHeight: UIConstants.bigSpace * 3,
+                  cusWidth: null,
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: UIConstants.bigSpace,
@@ -101,7 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               uiController.sizedBox(
-                  cusHeight: UIConstants.bigSpace, cusWidth: null),
+                cusHeight: UIConstants.bigSpace,
+                cusWidth: null,
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: UIConstants.bigSpace,
@@ -117,7 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               uiController.sizedBox(
-                  cusHeight: UIConstants.bigSpace * 1.5, cusWidth: null),
+                cusHeight: UIConstants.bigSpace * 1.5,
+                cusWidth: null,
+              ),
               CusTxtElevatedBtn(
                 txt: "Login",
                 verticalpadding: 10,
@@ -125,43 +120,56 @@ class _LoginScreenState extends State<LoginScreen> {
                 bdrRadius: 10,
                 bgClr: uiController.getpureOppositeClr(themeModeType),
                 func: () async {
-                  if(userNameController.text.trim().isEmpty || passwordController.text.trim().isEmpty ){
-                    if(userNameController.text.trim().isEmpty && passwordController.text.trim().isEmpty){
+                  if (userNameController.text.trim().isEmpty ||
+                      passwordController.text.trim().isEmpty) {
+                    if (userNameController.text.trim().isEmpty &&
+                        passwordController.text.trim().isEmpty) {
                       showValidationMessage("All forms must be filled");
-                    }else if(userNameController.text.trim().isEmpty){
+                    } else if (userNameController.text.trim().isEmpty) {
                       showValidationMessage("Username cannot be empty");
-                    }else if(passwordController.text.trim().isEmpty){
+                    } else if (passwordController.text.trim().isEmpty) {
                       showValidationMessage("Password cannot be empty");
-                    }else{
+                    } else {
                       showValidationMessage("All forms must be filled");
                     }
                     return;
                   }
 
                   final value = await context.read<UserDataCubit>().login(
-                      userName: userNameController.text.trim(),
-                      password: passwordController.text.trim(),
-                      userLevel: widget.userLevel,
-                      buildContext: context,
-                    );
+                    userName: userNameController.text.trim(),
+                    password: passwordController.text.trim(),
+                    userLevel: widget.userLevel,
+                    buildContext: context,
+                  );
 
                   if (value) {
                     // Trigger crash report sync on successful login
-                    await CrashReportSyncManager.instance.triggerSync(reason: 'User login');
+                    await CrashReportSyncManager.instance.triggerSync(
+                      reason: 'User login',
+                    );
                   }
 
-                  if (!mounted || !value) {
+                  if (!context.mounted || !value) {
                     return;
                   }
 
-                  await context.read<HistoryCubit>().reloadHistoryList();
-                  if (!mounted) return;
-                  Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.routeName, (route) => false);
+                  // Shared data Cubits are created before authentication, so
+                  // their remote reads are deferred until this point.
+                  final syncStatusCubit = context.read<SyncStatusCubit>();
+                  final changesApplied = await syncStatusCubit.retry();
+                  if (!context.mounted) return;
+                  if (!changesApplied) {
+                    await PosDataReloadService.reloadAll(context);
+                  }
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    HomeScreen.routeName,
+                    (route) => false,
+                  );
                 },
                 txtStyle: Theme.of(context).textTheme.bodyLarge!,
                 txtClr: uiController.getpureDirectClr(themeModeType),
               ),
-
             ],
           ),
         ),

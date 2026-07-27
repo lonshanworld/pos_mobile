@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
 import 'package:pos_mobile/screens/tables_charts/report_export_service.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class WeeklySales extends StatefulWidget {
   const WeeklySales({super.key});
@@ -22,6 +24,14 @@ class WeeklySales extends StatefulWidget {
 class _WeeklySalesState extends State<WeeklySales> {
   int _currentPage = 0;
   static const int _pageSize = 15;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.transactions(context);
 
   @override
   Widget build(BuildContext context) {

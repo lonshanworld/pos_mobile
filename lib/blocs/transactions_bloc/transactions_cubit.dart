@@ -1,6 +1,6 @@
+import 'package:pos_mobile/services/pos_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pos_mobile/controller/DB_helper.dart';
 import "package:collection/collection.dart";
 import 'package:pos_mobile/features/historyFilter.dart';
 import 'package:pos_mobile/models/transaction_model_folder/stockin_model_folder/stockin_history_model.dart';
@@ -42,9 +42,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
           inActiveStockInList: [],
           inActiveStockOutList: [],
         ),
-      ) {
-    _initTransactionsList();
-  }
+      );
 
   Future<void> _initTransactionsList() async {
     try {
@@ -56,9 +54,14 @@ class TransactionsCubit extends Cubit<TransactionsState> {
       List<DeliveryPersonModel> inActiveDeliveryPersonList = [];
 
       // Fetch first page (defaultPageLimit items)
-      List<StockInModel> allStockInList = await DBHelper.getAllStockIn(
-        limit: UIConstants.defaultPageLimit,
-        offset: 0,
+      final allStockInList = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllStockIn(
+          limit: UIConstants.defaultPageLimit,
+          offset: 0,
+        ),
+        remote: () => PosRepository.instance.fetchStockIns(
+          limit: UIConstants.defaultPageLimit,
+        ),
       );
       for (int a = 0; a < allStockInList.length; a++) {
         if (allStockInList[a].activeStatus) {
@@ -68,9 +71,14 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      List<StockOutModel> allStockOutList = await DBHelper.getAllStockOut(
-        limit: UIConstants.defaultPageLimit,
-        offset: 0,
+      final allStockOutList = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllStockOut(
+          limit: UIConstants.defaultPageLimit,
+          offset: 0,
+        ),
+        remote: () => PosRepository.instance.fetchStockOuts(
+          limit: UIConstants.defaultPageLimit,
+        ),
       );
       for (int b = 0; b < allStockOutList.length; b++) {
         if (allStockOutList[b].activeStatus) {
@@ -80,8 +88,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      List<DeliveryPersonModel> allDeliveryPersonList =
-          await DBHelper.getAllDeliveryPerson();
+      final allDeliveryPersonList = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllDeliveryPerson(),
+        remote: () => PosRepository.instance.fetchDeliveryPeople(),
+      );
       for (int c = 0; c < allDeliveryPersonList.length; c++) {
         if (allDeliveryPersonList[c].activeStatus) {
           activeDeliveryPersonList.add(allDeliveryPersonList[c]);
@@ -94,9 +104,18 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         TransactionsData(
           activeStockInList: activeStockInList,
           activeStockOutList: activeStockOutList,
-          stockOutItemList: await DBHelper.getAllStockOutItem(),
-          customerList: await DBHelper.getAllCustomer(),
-          deliveryModelList: await DBHelper.getAllDeliveryModel(),
+          stockOutItemList: await PosRepository.instance.readWithMode(
+            local: () => LocalPosRepository.getAllStockOutItem(),
+            remote: () => PosRepository.instance.fetchStockOutItems(),
+          ),
+          customerList: await PosRepository.instance.readWithMode(
+            local: () => LocalPosRepository.getAllCustomer(),
+            remote: () => PosRepository.instance.fetchCustomers(),
+          ),
+          deliveryModelList: await PosRepository.instance.readWithMode(
+            local: () => LocalPosRepository.getAllDeliveryModel(),
+            remote: () => PosRepository.instance.fetchDeliveries(),
+          ),
           activeDeliveryPersonList: activeDeliveryPersonList,
           inActiveDeliveryPersonList: inActiveDeliveryPersonList,
           inActiveStockInList: inActiveStockInList,
@@ -153,9 +172,15 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
     try {
       final int newOffset = state.stockInOffset + UIConstants.defaultPageLimit;
-      List<StockInModel> moreStockInList = await DBHelper.getAllStockIn(
-        limit: UIConstants.defaultPageLimit,
-        offset: newOffset,
+      final moreStockInList = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllStockIn(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
+        remote: () => PosRepository.instance.fetchStockIns(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
       );
 
       List<StockInModel> newActiveStockInList = List.from(
@@ -242,9 +267,15 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
     try {
       final int newOffset = state.stockOutOffset + UIConstants.defaultPageLimit;
-      List<StockOutModel> moreStockOutList = await DBHelper.getAllStockOut(
-        limit: UIConstants.defaultPageLimit,
-        offset: newOffset,
+      final moreStockOutList = await PosRepository.instance.readWithMode(
+        local: () => LocalPosRepository.getAllStockOut(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
+        remote: () => PosRepository.instance.fetchStockOuts(
+          limit: UIConstants.defaultPageLimit,
+          offset: newOffset,
+        ),
       );
 
       List<StockOutModel> newActiveStockOutList = List.from(
@@ -325,18 +356,28 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     List<StockInUnitSpec>? unitSpecs,
   }) async {
     try {
-      bool value = await DBHelper.createStockIn(
-        userModel: userModel,
-        categoryModel: categoryModel,
-        groupModel: groupModel,
-        typeModel: typeModel,
-        itemModel: itemModel,
-        code: code,
-        itemManufactureDate: itemManufactureDate,
-        itemExpireDate: itemExpireDate,
-        getItemFromWhere: getItemFromWhere,
-        itemLength: itemLength,
-        unitSpecs: unitSpecs,
+      final value = await PosRepository.instance.writeWithMode(
+        remote: () => PosRepository.instance.createStockInFromLegacy(
+          item: itemModel,
+          itemLength: itemLength,
+          code: code,
+          manufactureDate: itemManufactureDate,
+          expireDate: itemExpireDate,
+          unitSpecs: unitSpecs,
+        ),
+        local: () => LocalPosRepository.createStockIn(
+          userModel: userModel,
+          categoryModel: categoryModel,
+          groupModel: groupModel,
+          typeModel: typeModel,
+          itemModel: itemModel,
+          code: code,
+          itemManufactureDate: itemManufactureDate,
+          itemExpireDate: itemExpireDate,
+          getItemFromWhere: getItemFromWhere,
+          itemLength: itemLength,
+          unitSpecs: unitSpecs,
+        ),
       );
       await _initTransactionsList();
       return value;
@@ -366,22 +407,36 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required DateTime checkoutTime,
   }) async {
     try {
-      bool value = await DBHelper.createStockOutList(
-        uniqueItemList: uniqueItemList,
-        userModel: userModel,
-        deliveryCharges: deliveryCharges,
-        taxPercentage: taxPercentage,
-        additionalPromotionAmount: additionalPromotionAmount,
-        description: description,
-        customerName: customerName,
-        deliveryName: deliveryName,
-        shoppingType: shoppingType,
-        paymentMethod: paymentMethod,
-        barcode: barcode,
-        dataList: dataList,
-        finalTotalPrice: finalTotalPrice,
-        promotionModel: promotionModel,
-        checkoutTime: checkoutTime,
+      final value = await PosRepository.instance.writeWithMode(
+        remote: () => PosRepository.instance.createStockOutFromLegacy(
+          lines: dataList,
+          code: barcode,
+          description: description,
+          tax: taxPercentage,
+          discount: additionalPromotionAmount ?? 0,
+          shoppingType: shoppingType,
+          paymentMethod: paymentMethod,
+          customerName: customerName,
+          deliveryName: deliveryName,
+          deliveryCharges: deliveryCharges,
+        ),
+        local: () => LocalPosRepository.createStockOutList(
+          uniqueItemList: uniqueItemList,
+          userModel: userModel,
+          deliveryCharges: deliveryCharges,
+          taxPercentage: taxPercentage,
+          additionalPromotionAmount: additionalPromotionAmount,
+          description: description,
+          customerName: customerName,
+          deliveryName: deliveryName,
+          shoppingType: shoppingType,
+          paymentMethod: paymentMethod,
+          barcode: barcode,
+          dataList: dataList,
+          finalTotalPrice: finalTotalPrice,
+          promotionModel: promotionModel,
+          checkoutTime: checkoutTime,
+        ),
       );
       await _initTransactionsList();
       return value;
@@ -449,10 +504,15 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required List<ItemModel> itemModelList,
   }) async {
     try {
-      bool value = await DBHelper.stockOutOrderCancel(
-        stockOutId: stockOutId,
-        userModel: userModel,
-        itemModelList: itemModelList,
+      final value = await PosRepository.instance.writeWithMode(
+        remote: () => PosRepository.instance.deleteResource(
+          '/api/v1/stock-out/$stockOutId',
+        ),
+        local: () => LocalPosRepository.stockOutOrderCancel(
+          stockOutId: stockOutId,
+          userModel: userModel,
+          itemModelList: itemModelList,
+        ),
       );
       if (value) await reloadList();
       return value;
@@ -467,9 +527,14 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required UserModel userModel,
   }) async {
     try {
-      bool value = await DBHelper.deleteStockOut(
-        stockOutId: stockOutId,
-        userModel: userModel,
+      final value = await PosRepository.instance.writeWithMode(
+        remote: () => PosRepository.instance.deleteResource(
+          '/api/v1/stock-out/$stockOutId',
+        ),
+        local: () => LocalPosRepository.deleteStockOut(
+          stockOutId: stockOutId,
+          userModel: userModel,
+        ),
       );
       if (value) await reloadList();
       return value;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
@@ -24,6 +26,7 @@ import '../../../utils/txt_formatters.dart';
 import '../../../widgets/loading_widget.dart';
 import 'add_more_info_stockOut_screen.dart';
 import 'package:pos_mobile/constants/business_hierarchy_config.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class StockOutScreen extends StatefulWidget {
   static const String routeName = "/stockoutscreen";
@@ -56,6 +59,19 @@ class _StockOutScreenState extends State<StockOutScreen> {
   PaymentMethod paymentMethod = PaymentMethod.cash;
   PromotionModel? promotion;
   DateTime checkoutTime = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.items(context),
+      ScreenDataLoader.shopInfo(context),
+    ]);
+  }
 
   @override
   void dispose() {

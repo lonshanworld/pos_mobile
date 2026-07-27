@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
@@ -15,6 +17,7 @@ import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
 import 'package:pos_mobile/screens/tables_charts/report_export_service.dart';
+import 'package:pos_mobile/screens/screen_data_loader.dart';
 
 class PerTransactions extends StatefulWidget {
   const PerTransactions({super.key});
@@ -26,6 +29,19 @@ class PerTransactions extends StatefulWidget {
 class _PerTransactionsState extends State<PerTransactions> {
   int _currentPage = 0;
   static const int _pageSize = 15;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.transactions(context),
+      ScreenDataLoader.items(context),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,9 +64,10 @@ class _PerTransactionsState extends State<PerTransactions> {
     final int start = safePage * _pageSize;
     final int end = (start + _pageSize).clamp(0, totalCount);
     final List<StockOutModel> pageRows = allTransactions.sublist(start, end);
+    final itemState = context.watch<ItemCubit>().state;
     final List<ItemModel> allItemModelList = [
-      ...context.read<ItemCubit>().state.activeItemList,
-      ...context.read<ItemCubit>().state.inActiveItemList,
+      ...itemState.activeItemList,
+      ...itemState.inActiveItemList,
     ];
 
     return Column(

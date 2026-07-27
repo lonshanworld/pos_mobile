@@ -1,5 +1,8 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:get_storage/get_storage.dart";
 import "package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart";
 import "package:pos_mobile/blocs/theme_bloc/theme_cubit.dart";
 import "package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart";
@@ -7,6 +10,7 @@ import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
+import "package:pos_mobile/screens/screen_data_loader.dart";
 
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
 import "package:pos_mobile/routes/drawer_pagemodelList.dart";
@@ -33,14 +37,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int pageIndex = 0;
+  static const String _webPageIndexKey = 'web_home_page_index';
+  final GetStorage _storage = GetStorage();
+  late int pageIndex;
   late final PageController pageController;
+  bool _initialDataRefreshStarted = false;
 
   @override
   void initState() {
     super.initState();
+    pageIndex = _storage.read<int>(_webPageIndexKey) ?? 0;
     pageController = PageController(initialPage: pageIndex, keepPage: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _initialDataRefreshStarted) return;
+      _initialDataRefreshStarted = true;
+      unawaited(loadData());
+    });
   }
+
+  Future<void> loadData() => ScreenDataLoader.all(context);
 
   @override
   void dispose() {
@@ -82,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         pageIndex = value;
         pageController.jumpToPage(value);
       });
+      _storage.write(_webPageIndexKey, value);
     }
 
     void logoutFunc() async {

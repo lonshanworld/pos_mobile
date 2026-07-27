@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:barcode/barcode.dart' as barcode_lib;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,11 +9,14 @@ import '../blocs/loading_bloc/loading_cubit.dart';
 import '../blocs/item_bloc/item_cubit.dart';
 import '../constants/business_hierarchy_config.dart';
 import '../constants/enums.dart';
-import '../controller/DB_helper.dart';
+import '../services/pos_repository.dart';
 import '../controller/ui_controller.dart';
 import '../models/item_model_folder/item_model.dart';
 import '../models/item_model_folder/uniqueItem_model.dart';
 import 'barcode_scanner_screen.dart';
+import 'screen_data_loader.dart';
+
+enum _BarcodeEntryMethod { scan, text }
 
 class PrintBarcodeScreen extends StatefulWidget {
   static const routeName = '/print-barcode';
@@ -32,6 +37,14 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
   int? _selectedGroupId;
   int? _selectedTypeId;
   final Set<String> _selected = {};
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() => ScreenDataLoader.items(context);
 
   @override
   void dispose() {
@@ -70,7 +83,9 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
     while (true) {
       final suffix = attempt == 0 ? '' : '-$attempt';
       final candidate = '$prefix$id$suffix';
-      if (await DBHelper.isBarcodeAvailable(candidate)) return candidate;
+      if (await PosRepository.instance.isBarcodeAvailable(candidate)) {
+        return candidate;
+      }
       attempt++;
     }
   }
@@ -137,9 +152,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
           final hasBarcode = _hasUniqueBarcode(uniqueItem);
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
             child: CheckboxListTile(
               value: _selected.contains(_uniqueSelectionKey(uniqueItem)),
               title: Text(code),
@@ -151,17 +164,13 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                   color: hasBarcode ? Colors.green : Colors.grey,
                 ),
               ),
-              secondary: hasBarcode
-                  ? const Icon(Icons.qr_code_2)
-                  : null,
-              onChanged: (_) => setState(
-                () {
-                  final key = _uniqueSelectionKey(uniqueItem);
-                  _selected.contains(key)
-                      ? _selected.remove(key)
-                      : _selected.add(key);
-                },
-              ),
+              secondary: hasBarcode ? const Icon(Icons.qr_code_2) : null,
+              onChanged: (_) => setState(() {
+                final key = _uniqueSelectionKey(uniqueItem);
+                _selected.contains(key)
+                    ? _selected.remove(key)
+                    : _selected.add(key);
+              }),
             ),
           );
         }).toList(),
@@ -190,7 +199,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
         final selected = _selected.contains(_uniqueSelectionKey(uniqueItem));
         if (selected && !_hasUniqueBarcode(uniqueItem)) {
           final barcode = await _nextAvailableBarcode('UNIT-', uniqueItem.id);
-          final success = await DBHelper.updateUniqueItemBarcode(
+          final success = await PosRepository.instance.updateUniqueItemBarcode(
             uniqueItemId: uniqueItem.id,
             barcode: barcode,
           );
@@ -202,7 +211,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
         if (_selected.contains(_itemSelectionKey(item)) &&
             !_hasItemBarcode(item)) {
           final barcode = await _nextAvailableBarcode('ITEM-', item.id);
-          final success = await DBHelper.updateItemBarcode(
+          final success = await PosRepository.instance.updateItemBarcode(
             itemId: item.id,
             barcode: barcode,
           );
@@ -230,12 +239,93 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       return;
     }
 
-    final scanned = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    final method = await showModalBottomSheet<_BarcodeEntryMethod>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner),
+              title: const Text('Scan barcode'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_BarcodeEntryMethod.scan),
+            ),
+            ListTile(
+              leading: const Icon(Icons.keyboard),
+              title: const Text('Add barcode text'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_BarcodeEntryMethod.text),
+            ),
+          ],
+        ),
+      ),
     );
-    if (!mounted || scanned == null || scanned.trim().isEmpty) return;
+    if (!mounted || method == null) return;
 
-    final barcode = scanned.trim();
+    String? barcode;
+    if (method == _BarcodeEntryMethod.scan) {
+      barcode = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+      );
+    } else {
+      barcode = await _showManualBarcodeDialog();
+    }
+    if (!mounted || barcode == null || barcode.trim().isEmpty) return;
+
+    await _saveBarcode(barcode.trim());
+  }
+
+  Future<String?> _showManualBarcodeDialog() async {
+    final controller = TextEditingController();
+    final barcode = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            void submit() {
+              final value = controller.text.trim();
+              if (value.isEmpty) {
+                setDialogState(() {
+                  errorText = 'Enter a barcode.';
+                });
+                return;
+              }
+              Navigator.of(dialogContext).pop(value);
+            }
+
+            return AlertDialog(
+              title: const Text('Add barcode text'),
+              content: TextField(
+                controller: controller,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'Barcode',
+                  errorText: errorText,
+                ),
+                onSubmitted: (_) => submit(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(onPressed: submit, child: const Text('Add')),
+              ],
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
+    return barcode?.trim();
+  }
+
+  Future<void> _saveBarcode(String barcode) async {
     final itemCubit = context.read<ItemCubit>();
     final itemState = itemCubit.state;
     final loading = context.read<LoadingCubit>();
@@ -246,7 +336,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       for (final uniqueItem in itemState.activeUniqueItemList) {
         final selectionKey = _uniqueSelectionKey(uniqueItem);
         if (_selected.contains(selectionKey)) {
-          success = await DBHelper.updateUniqueItemBarcode(
+          success = await PosRepository.instance.updateUniqueItemBarcode(
             uniqueItemId: uniqueItem.id,
             barcode: barcode,
           );
@@ -257,7 +347,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
       for (final item in itemState.activeItemList) {
         final selectionKey = _itemSelectionKey(item);
         if (_selected.contains(selectionKey)) {
-          success = await DBHelper.updateItemBarcode(
+          success = await PosRepository.instance.updateItemBarcode(
             itemId: item.id,
             barcode: barcode,
           );
@@ -613,7 +703,6 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
                   itemBuilder: (context, index) {
                     if (!_uniqueItems) {
                       final item = items[index];
-                      final code = _code(item);
                       final selectionKey = _itemSelectionKey(item);
                       final hasBarcode = _hasItemBarcode(item);
                       return Container(
@@ -714,9 +803,7 @@ class _PrintBarcodeScreenState extends State<PrintBarcodeScreen> {
     List<ItemModel> items,
     List<UniqueItemModel> uniqueItems,
   ) {
-    final itemByKey = {
-      for (final item in items) _itemSelectionKey(item): item,
-    };
+    final itemByKey = {for (final item in items) _itemSelectionKey(item): item};
     final uniqueByKey = {
       for (final item in uniqueItems) _uniqueSelectionKey(item): item,
     };

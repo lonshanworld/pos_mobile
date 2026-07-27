@@ -14,6 +14,8 @@ class CrashReporter {
 
   static PackageInfo? _packageInfo;
 
+  static String get _platformName => kIsWeb ? 'web' : Platform.operatingSystem;
+
   static Future<void> _captureWithSentry(
     dynamic error, {
     StackTrace? stackTrace,
@@ -32,8 +34,8 @@ class CrashReporter {
   }) async {
     // Ignore network/internet connection errors to prevent cluttering reports
     final errorStr = error.toString().toLowerCase();
-    if (errorStr.contains('socketexception') || 
-        errorStr.contains('clientexception') || 
+    if (errorStr.contains('socketexception') ||
+        errorStr.contains('clientexception') ||
         errorStr.contains('handshakeexception') ||
         errorStr.contains('no internet connection') ||
         errorStr.contains('network_error') ||
@@ -56,16 +58,22 @@ class CrashReporter {
     required String errorType,
   }) async {
     try {
+      // sqflite is not available in the web build. The error must not cause a
+      // second error while the original exception is being reported.
+      if (kIsWeb) {
+        cusDebugPrint('Crash report captured on web: $error');
+        return;
+      }
       _packageInfo ??= await PackageInfo.fromPlatform();
 
       final report = CrashReportModel(
         id: 0,
         errorMessage: error.toString(),
         stackTrace: stackTrace?.toString() ?? 'No stack trace',
-        deviceInfo: Platform.operatingSystem,
+        deviceInfo: _platformName,
         userInfo: null,
         appVersion: _packageInfo!.version,
-        platform: Platform.operatingSystem,
+        platform: _platformName,
         timestamp: DateTime.now(),
         errorType: errorType,
         isSynced: false,
@@ -75,7 +83,9 @@ class CrashReporter {
       cusDebugPrint('Crash report saved to local database');
 
       // Attempt immediate sync if online
-      await CrashReportSyncManager.instance.triggerSync(reason: 'Immediate error submission');
+      await CrashReportSyncManager.instance.triggerSync(
+        reason: 'Immediate error submission',
+      );
     } catch (e) {
       cusDebugPrint('Failed to save crash report to database: $e');
     }
@@ -91,7 +101,7 @@ class CrashReporter {
 
       // Ignore layout overflow errors to prevent cluttering the crash reports
       final errorStr = details.exception.toString();
-      if (errorStr.contains('A RenderFlex overflowed') || 
+      if (errorStr.contains('A RenderFlex overflowed') ||
           errorStr.contains('overflowed by') ||
           errorStr.contains('RenderBox was not laid out')) {
         return;
@@ -104,10 +114,7 @@ class CrashReporter {
       );
 
       if (sentryDsn.isNotEmpty) {
-        await _captureWithSentry(
-          details.exception,
-          stackTrace: details.stack,
-        );
+        await _captureWithSentry(details.exception, stackTrace: details.stack);
       } else {
         cusDebugPrint('FlutterError: ${details.exceptionAsString()}');
       }

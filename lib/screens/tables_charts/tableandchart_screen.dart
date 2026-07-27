@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
@@ -8,6 +10,7 @@ import 'package:pos_mobile/screens/tables_charts/per_transactions.dart';
 import '../../blocs/theme_bloc/theme_cubit.dart';
 import '../../constants/enums.dart';
 import '../../controller/ui_controller.dart';
+import '../screen_data_loader.dart';
 
 class TableAndChartScreen extends StatefulWidget {
   static const String routeName = "/tableandchartscreen";
@@ -26,6 +29,14 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
   void initState() {
     super.initState();
     tabController = TabController(initialIndex: 0, length: 4, vsync: this);
+    unawaited(loadData());
+  }
+
+  Future<void> loadData() async {
+    await Future.wait([
+      ScreenDataLoader.transactions(context),
+      ScreenDataLoader.items(context),
+    ]);
   }
 
   @override

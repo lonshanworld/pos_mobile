@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -399,7 +399,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       final pdfBytes = await generateVoucherPdf(printKey);
       if (pdfBytes == null) return null;
 
-      if (Platform.isAndroid) {
+      if (kIsWeb || Platform.isAndroid) {
         final cleanName = _sanitizeFileName(
           fileName ?? 'voucher_${DateTime.now().millisecondsSinceEpoch}',
         );
