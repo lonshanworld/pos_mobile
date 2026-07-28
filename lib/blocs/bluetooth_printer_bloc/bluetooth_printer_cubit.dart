@@ -38,8 +38,12 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
           gpsOpened: false,
         ),
       ) {
-    checkPermission();
-    _initConnectionListener();
+    // Bluetooth permissions and the native printer listener are unavailable
+    // on Flutter web. Avoid touching dart:io Platform there.
+    if (!kIsWeb) {
+      checkPermission();
+      _initConnectionListener();
+    }
   }
 
   List<BluetoothDevice> _scanResults = [];
@@ -74,6 +78,8 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
   }
 
   Future<void> checkPermission() async {
+    if (kIsWeb) return;
+
     final permissions = <Permission>[
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
