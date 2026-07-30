@@ -101,6 +101,12 @@ flutter build apk \
 **GET /api/admin/stats**
 - Get crash report statistics (requires admin JWT)
 
+**DELETE /api/admin/keys/{key}**
+- Permanently delete a license key and all attached device registrations (admin only)
+
+**DELETE /api/admin/keys/{key}/devices/{device_id}**
+- Release one device registration while keeping the license key (admin only)
+
 ## Dashboard Access
 
 1. Open `http://localhost:8000` in your browser

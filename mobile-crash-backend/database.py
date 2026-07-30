@@ -283,6 +283,31 @@ class Database:
             await db.commit()
             return True
 
+    async def delete_api_key(self, key: str) -> bool:
+        """Permanently delete a key and every device registration attached to it."""
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                'SELECT 1 FROM api_keys WHERE key = ? LIMIT 1',
+                (key,)
+            ) as cursor:
+                exists = await cursor.fetchone()
+
+            if not exists:
+                return False
+
+            # The schema does not declare a foreign-key cascade, so remove the
+            # registrations explicitly before deleting the key itself.
+            await db.execute(
+                'DELETE FROM api_key_devices WHERE key = ?',
+                (key,)
+            )
+            await db.execute(
+                'DELETE FROM api_keys WHERE key = ?',
+                (key,)
+            )
+            await db.commit()
+            return True
+
     async def validate_and_activate_key(self, key: str, device_id: str) -> Optional[Dict[str, Any]]:
         """Validate and activate a key for a device"""
         async with aiosqlite.connect(self.db_path) as db:

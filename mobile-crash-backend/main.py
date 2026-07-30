@@ -232,6 +232,22 @@ async def delete_key_device(key: str, device_id: str, _: dict = Depends(verify_a
             detail="Failed to remove device"
         )
 
+@app.delete("/api/admin/keys/{key}")
+async def delete_api_key(key: str, _: dict = Depends(verify_admin_token)):
+    """Permanently delete a license key and all of its device registrations (admin only)."""
+    success = await db.delete_api_key(key)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="License key not found"
+        )
+
+    return {
+        "status": "success",
+        "message": "License key deleted permanently",
+        "key": key
+    }
+
 @app.post("/api/admin/keys/generate", response_model=dict)
 async def generate_key(request: GenerateKeyRequest, _: dict = Depends(verify_admin_token)):
     """Generate a new key (admin only)"""
