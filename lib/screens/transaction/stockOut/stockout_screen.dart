@@ -55,6 +55,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
   ShoppingType shoppingType = ShoppingType.shop;
   PaymentMethod paymentMethod = PaymentMethod.cash;
   PromotionModel? promotion;
+  DateTime checkoutTime = DateTime.now();
 
   @override
   void dispose() {
@@ -157,8 +158,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
         return false;
       }
 
-      if (selectedCategoryId != null &&
-          item.categoryId != selectedCategoryId) {
+      if (selectedCategoryId != null && item.categoryId != selectedCategoryId) {
         return false;
       }
 
@@ -519,10 +519,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
         return;
       }
 
-      final matches = CheckoutHelpers.findItemsByBarcode(
-        code,
-        activeItemList,
-      );
+      final matches = CheckoutHelpers.findItemsByBarcode(code, activeItemList);
 
       if (matches.isEmpty) {
         _showInfoSnack('No item found for barcode "$code".');
@@ -572,9 +569,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
     Future<void> openBarcodeScanner() async {
       final scanned = await Navigator.of(context).push<String>(
-        MaterialPageRoute(
-          builder: (_) => const BarcodeScannerScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
       );
       if (!mounted || scanned == null || scanned.trim().isEmpty) return;
       barcodeController.text = scanned;
@@ -653,6 +648,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
         taxPercentage: taxPercentage,
         promotionModel: promotion,
+        checkoutTime: checkoutTime,
         selectedUniqueItemList: sellUniqueItemModelList,
         selectedItemModelList: sellItemModelList,
         clearDataFunc: () {
@@ -975,8 +971,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                             Text(
                                               _emptyStateMessage(
                                                 businessType,
-                                                searchController.text.trim().isNotEmpty ||
-                                                    selectedCategoryId != null ||
+                                                searchController.text
+                                                        .trim()
+                                                        .isNotEmpty ||
+                                                    selectedCategoryId !=
+                                                        null ||
                                                     selectedGroupId != null ||
                                                     selectedTypeId != null ||
                                                     selectedColor != null,
@@ -992,47 +991,67 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                           ],
                                         ),
                                       )
-                                    : GridView.builder(
-                                        padding: const EdgeInsets.all(
-                                          UIConstants.smallSpace,
-                                        ),
-                                        physics: const BouncingScrollPhysics(
-                                          parent:
-                                              AlwaysScrollableScrollPhysics(),
-                                        ),
-                                        gridDelegate:
-                                            SliverGridDelegateWithMaxCrossAxisExtent(
-                                              maxCrossAxisExtent:
-                                                  screenWidth >= 1400
-                                                  ? 260
-                                                  : isWide
-                                                  ? 230
-                                                  : 190,
-                                              mainAxisExtent:
-                                                  screenWidth >= 1400
-                                                  ? 360
-                                                  : isWide
-                                                  ? 320
-                                                  : 290,
-                                              crossAxisSpacing:
-                                                  UIConstants.mediumSpace,
-                                              mainAxisSpacing:
-                                                  UIConstants.mediumSpace,
+                                    : LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final maxCardWidth =
+                                              screenWidth >= 1400
+                                              ? 260.0
+                                              : isWide
+                                              ? 230.0
+                                              : 190.0;
+                                          const spacing =
+                                              UIConstants.mediumSpace;
+                                          final contentWidth =
+                                              constraints.maxWidth -
+                                              UIConstants.smallSpace * 2;
+                                          final columnCount =
+                                              (contentWidth /
+                                                      (maxCardWidth + spacing))
+                                                  .ceil()
+                                                  .clamp(1, 6);
+                                          final cardWidth =
+                                              (contentWidth -
+                                                  (columnCount - 1) * spacing) /
+                                              columnCount;
+
+                                          return SingleChildScrollView(
+                                            padding: const EdgeInsets.all(
+                                              UIConstants.smallSpace,
                                             ),
-                                        itemCount: itemsToShow.length,
-                                        itemBuilder: (context, index) {
-                                          final item = itemsToShow[index];
-                                          return RepaintBoundary(
-                                            child: StockOutItemBoxWidget(
-                                              itemModel: item,
-                                              reduceFunc:
-                                                  removeSellUniqueItemList,
-                                              addFunc: addSellUniqueItemList,
-                                              selectedUniqueItemList:
-                                                  sellUniqueItemModelList,
-                                              startIndex: getSearchIndex(
-                                                item.id,
-                                              ),
+                                            physics: const BouncingScrollPhysics(
+                                              parent:
+                                                  AlwaysScrollableScrollPhysics(),
+                                            ),
+                                            child: Wrap(
+                                              spacing: spacing,
+                                              runSpacing: spacing,
+                                              children: [
+                                                for (
+                                                  var index = 0;
+                                                  index < itemsToShow.length;
+                                                  index++
+                                                )
+                                                  SizedBox(
+                                                    width: cardWidth,
+                                                    child: RepaintBoundary(
+                                                      child: StockOutItemBoxWidget(
+                                                        itemModel:
+                                                            itemsToShow[index],
+                                                        reduceFunc:
+                                                            removeSellUniqueItemList,
+                                                        addFunc:
+                                                            addSellUniqueItemList,
+                                                        selectedUniqueItemList:
+                                                            sellUniqueItemModelList,
+                                                        startIndex:
+                                                            getSearchIndex(
+                                                              itemsToShow[index]
+                                                                  .id,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                           );
                                         },
@@ -1097,6 +1116,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                         required ShoppingType shoppingTypeInfo,
                                         required double taxPercentageInfo,
                                         required PromotionModel? promotionModel,
+                                        required DateTime checkoutTimeInfo,
                                       }) {
                                         if (mounted) {
                                           setState(() {
@@ -1111,6 +1131,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                             shoppingType = shoppingTypeInfo;
                                             taxPercentage = taxPercentageInfo;
                                             promotion = promotionModel;
+                                            checkoutTime = checkoutTimeInfo;
                                           });
                                         }
                                       },
@@ -1127,6 +1148,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                                   shoppingTypeInfo: shoppingType,
                                   paymentMethodInfo: paymentMethod,
                                   promotionModel: promotion,
+                                  checkoutTimeInfo: checkoutTime,
                                 ),
                               );
                             },

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/screens/tables_charts/daily_sales.dart';
@@ -37,8 +37,10 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
 
     return Scaffold(
       body: Column(
@@ -57,12 +59,14 @@ class _TableAndChartScreenState extends State<TableAndChartScreen>
                 borderRadius: UIConstants.mediumBorderRadius,
               ),
               labelColor: uiController.getpureDirectClr(themeModeType),
-              unselectedLabelColor:
-                  uiController.getpureOppositeClr(themeModeType),
+              unselectedLabelColor: uiController.getpureOppositeClr(
+                themeModeType,
+              ),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               overlayColor: WidgetStateProperty.all(
-                  UIConstants.redVioletClr.withValues(alpha: 0.1)),
+                UIConstants.redVioletClr.withValues(alpha: 0.1),
+              ),
               tabs: const [
                 Tab(text: "Per Transaction"),
                 Tab(text: "Daily"),

@@ -14,6 +14,7 @@ import 'package:pos_mobile/screens/history/transactions_history/merchant_order_d
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
+import 'package:pos_mobile/screens/tables_charts/report_export_service.dart';
 
 class PerTransactions extends StatefulWidget {
   const PerTransactions({super.key});
@@ -29,13 +30,15 @@ class _PerTransactionsState extends State<PerTransactions> {
   @override
   Widget build(BuildContext context) {
     final tablesAndCharts = TablesAndCharts(context: context);
-    final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
+    final stockOutList = context
+        .watch<TransactionsCubit>()
+        .state
+        .activeStockOutList;
     final List<StockOutHistoryModel> allRows =
         HistoryFilter.filterStockOutHistory(stockOutList);
-    final List<StockOutModel> allTransactions = allRows
-        .expand((history) => history.stockOutList)
-        .toList()
-      ..sort((left, right) => right.createTime.compareTo(left.createTime));
+    final List<StockOutModel> allTransactions =
+        allRows.expand((history) => history.stockOutList).toList()
+          ..sort((left, right) => right.createTime.compareTo(left.createTime));
     final int totalCount = allTransactions.length;
 
     if (totalCount == 0) return _emptyState(context);
@@ -60,7 +63,8 @@ class _PerTransactionsState extends State<PerTransactions> {
               scrollDirection: Axis.vertical,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.resolveWith(
-                    (_) => UIConstants.redVioletClr.withValues(alpha: 0.4)),
+                  (_) => UIConstants.redVioletClr.withValues(alpha: 0.4),
+                ),
                 dataRowMinHeight: 36,
                 dataRowMaxHeight: 72,
                 horizontalMargin: 8,
@@ -69,6 +73,7 @@ class _PerTransactionsState extends State<PerTransactions> {
                   tablesAndCharts.tableTitle("No."),
                   tablesAndCharts.tableTitle("Date"),
                   tablesAndCharts.tableTitle("Item Name"),
+                  tablesAndCharts.tableTitle("Item Count"),
                   tablesAndCharts.tableTitle("Original Price"),
                   tablesAndCharts.tableTitle("Sell Price"),
                   tablesAndCharts.tableTitle("Final Sell Price"),
@@ -83,18 +88,23 @@ class _PerTransactionsState extends State<PerTransactions> {
                           .getSelectedStockOutItemList(transaction.id);
 
                   final List<String> itemNames = [];
+                  final List<String> itemCounts = [];
                   final List<String> originalPrices = [];
                   final List<String> sellPrices = [];
                   double totalOrgPrice = 0;
                   double totalFinalSellPrices = 0;
 
                   for (final item in selectedStockOutItemList) {
-                    final ItemModel? itemModel = allItemModelList.firstWhereOrNull(
-                      (element) => element.id == item.itemId,
-                    );
+                    final ItemModel? itemModel = allItemModelList
+                        .firstWhereOrNull(
+                          (element) => element.id == item.itemId,
+                        );
                     itemNames.add(itemModel?.name ?? "Unknown");
+                    itemCounts.add(item.count.toString());
                     originalPrices.add(
-                      TablesAndCharts.formatNum(item.originalPrice * item.count),
+                      TablesAndCharts.formatNum(
+                        item.originalPrice * item.count,
+                      ),
                     );
                     sellPrices.add(
                       TablesAndCharts.formatNum(item.sellPrice * item.count),
@@ -103,23 +113,30 @@ class _PerTransactionsState extends State<PerTransactions> {
                     totalFinalSellPrices += item.finalSellPrice * item.count;
                   }
 
-                  final DeliveryModel? deliveryModel = transaction.deliveryModelId == null
+                  final DeliveryModel? deliveryModel =
+                      transaction.deliveryModelId == null
                       ? null
-                      : context.read<TransactionsCubit>().getDeliveryModel(transaction.deliveryModelId!);
-                  final double deliCharges = deliveryModel?.deliveryCharges ?? 0;
+                      : context.read<TransactionsCubit>().getDeliveryModel(
+                          transaction.deliveryModelId!,
+                        );
+                  final double deliCharges =
+                      deliveryModel?.deliveryCharges ?? 0;
                   final double orderTax = CalculationFormula.getPercentageToMMK(
                     totalFinalSellPrices,
                     transaction.taxPercentage ?? 0,
                   );
                   final double finalSellPrice = transaction.finalTotalPrice;
-                  final double profit = finalSellPrice - deliCharges - orderTax - totalOrgPrice;
+                  final double profit =
+                      finalSellPrice - deliCharges - orderTax - totalOrgPrice;
 
                   return tablesAndCharts.transactionDataRow(
                     index: start + index + 1,
                     dateTxt: TextFormatters.getDateTime(transaction.createTime),
                     itemNames: itemNames.isEmpty ? const ["-"] : itemNames,
-                    originalPrices:
-                        originalPrices.isEmpty ? const ["-"] : originalPrices,
+                    itemCounts: itemCounts.isEmpty ? const ["-"] : itemCounts,
+                    originalPrices: originalPrices.isEmpty
+                        ? const ["-"]
+                        : originalPrices,
                     sellPrices: sellPrices.isEmpty ? const ["-"] : sellPrices,
                     finalSellPrice: TablesAndCharts.formatNum(finalSellPrice),
                     profit: TablesAndCharts.formatNum(profit),
@@ -145,17 +162,31 @@ class _PerTransactionsState extends State<PerTransactions> {
     );
   }
 
-  Widget _recordsHeader(BuildContext context, int totalCount, int page,
-      int totalPages, int start, int end) {
+  Widget _recordsHeader(
+    BuildContext context,
+    int totalCount,
+    int page,
+    int totalPages,
+    int start,
+    int end,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(UIConstants.bigSpace, UIConstants.smallSpace,
-          UIConstants.bigSpace, UIConstants.smallSpace),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.fromLTRB(
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+        UIConstants.bigSpace,
+        UIConstants.smallSpace,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: UIConstants.smallSpace,
+        spacing: UIConstants.smallSpace,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: 3),
+              horizontal: UIConstants.mediumSpace,
+              vertical: 3,
+            ),
             decoration: BoxDecoration(
               color: UIConstants.redVioletClr.withValues(alpha: 0.1),
               borderRadius: UIConstants.smallBorderRadius,
@@ -163,15 +194,25 @@ class _PerTransactionsState extends State<PerTransactions> {
             child: Text(
               "$totalCount record${totalCount == 1 ? '' : 's'}",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: UIConstants.redVioletClr, fontWeight: FontWeight.w600),
+                color: UIConstants.redVioletClr,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             "Showing ${start + 1}–$end",
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () => ReportExportService.requestExport(
+              context: context,
+              type: ReportExportType.transactions,
+            ),
+            icon: const Icon(Icons.download_outlined, size: 16),
+            label: const Text('Export'),
           ),
         ],
       ),
@@ -181,26 +222,34 @@ class _PerTransactionsState extends State<PerTransactions> {
   Widget _paginationRow(int page, int totalPages) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-          vertical: UIConstants.mediumSpace, horizontal: UIConstants.bigSpace),
+        vertical: UIConstants.mediumSpace,
+        horizontal: UIConstants.bigSpace,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
-            onPressed:
-                page > 0 ? () => setState(() => _currentPage = page - 1) : null,
+            onPressed: page > 0
+                ? () => setState(() => _currentPage = page - 1)
+                : null,
             color: UIConstants.redVioletClr,
           ),
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: UIConstants.mediumSpace, vertical: UIConstants.smallSpace),
+              horizontal: UIConstants.mediumSpace,
+              vertical: UIConstants.smallSpace,
+            ),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: UIConstants.redVioletClr.withValues(alpha: 0.3)),
+                color: UIConstants.redVioletClr.withValues(alpha: 0.3),
+              ),
               borderRadius: UIConstants.smallBorderRadius,
             ),
-            child: Text("${page + 1} / $totalPages",
-                style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              "${page + 1} / $totalPages",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded),
@@ -219,14 +268,18 @@ class _PerTransactionsState extends State<PerTransactions> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bar_chart_outlined,
-              size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+          Icon(
+            Icons.bar_chart_outlined,
+            size: 64,
+            color: Colors.grey.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: UIConstants.mediumSpace),
-          Text("No daily sales data yet",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey)),
+          Text(
+            "No daily sales data yet",
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
         ],
       ),
     );

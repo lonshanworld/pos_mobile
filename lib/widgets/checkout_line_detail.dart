@@ -6,6 +6,7 @@ import 'package:pos_mobile/models/item_model_folder/item_business_detail_model.d
 import 'package:pos_mobile/models/item_model_folder/uniqueItem_model.dart';
 import 'package:pos_mobile/utils/checkout_helpers.dart';
 import 'package:pos_mobile/widgets/business_type_selector.dart';
+import 'package:pos_mobile/languages/app_language.dart';
 
 /// Item-level business chips for checkout product tiles.
 class CheckoutItemDetailChips extends StatelessWidget {
@@ -106,8 +107,8 @@ class CheckoutCartUnitSummary extends StatelessWidget {
           final price =
               CheckoutHelpers.uniqueItemSellPrice(unit).toStringAsFixed(0);
           final label = lines.isEmpty
-              ? '$price MMK'
-              : '${lines.first} — $price MMK';
+              ? CurrencyFormatter.format(context, double.parse(price))
+              : '${lines.first} — ${CurrencyFormatter.format(context, double.parse(price))}';
           return Text(
             label,
             maxLines: 1,

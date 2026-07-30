@@ -10,6 +10,7 @@ import 'package:pos_mobile/models/transaction_model_folder/stockout_model_folder
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/utils/txt_formatters.dart';
 import 'package:pos_mobile/widgets/tables_folder/tables_charts_widget.dart';
+import 'package:pos_mobile/screens/tables_charts/report_export_service.dart';
 
 class DailySales extends StatefulWidget {
   const DailySales({super.key});
@@ -25,14 +26,16 @@ class _DailySalesState extends State<DailySales> {
   @override
   Widget build(BuildContext context) {
     final tablesAndCharts = TablesAndCharts(context: context);
-    final stockOutList = context.watch<TransactionsCubit>().state.activeStockOutList;
+    final stockOutList = context
+        .watch<TransactionsCubit>()
+        .state
+        .activeStockOutList;
     final List<StockOutHistoryModel> allRows =
-        HistoryFilter.filterStockOutHistory(stockOutList)
-          ..sort(
-            (left, right) => TextFormatters.reverseDate(right.dateTimeTxt).compareTo(
-              TextFormatters.reverseDate(left.dateTimeTxt),
-            ),
-          );
+        HistoryFilter.filterStockOutHistory(stockOutList)..sort(
+          (left, right) => TextFormatters.reverseDate(
+            right.dateTimeTxt,
+          ).compareTo(TextFormatters.reverseDate(left.dateTimeTxt)),
+        );
     final int totalCount = allRows.length;
 
     if (totalCount == 0) return _emptyState(context);
@@ -67,7 +70,8 @@ class _DailySalesState extends State<DailySales> {
                 ],
                 rows: List.generate(pageRows.length, (index) {
                   final history = pageRows[index];
-                  final List<StockOutModel> selectedStockOutList = history.stockOutList;
+                  final List<StockOutModel> selectedStockOutList =
+                      history.stockOutList;
                   double totalOrgPrice = 0;
                   double totalSellPrice = 0;
                   double totalFinalSellPrice = 0;
@@ -77,16 +81,21 @@ class _DailySalesState extends State<DailySales> {
                         .read<TransactionsCubit>()
                         .getSelectedStockOutItemList(stockOut.id);
                     totalOrgPrice +=
-                        CalculationFormula.getItemTotalOriginalPriceForStockOut(items);
+                        CalculationFormula.getItemTotalOriginalPriceForStockOut(
+                          items,
+                        );
                     totalSellPrice +=
-                        CalculationFormula.getItemTotalFinalSellPriceForStockOut(items);
+                        CalculationFormula.getItemTotalFinalSellPriceForStockOut(
+                          items,
+                        );
 
                     double finalPrice = stockOut.finalTotalPrice;
-                    final DeliveryModel? delivery = stockOut.deliveryModelId == null
+                    final DeliveryModel? delivery =
+                        stockOut.deliveryModelId == null
                         ? null
-                        : context
-                            .read<TransactionsCubit>()
-                            .getDeliveryModel(stockOut.deliveryModelId!);
+                        : context.read<TransactionsCubit>().getDeliveryModel(
+                            stockOut.deliveryModelId!,
+                          );
                     if (delivery?.deliveryCharges != null) {
                       finalPrice -= delivery!.deliveryCharges!;
                     }
@@ -127,8 +136,10 @@ class _DailySalesState extends State<DailySales> {
         UIConstants.bigSpace,
         UIConstants.smallSpace,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: UIConstants.smallSpace,
+        spacing: UIConstants.smallSpace,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(
@@ -142,17 +153,25 @@ class _DailySalesState extends State<DailySales> {
             child: Text(
               "$totalCount date${totalCount == 1 ? '' : 's'}",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: UIConstants.redVioletClr,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: UIConstants.redVioletClr,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             "Showing ${start + 1}–$end",
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () => ReportExportService.requestExport(
+              context: context,
+              type: ReportExportType.daily,
+            ),
+            icon: const Icon(Icons.download_outlined, size: 16),
+            label: const Text('Export'),
           ),
         ],
       ),
@@ -170,8 +189,9 @@ class _DailySalesState extends State<DailySales> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
-            onPressed:
-                page > 0 ? () => setState(() => _currentPage = page - 1) : null,
+            onPressed: page > 0
+                ? () => setState(() => _currentPage = page - 1)
+                : null,
             color: UIConstants.redVioletClr,
           ),
           Container(
@@ -215,10 +235,9 @@ class _DailySalesState extends State<DailySales> {
           const SizedBox(height: UIConstants.mediumSpace),
           Text(
             "No daily sales data yet",
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
           ),
         ],
       ),

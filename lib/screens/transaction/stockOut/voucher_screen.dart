@@ -22,6 +22,7 @@ import '../../../utils/formula.dart';
 import '../../../utils/ui_responsive_calculation.dart';
 import '../../../widgets/btns_folder/cusTxtIconBtn_widget.dart';
 import '../../../widgets/voucher_box_widget.dart';
+import 'voucher_full_view_screen.dart';
 
 class VoucherScreen extends StatefulWidget {
   final String? customerName;
@@ -36,6 +37,7 @@ class VoucherScreen extends StatefulWidget {
 
   final double taxPercentage;
   final PromotionModel? promotionModel;
+  final DateTime checkoutTime;
   final VoidCallback clearDataFunc;
 
   const VoucherScreen({
@@ -53,6 +55,7 @@ class VoucherScreen extends StatefulWidget {
     required this.taxPercentage,
     required this.promotionModel,
     required this.clearDataFunc,
+    required this.checkoutTime,
   });
 
   @override
@@ -205,6 +208,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       barcode: barCode,
       finalTotalPrice: _getFinalTotal(context),
       promotionModel: widget.promotionModel,
+      checkoutTime: widget.checkoutTime,
     );
 
     if (!mounted) return;
@@ -213,10 +217,12 @@ class _VoucherScreenState extends State<VoucherScreen> {
       await itemCubit.reloadAllItem();
       await promotionCubit.reloadStockOutPromotionDataList();
       if (!mounted) return;
-      loadingCubit.setSuccess("Success !");
+      loadingCubit.setSuccess("Success !", showDialog: false);
       widget.clearDataFunc();
       if (!mounted) return;
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     } else {
       loadingCubit.setFail("Fail !");
     }
@@ -267,9 +273,11 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    loadingCubit.setSuccess("Success !");
+    loadingCubit.setSuccess("Success !", showDialog: false);
     widget.clearDataFunc();
-    Navigator.of(context).pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _handleCompleteLogic(String barCode) async {
@@ -307,6 +315,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       barcode: barCode,
       finalTotalPrice: _getFinalTotal(context),
       promotionModel: widget.promotionModel,
+      checkoutTime: widget.checkoutTime,
     );
 
     if (!mounted) return;
@@ -317,6 +326,29 @@ class _VoucherScreenState extends State<VoucherScreen> {
     } else {
       loadingCubit.setFail("Fail !");
     }
+  }
+
+  void _openFullView() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VoucherFullViewScreen(
+          customerName: widget.customerName,
+          deliveryName: widget.deliveryName,
+          selectedUniqueItemList: widget.selectedUniqueItemList,
+          selectedItemModelList: widget.selectedItemModelList,
+          shoppingType: widget.shoppingType,
+          paymentMethod: widget.paymentMethod,
+          additionalPromotionAmount: widget.additionalPromotionAmount,
+          deliCharges: widget.deliCharges,
+          description: widget.description,
+          barCode: _barCode,
+          taxPercentage: widget.taxPercentage,
+          promotionModel: widget.promotionModel,
+          checkoutTime: widget.checkoutTime,
+          showAdditionalPromotion: showAdditionalPromotion,
+        ),
+      ),
+    );
   }
 
   @override
@@ -345,6 +377,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
         barCode: _barCode,
         taxPercentage: widget.taxPercentage,
         promotionModel: widget.promotionModel,
+        orderDateTime: widget.checkoutTime,
         showAdditionalPromotion: showAdditionalPromotion,
       ),
     );
@@ -366,17 +399,38 @@ class _VoucherScreenState extends State<VoucherScreen> {
               child: Column(
                 children: [
                   Container(
-                    height: 30,
+                    height: 48,
                     padding: const EdgeInsets.only(
                       top: UIConstants.mediumSpace,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CusTxtWidget(
-                          txtStyle: Theme.of(context).textTheme.bodyMedium!
-                              .copyWith(fontWeight: FontWeight.bold),
-                          txt: "Voucher / Invoice",
+                        uiController.sizedBox(
+                          cusHeight: 0,
+                          cusWidth: UIConstants.smallSpace,
+                        ),
+                        Expanded(
+                          child: CusTxtWidget(
+                            txtStyle: Theme.of(context).textTheme.bodyMedium!
+                                .copyWith(fontWeight: FontWeight.bold),
+                            txt: "Voucher / Invoice",
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _openFullView,
+                          icon: const Icon(Icons.open_in_full, size: 16),
+                          label: const Text('Click for full view'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
                         ),
                         // SizedBox(
                         //   child: Transform.scale(

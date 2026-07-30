@@ -8,13 +8,12 @@ import '../../../models/item_model_folder/item_model.dart';
 import '../../../models/item_model_folder/uniqueItem_model.dart';
 import '../../../models/user_model_folder/user_model.dart';
 
-
-class UniqueItemDbService{
-  static Future<void>initUniqueItemDb(Database db)async{
+class UniqueItemDbService {
+  static Future<void> initUniqueItemDb(Database db) async {
     await UniqueItemDbStorage.onCreate(db);
   }
 
-  static Future<void>deleteUniqueItemDb(Database db)async{
+  static Future<void> deleteUniqueItemDb(Database db) async {
     await UniqueItemDbStorage.onDelete(db);
   }
 
@@ -24,83 +23,129 @@ class UniqueItemDbService{
   // })async{
   //   List<int> values = await UniqueItemDbStorage.insertNewDataList(db: db, uniqueItemModelList: uniqueItemModelList);
   // }
-  static Future<List<UniqueItemModel>> getAllData(Database db, {int limit = 100, int offset = 0})async{
-    List<dynamic> itemList = await UniqueItemDbStorage.getAllUniqueItemList(db, limit: limit, offset: offset);
+  static Future<List<UniqueItemModel>> getAllData(
+    Database db, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    List<dynamic> itemList = await UniqueItemDbStorage.getAllUniqueItemList(
+      db,
+      limit: limit,
+      offset: offset,
+    );
     return itemList.map((e) => UniqueItemModel.fromJson(e)).toList();
   }
 
-
+  static Future<bool> updateUniqueItemBarcode(
+    Database db, {
+    required int uniqueItemId,
+    required String barcode,
+  }) async {
+    final value = await UniqueItemDbStorage.updateUniqueItemBarcode(
+      db,
+      uniqueItemId: uniqueItemId,
+      barcode: barcode,
+      dateTime: DateTime.now(),
+    );
+    return value > 0;
+  }
 
   static Future<List<int>> updateUniqueItemList(
-    Database db,
-    {
-      required UserModel userModel,
-      required List<UniqueItemModel> uniqueItemList,
-      required DateTime dateTime,
-      required double profitPrice,
-      required double originalPrice,
-      required double taxPercentage,
-    }
-  )async{
-    return await UniqueItemDbStorage.updateUniqueItemList(db, userModel: userModel, uniqueItemList: uniqueItemList, dateTime: dateTime, profitPrice: profitPrice, originalPrice: originalPrice, taxPercentage: taxPercentage) ;
+    Database db, {
+    required UserModel userModel,
+    required List<UniqueItemModel> uniqueItemList,
+    required DateTime dateTime,
+    required double profitPrice,
+    required double originalPrice,
+    required double taxPercentage,
+  }) async {
+    return await UniqueItemDbStorage.updateUniqueItemList(
+      db,
+      userModel: userModel,
+      uniqueItemList: uniqueItemList,
+      dateTime: dateTime,
+      profitPrice: profitPrice,
+      originalPrice: originalPrice,
+      taxPercentage: taxPercentage,
+    );
   }
 
   static Future<bool> reActivateUniqueItemList(
-    Database db,
-    {
-      required UserModel userModel,
-      required int stockOutId,
-      required DateTime dateTime,
-      required List<ItemModel> itemModelList,
-    }
-  )async{
-    try{
-      List<dynamic> oldDataList = await UniqueItemDbStorage.getSelectedUniqueItemListFromStockOutId(db, stockOutId: stockOutId);
-      List<UniqueItemModel> formattedOldDataList = oldDataList.map((e) => UniqueItemModel.fromJson(e)).toList();
+    Database db, {
+    required UserModel userModel,
+    required int stockOutId,
+    required DateTime dateTime,
+    required List<ItemModel> itemModelList,
+  }) async {
+    try {
+      List<dynamic> oldDataList =
+          await UniqueItemDbStorage.getSelectedUniqueItemListFromStockOutId(
+            db,
+            stockOutId: stockOutId,
+          );
+      List<UniqueItemModel> formattedOldDataList = oldDataList
+          .map((e) => UniqueItemModel.fromJson(e))
+          .toList();
       List<int> updateValueList = [];
-      for(int x =0; x < formattedOldDataList.length; x++){
-        int updateValue = await UniqueItemDbStorage.reInStockUniqueItem(db, uniqueItemId: formattedOldDataList[x].id, dateTime: dateTime);
+      for (int x = 0; x < formattedOldDataList.length; x++) {
+        int updateValue = await UniqueItemDbStorage.reInStockUniqueItem(
+          db,
+          uniqueItemId: formattedOldDataList[x].id,
+          dateTime: dateTime,
+        );
         updateValueList.add(updateValue);
       }
-      if(updateValueList.contains(-1)) return false;
-
+      if (updateValueList.contains(-1)) return false;
 
       List<UniqueItemModel> formattedNewDataList = [];
-      for(int a = 0 ; a < formattedOldDataList.length; a++){
-        List<dynamic> rawNewDataList = await UniqueItemDbStorage.getSingleUniqueItemList(db, uniqueItemId: formattedOldDataList[a].id);
-        UniqueItemModel newData = UniqueItemModel.fromJson(rawNewDataList.first);
+      for (int a = 0; a < formattedOldDataList.length; a++) {
+        List<dynamic> rawNewDataList =
+            await UniqueItemDbStorage.getSingleUniqueItemList(
+              db,
+              uniqueItemId: formattedOldDataList[a].id,
+            );
+        UniqueItemModel newData = UniqueItemModel.fromJson(
+          rawNewDataList.first,
+        );
         formattedNewDataList.add(newData);
       }
-      if(formattedNewDataList.length != formattedOldDataList.length) return false;
-
+      if (formattedNewDataList.length != formattedOldDataList.length) {
+        return false;
+      }
 
       List<bool> historyUpdateValueList = [];
-      for(int b = 0; b < formattedNewDataList.length; b++){
-        UniqueItemModel oldData = formattedOldDataList.firstWhere((element) => formattedNewDataList[b].id == element.id);
-        bool historyUpdateValue = await HistoryDBService.addHistoryData(oldData: oldData, newData: formattedNewDataList[b], updateType: UpdateType.orderCancel, createPersonId: userModel.id, db: db, dateTime: dateTime);
+      for (int b = 0; b < formattedNewDataList.length; b++) {
+        UniqueItemModel oldData = formattedOldDataList.firstWhere(
+          (element) => formattedNewDataList[b].id == element.id,
+        );
+        bool historyUpdateValue = await HistoryDBService.addHistoryData(
+          oldData: oldData,
+          newData: formattedNewDataList[b],
+          updateType: UpdateType.orderCancel,
+          createPersonId: userModel.id,
+          db: db,
+          dateTime: dateTime,
+        );
         historyUpdateValueList.add(historyUpdateValue);
       }
       return !historyUpdateValueList.contains(false);
-    }catch(err){
+    } catch (err) {
       cusDebugPrint(err);
       return false;
     }
-
   }
 
-  static Future<bool>deActivateUniqueItem(
-    Database db,
-    {
-      required UniqueItemModel uniqueItemModel,
-      required UserModel userModel,
-    }
-  )async{
+  static Future<bool> deActivateUniqueItem(
+    Database db, {
+    required UniqueItemModel uniqueItemModel,
+    required UserModel userModel,
+  }) async {
     DateTime dateTime = DateTime.now();
     int value = await UniqueItemDbStorage.deActivateSingleUniqueItem(
-        db,
-        uniqueItemId: uniqueItemModel.id,
-        userModel: userModel,
-        dateTime: dateTime,
+      db,
+      uniqueItemId: uniqueItemModel.id,
+      userModel: userModel,
+      dateTime: dateTime,
     );
     return value != -1;
   }

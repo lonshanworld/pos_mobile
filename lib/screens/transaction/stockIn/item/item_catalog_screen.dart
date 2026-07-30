@@ -16,10 +16,7 @@ import "package:pos_mobile/widgets/noitem_widget.dart";
 class ItemCatalogScreen extends StatefulWidget {
   final bool isStorage;
 
-  const ItemCatalogScreen({
-    super.key,
-    required this.isStorage,
-  });
+  const ItemCatalogScreen({super.key, required this.isStorage});
 
   @override
   State<ItemCatalogScreen> createState() => _ItemCatalogScreenState();
@@ -37,15 +34,14 @@ class _ItemCatalogScreenState extends State<ItemCatalogScreen> {
     super.dispose();
   }
 
-  List<ItemModel> _buildFilteredItems(
-    List<ItemModel> items,
-  ) {
+  List<ItemModel> _buildFilteredItems(List<ItemModel> items) {
     final query = _searchController.text.trim().toLowerCase();
     return items.where((item) {
       if (query.isNotEmpty && !item.name.toLowerCase().contains(query)) {
         return false;
       }
-      if (_selectedCategoryId != null && item.categoryId != _selectedCategoryId) {
+      if (_selectedCategoryId != null &&
+          item.categoryId != _selectedCategoryId) {
         return false;
       }
       if (_selectedGroupId != null && item.groupId != _selectedGroupId) {
@@ -71,7 +67,10 @@ class _ItemCatalogScreenState extends State<ItemCatalogScreen> {
         labelText: label,
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 10,
+        ),
       ),
       items: items,
       onChanged: onChanged,
@@ -233,23 +232,47 @@ class _ItemCatalogScreenState extends State<ItemCatalogScreen> {
                         ? NoItemWidget(
                             noItemTxt: "No ${itemLabel.toLowerCase()} found",
                           )
-                        : GridView.builder(
-                            padding: const EdgeInsets.only(
-                              bottom: 90,
-                              top: UIConstants.smallSpace,
-                            ),
-                            itemCount: filteredItems.length,
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 280,
-                              mainAxisExtent: 220,
-                              crossAxisSpacing: UIConstants.mediumSpace,
-                              mainAxisSpacing: UIConstants.mediumSpace,
-                            ),
-                            itemBuilder: (context, index) {
-                              return ItemBoxWidget(
-                                index: index,
-                                itemModel: filteredItems[index],
-                                isStorage: widget.isStorage,
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              const cardMaxWidth = 280.0;
+                              const spacing = UIConstants.mediumSpace;
+                              // Match SliverGridDelegateWithMaxCrossAxisExtent:
+                              // only the height is content-driven; card widths
+                              // remain the same as the previous grid.
+                              final columnCount =
+                                  (constraints.maxWidth /
+                                          (cardMaxWidth + spacing))
+                                      .ceil()
+                                      .clamp(1, 4);
+                              final cardWidth =
+                                  (constraints.maxWidth -
+                                      (columnCount - 1) * spacing) /
+                                  columnCount;
+
+                              return SingleChildScrollView(
+                                padding: const EdgeInsets.only(
+                                  bottom: 90,
+                                  top: UIConstants.smallSpace,
+                                ),
+                                child: Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: [
+                                    for (
+                                      var index = 0;
+                                      index < filteredItems.length;
+                                      index++
+                                    )
+                                      SizedBox(
+                                        width: cardWidth,
+                                        child: ItemBoxWidget(
+                                          index: index,
+                                          itemModel: filteredItems[index],
+                                          isStorage: widget.isStorage,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               );
                             },
                           ),

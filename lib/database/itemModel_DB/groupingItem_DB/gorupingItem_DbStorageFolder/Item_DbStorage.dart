@@ -135,6 +135,22 @@ class ItemDbStorage {
     );
   }
 
+  static Future<int> updateItemBarcode(
+    Database db, {
+    required int itemId,
+    required String barcode,
+    required DateTime dateTime,
+  }) async {
+    return db.rawUpdate(
+      """
+        UPDATE ${TxtConstants.itemTableName}
+        SET code = ?, lastUpdateTime = ?
+        WHERE id = ? AND activeStatus = 1
+      """,
+      [barcode, dateTime.toString(), itemId],
+    );
+  }
+
   static Future<List<dynamic>> getSingleItem(
     Database db,
     ItemModel itemModel,
@@ -189,6 +205,19 @@ class ItemDbStorage {
         needStock ? 1 : 0,
         itemModel.id,
       ],
+    );
+  }
+
+  static Future<int> updateImageId(
+    Database db, {
+    required int itemId,
+    required int imageId,
+  }) async {
+    return await db.update(
+      TxtConstants.itemTableName,
+      {'imageId': imageId},
+      where: 'id = ?',
+      whereArgs: [itemId],
     );
   }
 

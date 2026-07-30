@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pos_mobile/blocs/shop_info_bloc/shop_info_cubit.dart';
 import 'package:pos_mobile/blocs/userData_bloc/user_data_cubit.dart';
 import 'package:pos_mobile/constants/enums.dart';
@@ -13,6 +10,7 @@ import 'package:pos_mobile/widgets/business_type_selector.dart';
 import 'package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart';
 import 'package:pos_mobile/widgets/dividers/cus_divider_widget.dart';
 import 'package:pos_mobile/widgets/logo_folder/logo_image_widget.dart';
+import 'package:pos_mobile/services/public_document_storage.dart';
 
 import '../../controller/ui_controller.dart';
 
@@ -95,13 +93,12 @@ class GeneralSettingsScreen extends StatelessWidget {
     if (picked == null) return;
 
     try {
-      final supportDir = await getApplicationSupportDirectory();
-      final logoDir = Directory('${supportDir.path}/shop_logo');
-      await logoDir.create(recursive: true);
-
       final ext = picked.path.split('.').last.toLowerCase();
-      final destPath = '${logoDir.path}/logo.$ext';
-      await File(picked.path).copy(destPath);
+      final destPath = await PublicDocumentStorage.copyFile(
+        sourcePath: picked.path,
+        fileName: 'logo.$ext',
+        directory: 'shop_logo',
+      );
 
       if (!context.mounted) return;
       await context.read<ShopInfoCubit>().updateLogoPath(destPath);

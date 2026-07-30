@@ -589,6 +589,7 @@
                         <th>Duration</th>
                         <th>Activated</th>
                         <th>Expires</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -623,6 +624,9 @@
                             <td>${key.duration ? key.duration + ' days' : '-'}</td>
                             <td>${key.activated_at ? new Date(key.activated_at).toLocaleString() : '-'}</td>
                             <td>${expiresDate}</td>
+                            <td>
+                                <button class="logout-btn" style="padding: 0.35rem 0.6rem; background: #a71d2a;" onclick="deleteKey('${key.key}')">Delete Key</button>
+                            </td>
                         </tr>
                         `;
                     }).join('')}
@@ -646,6 +650,26 @@
                 }
             } catch (err) {
                 alert('Error removing device: ' + err.message);
+            }
+        }
+
+        async function deleteKey(key) {
+            const confirmed = confirm(
+                `Delete license key ${key} permanently? This will also remove all device registrations and cannot be undone.`
+            );
+            if (!confirmed) return;
+
+            try {
+                const response = await apiCall(`/api/admin/keys/${encodeURIComponent(key)}`, 'DELETE');
+                if (response && response.status === 'success') {
+                    alert('License key deleted permanently.');
+                    loadKeysStats();
+                    loadKeys();
+                } else {
+                    alert('Failed to delete license key.');
+                }
+            } catch (err) {
+                alert('Error deleting license key: ' + err.message);
             }
         }
 

@@ -12,15 +12,9 @@ import "package:pos_mobile/controller/ui_controller.dart";
 
 import "../../../../constants/uiConstants.dart";
 
-
-
-
 class GroupScreen extends StatefulWidget {
   final bool isStorage;
-  const GroupScreen({
-    super.key,
-    required this.isStorage,
-  });
+  const GroupScreen({super.key, required this.isStorage});
 
   @override
   State<GroupScreen> createState() => _GroupScreenState();
@@ -42,7 +36,8 @@ class _GroupScreenState extends State<GroupScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 500) {
       context.read<ItemCubit>().loadMoreGroups();
     }
   }
@@ -50,7 +45,10 @@ class _GroupScreenState extends State<GroupScreen> {
   @override
   Widget build(BuildContext context) {
     final businessType = UIController.instance.businessType;
-    final groupLabel = BusinessHierarchyConfig.getLabel(businessType, HierarchyLevel.group);
+    final groupLabel = BusinessHierarchyConfig.getLabel(
+      businessType,
+      HierarchyLevel.group,
+    );
 
     return Scaffold(
       body: BlocBuilder<ItemCubit, ItemState>(
@@ -71,23 +69,26 @@ class _GroupScreenState extends State<GroupScreen> {
                       ),
                     if (groupList.isNotEmpty)
                       Positioned.fill(
-                        child: GridView.builder(
+                        child: ListView.separated(
                           controller: _scrollController,
-                          padding: const EdgeInsets.all(UIConstants.bigSpace),
-                          itemCount: groupList.length + (isLoadingMore ? 1 : 0),
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 240,
-                            mainAxisExtent: 120,
-                            mainAxisSpacing: UIConstants.mediumSpace,
-                            crossAxisSpacing: UIConstants.mediumSpace,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: UIConstants.bigSpace,
+                            vertical: UIConstants.smallSpace,
                           ),
+                          itemCount: groupList.length + (isLoadingMore ? 1 : 0),
+                          separatorBuilder: (_, index) =>
+                              const Divider(height: 1),
                           itemBuilder: (ctx, index) {
                             if (index == groupList.length) {
-                              return const Center(child: CircularProgressIndicator());
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
                             }
                             return GroupBoxWidget(
                               groupModel: groupList[index],
-                              itemCount: context.read<ItemCubit>().getItemCountForGroup(groupList[index].id),
+                              itemCount: context
+                                  .read<ItemCubit>()
+                                  .getItemCountForGroup(groupList[index].id),
                               func: () {},
                               isStorage: widget.isStorage,
                             );
@@ -109,4 +110,3 @@ class _GroupScreenState extends State<GroupScreen> {
     );
   }
 }
-                

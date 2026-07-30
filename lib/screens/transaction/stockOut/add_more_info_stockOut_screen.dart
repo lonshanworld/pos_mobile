@@ -32,6 +32,7 @@ class AddMoreInfoStockOutScreen extends StatefulWidget {
     required ShoppingType shoppingTypeInfo,
     required PaymentMethod paymentMethodInfo,
     required PromotionModel? promotionModel,
+    required DateTime checkoutTimeInfo,
   })
   func;
   final List<UniqueItemModel> selectedUniqueItemList;
@@ -45,6 +46,7 @@ class AddMoreInfoStockOutScreen extends StatefulWidget {
   final ShoppingType shoppingTypeInfo;
   final PaymentMethod paymentMethodInfo;
   final PromotionModel? promotionModel;
+  final DateTime checkoutTimeInfo;
   const AddMoreInfoStockOutScreen({
     super.key,
     required this.func,
@@ -59,6 +61,7 @@ class AddMoreInfoStockOutScreen extends StatefulWidget {
     required this.shoppingTypeInfo,
     required this.paymentMethodInfo,
     required this.promotionModel,
+    required this.checkoutTimeInfo,
   });
 
   @override
@@ -69,7 +72,6 @@ class AddMoreInfoStockOutScreen extends StatefulWidget {
 class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   final TextEditingController deliveryChargesController =
       TextEditingController();
-  final TextEditingController taxPercentageController = TextEditingController();
   final TextEditingController additionalPromotionAmountController =
       TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
@@ -79,6 +81,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   ShoppingType shoppingType = ShoppingType.shop;
   PaymentMethod paymentMethod = PaymentMethod.cash;
   PromotionModel? selectedPromotionModel;
+  late DateTime checkoutTime;
 
   void reloadScreen() {
     if (mounted) {
@@ -100,18 +103,14 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
           .toString();
     }
 
-    taxPercentageController.text = widget.taxPercentageInfo.toString();
-
     descriptionController.text = widget.descriptionInfo ?? "";
     customerNameController.text = widget.customerNameInfo ?? "";
     deliveryNameController.text = widget.deliveryNameInfo ?? "";
     shoppingType = widget.shoppingTypeInfo;
     paymentMethod = widget.paymentMethodInfo;
     selectedPromotionModel = widget.promotionModel;
+    checkoutTime = widget.checkoutTimeInfo;
     deliveryChargesController.addListener(() {
-      reloadScreen();
-    });
-    taxPercentageController.addListener(() {
       reloadScreen();
     });
     additionalPromotionAmountController.addListener(() {
@@ -131,7 +130,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
   @override
   void dispose() {
     deliveryChargesController.dispose();
-    taxPercentageController.dispose();
     additionalPromotionAmountController.dispose();
     descriptionController.dispose();
     customerNameController.dispose();
@@ -148,6 +146,11 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
     final BusinessType businessType = context.select(
       (ShopInfoCubit cubit) => cubit.state.businessType,
     );
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final checkoutTaxPercentage =
+        shopInfoState.taxEnabled && shopInfoState.checkoutTaxEnabled
+        ? shopInfoState.checkoutTaxPercentage
+        : 0.0;
     final List<PromotionModel> promotionList = context.select(
       (PromotionCubit cubit) => cubit.state.activePromotionList,
     );
@@ -228,95 +231,75 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
         leading: const CusLeadingBackIconBtn(),
         actions: [
           CusTxtElevatedBtn(
-                txt: "Save",
-                verticalpadding: UIConstants.smallSpace,
-                horizontalpadding: UIConstants.mediumSpace,
-                bdrRadius: UIConstants.smallRadius,
-                bgClr: Colors.green,
-                func: () {
-                  final double? deliveryCharges = double.tryParse(
-                    deliveryChargesController.text.trim(),
-                  );
-                  final double? taxPercentage = double.tryParse(
-                    taxPercentageController.text.trim(),
-                  );
-                  final double? additionalPromotionAmount = double.tryParse(
-                    additionalPromotionAmountController.text.trim(),
-                  );
+            txt: "Save",
+            verticalpadding: UIConstants.smallSpace,
+            horizontalpadding: UIConstants.mediumSpace,
+            bdrRadius: UIConstants.smallRadius,
+            bgClr: Colors.green,
+            func: () {
+              final double? deliveryCharges = double.tryParse(
+                deliveryChargesController.text.trim(),
+              );
+              final shopInfo = context.read<ShopInfoCubit>().state;
+              final double taxPercentage =
+                  shopInfo.taxEnabled && shopInfo.checkoutTaxEnabled
+                  ? shopInfo.checkoutTaxPercentage
+                  : 0;
+              final double? additionalPromotionAmount = double.tryParse(
+                additionalPromotionAmountController.text.trim(),
+              );
 
-                  if (deliveryChargesController.text.trim().isNotEmpty &&
-                      deliveryCharges == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Delivery charges must be a valid number.",
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
+              if (deliveryChargesController.text.trim().isNotEmpty &&
+                  deliveryCharges == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Delivery charges must be a valid number."),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
 
-                  if (taxPercentageController.text.trim().isNotEmpty &&
-                      taxPercentage == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Tax percentage must be a valid number."),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
+              if (additionalPromotionAmountController.text.trim().isNotEmpty &&
+                  additionalPromotionAmount == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Additional promotion must be a valid number.",
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
 
-                  if ((taxPercentage ?? 0) < 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Tax percentage cannot be negative."),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (additionalPromotionAmountController.text
-                          .trim()
-                          .isNotEmpty &&
-                      additionalPromotionAmount == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Additional promotion must be a valid number.",
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
-
-                  widget.func(
-                    deliveryChargesInfo: deliveryCharges,
-                    taxPercentageInfo: taxPercentage ?? 0,
-                    additionalPromotionAmountInfo: additionalPromotionAmount,
-                    descriptionInfo: descriptionController.text.trim() == ""
-                        ? null
-                        : descriptionController.text.trim(),
-                    customerNameInfo: customerNameController.text.trim() == ""
-                        ? null
-                        : customerNameController.text.trim(),
-                    deliveryNameInfo: deliveryNameController.text.trim() == ""
-                        ? null
-                        : deliveryNameController.text.trim(),
-                    shoppingTypeInfo: shoppingType,
-                    paymentMethodInfo: paymentMethod,
-                    promotionModel: selectedPromotionModel,
-                  );
-                  Navigator.of(context).pop();
-                },
-                txtStyle: Theme.of(context).textTheme.titleSmall!,
-                txtClr: Colors.white,
-              ),
-              const SizedBox(width: UIConstants.bigSpace ,),
-        ]
+              widget.func(
+                deliveryChargesInfo: deliveryCharges,
+                taxPercentageInfo: taxPercentage,
+                additionalPromotionAmountInfo: additionalPromotionAmount,
+                descriptionInfo: descriptionController.text.trim() == ""
+                    ? null
+                    : descriptionController.text.trim(),
+                customerNameInfo: customerNameController.text.trim() == ""
+                    ? null
+                    : customerNameController.text.trim(),
+                deliveryNameInfo: deliveryNameController.text.trim() == ""
+                    ? null
+                    : deliveryNameController.text.trim(),
+                shoppingTypeInfo: shoppingType,
+                paymentMethodInfo: paymentMethod,
+                promotionModel: selectedPromotionModel,
+                checkoutTimeInfo: checkoutTime,
+              );
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+            txtStyle: Theme.of(context).textTheme.titleSmall!,
+            txtClr: Colors.white,
+          ),
+          const SizedBox(width: UIConstants.bigSpace),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -331,6 +314,43 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                     context,
                   ).textTheme.titleMedium!.copyWith(color: Colors.grey),
                   txt: "Details",
+                ),
+              ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.event),
+                  title: const Text('Checkout date and time'),
+                  subtitle: Text(
+                    '${checkoutTime.day.toString().padLeft(2, '0')}/'
+                    '${checkoutTime.month.toString().padLeft(2, '0')}/'
+                    '${checkoutTime.year}  '
+                    '${checkoutTime.hour.toString().padLeft(2, '0')}:'
+                    '${checkoutTime.minute.toString().padLeft(2, '0')}',
+                  ),
+                  trailing: const Icon(Icons.edit_calendar),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: checkoutTime,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (date == null || !mounted) return;
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(checkoutTime),
+                    );
+                    if (time == null || !mounted) return;
+                    setState(() {
+                      checkoutTime = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        time.hour,
+                        time.minute,
+                      );
+                    });
+                  },
                 ),
               ),
               if (customerNameController.text.trim().isNotEmpty &&
@@ -406,15 +426,16 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 cusTxtWidgetBodyMedium("Payment Method"),
                 cusTxtWidgetBodyMedium(paymentMethod.name.toUpperCase()),
               ),
-              dataRow(
-                cusTxtWidgetBodyMedium("Tax (MMK)"),
-                cusTxtWidgetBodyMedium(
-                  CalculationFormula.getPercentageToMMK(
-                    getAllPrice(),
-                    double.tryParse(taxPercentageController.text.trim()) ?? 0,
-                  ).toString(),
+              if (shopInfoState.taxEnabled && shopInfoState.checkoutTaxEnabled)
+                dataRow(
+                  cusTxtWidgetBodyMedium("Tax (MMK)"),
+                  cusTxtWidgetBodyMedium(
+                    CalculationFormula.getPercentageToMMK(
+                      getAllPrice(),
+                      checkoutTaxPercentage,
+                    ).toString(),
+                  ),
                 ),
-              ),
               if (additionalPromotionAmountController.text.trim().isNotEmpty &&
                   additionalPromotionAmountController.text.trim() != "")
                 dataRow(
@@ -456,8 +477,7 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                       totalPrice: getAllPrice(),
                       taxPrice: CalculationFormula.getPercentageToMMK(
                         getAllPrice(),
-                        double.tryParse(taxPercentageController.text.trim()) ??
-                            0,
+                        checkoutTaxPercentage,
                       ),
                       additionalPromotionPrice:
                           double.tryParse(
@@ -525,11 +545,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                 txtController: deliveryNameController,
                 hintTxt: "Enter deli-person name",
                 txtInputType: TextInputType.text,
-              ),
-              cusTxtFieldStockOut(
-                txtController: taxPercentageController,
-                hintTxt: "Enter tax percentage",
-                txtInputType: TextInputType.number,
               ),
               uiController.sizedBox(
                 cusHeight: UIConstants.mediumSpace,
@@ -711,7 +726,6 @@ class _AddMoreInfoStockOutScreenState extends State<AddMoreInfoStockOutScreen> {
                   ),
                 ],
               ),
-              
 
               const SizedBox(height: UIConstants.bigSpace * 3),
             ],

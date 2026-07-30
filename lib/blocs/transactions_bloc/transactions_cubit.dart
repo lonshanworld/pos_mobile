@@ -30,7 +30,8 @@ part 'transactions_state.dart';
 
 class TransactionsCubit extends Cubit<TransactionsState> {
   TransactionsCubit()
-      : super(const TransactionsData(
+    : super(
+        const TransactionsData(
           activeStockInList: [],
           activeStockOutList: [],
           stockOutItemList: [],
@@ -40,12 +41,13 @@ class TransactionsCubit extends Cubit<TransactionsState> {
           inActiveDeliveryPersonList: [],
           inActiveStockInList: [],
           inActiveStockOutList: [],
-        )) {
+        ),
+      ) {
     _initTransactionsList();
   }
 
   Future<void> _initTransactionsList() async {
-    try{
+    try {
       List<StockInModel> activeStockInList = [];
       List<StockInModel> inActiveStockInList = [];
       List<StockOutModel> activeStockOutList = [];
@@ -54,7 +56,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
       List<DeliveryPersonModel> inActiveDeliveryPersonList = [];
 
       // Fetch first page (defaultPageLimit items)
-      List<StockInModel> allStockInList = await DBHelper.getAllStockIn(limit: UIConstants.defaultPageLimit, offset: 0);
+      List<StockInModel> allStockInList = await DBHelper.getAllStockIn(
+        limit: UIConstants.defaultPageLimit,
+        offset: 0,
+      );
       for (int a = 0; a < allStockInList.length; a++) {
         if (allStockInList[a].activeStatus) {
           activeStockInList.add(allStockInList[a]);
@@ -63,7 +68,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      List<StockOutModel> allStockOutList = await DBHelper.getAllStockOut(limit: UIConstants.defaultPageLimit, offset: 0);
+      List<StockOutModel> allStockOutList = await DBHelper.getAllStockOut(
+        limit: UIConstants.defaultPageLimit,
+        offset: 0,
+      );
       for (int b = 0; b < allStockOutList.length; b++) {
         if (allStockOutList[b].activeStatus) {
           activeStockOutList.add(allStockOutList[b]);
@@ -82,7 +90,8 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      emit(TransactionsData(
+      emit(
+        TransactionsData(
           activeStockInList: activeStockInList,
           activeStockOutList: activeStockOutList,
           stockOutItemList: await DBHelper.getAllStockOutItem(),
@@ -94,53 +103,67 @@ class TransactionsCubit extends Cubit<TransactionsState> {
           inActiveStockOutList: inActiveStockOutList,
           stockInOffset: 0,
           stockOutOffset: 0,
-        hasMoreStockIn: allStockInList.length == UIConstants.defaultPageLimit,
-        hasMoreStockOut: allStockOutList.length == UIConstants.defaultPageLimit,
+          hasMoreStockIn: allStockInList.length == UIConstants.defaultPageLimit,
+          hasMoreStockOut:
+              allStockOutList.length == UIConstants.defaultPageLimit,
           isLoadingMoreStockIn: false,
-          isLoadingMoreStockOut: false));
-    }catch(e){
+          isLoadingMoreStockOut: false,
+        ),
+      );
+    } catch (e) {
       cusDebugPrint('Failed to load transaction data: $e');
-      emit(const TransactionsData(
-        activeStockInList: [],
-        activeStockOutList: [],
-        stockOutItemList: [],
-        customerList: [],
-        deliveryModelList: [],
-        activeDeliveryPersonList: [],
-        inActiveDeliveryPersonList: [],
-        inActiveStockInList: [],
-        inActiveStockOutList: [],
-      ));
+      emit(
+        const TransactionsData(
+          activeStockInList: [],
+          activeStockOutList: [],
+          stockOutItemList: [],
+          customerList: [],
+          deliveryModelList: [],
+          activeDeliveryPersonList: [],
+          inActiveDeliveryPersonList: [],
+          inActiveStockInList: [],
+          inActiveStockOutList: [],
+        ),
+      );
     }
   }
 
   Future<void> loadMoreStockIn() async {
     if (state.isLoadingMoreStockIn || !state.hasMoreStockIn) return;
 
-    emit(TransactionsData(
-      activeStockInList: state.activeStockInList,
-      activeStockOutList: state.activeStockOutList,
-      stockOutItemList: state.stockOutItemList,
-      customerList: state.customerList,
-      deliveryModelList: state.deliveryModelList,
-      activeDeliveryPersonList: state.activeDeliveryPersonList,
-      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
-      inActiveStockInList: state.inActiveStockInList,
-      inActiveStockOutList: state.inActiveStockOutList,
-      stockInOffset: state.stockInOffset,
-      stockOutOffset: state.stockOutOffset,
-      hasMoreStockIn: state.hasMoreStockIn,
-      hasMoreStockOut: state.hasMoreStockOut,
-      isLoadingMoreStockIn: true,
-      isLoadingMoreStockOut: state.isLoadingMoreStockOut,
-    ));
+    emit(
+      TransactionsData(
+        activeStockInList: state.activeStockInList,
+        activeStockOutList: state.activeStockOutList,
+        stockOutItemList: state.stockOutItemList,
+        customerList: state.customerList,
+        deliveryModelList: state.deliveryModelList,
+        activeDeliveryPersonList: state.activeDeliveryPersonList,
+        inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+        inActiveStockInList: state.inActiveStockInList,
+        inActiveStockOutList: state.inActiveStockOutList,
+        stockInOffset: state.stockInOffset,
+        stockOutOffset: state.stockOutOffset,
+        hasMoreStockIn: state.hasMoreStockIn,
+        hasMoreStockOut: state.hasMoreStockOut,
+        isLoadingMoreStockIn: true,
+        isLoadingMoreStockOut: state.isLoadingMoreStockOut,
+      ),
+    );
 
-    try{
+    try {
       final int newOffset = state.stockInOffset + UIConstants.defaultPageLimit;
-      List<StockInModel> moreStockInList = await DBHelper.getAllStockIn(limit: UIConstants.defaultPageLimit, offset: newOffset);
+      List<StockInModel> moreStockInList = await DBHelper.getAllStockIn(
+        limit: UIConstants.defaultPageLimit,
+        offset: newOffset,
+      );
 
-      List<StockInModel> newActiveStockInList = List.from(state.activeStockInList);
-      List<StockInModel> newInActiveStockInList = List.from(state.inActiveStockInList);
+      List<StockInModel> newActiveStockInList = List.from(
+        state.activeStockInList,
+      );
+      List<StockInModel> newInActiveStockInList = List.from(
+        state.inActiveStockInList,
+      );
 
       for (var item in moreStockInList) {
         if (item.activeStatus) {
@@ -150,26 +173,55 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      emit(TransactionsData(
-        activeStockInList: newActiveStockInList,
-        activeStockOutList: state.activeStockOutList,
-        stockOutItemList: state.stockOutItemList,
-        customerList: state.customerList,
-        deliveryModelList: state.deliveryModelList,
-        activeDeliveryPersonList: state.activeDeliveryPersonList,
-        inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
-        inActiveStockInList: newInActiveStockInList,
-        inActiveStockOutList: state.inActiveStockOutList,
-        stockInOffset: newOffset,
-        stockOutOffset: state.stockOutOffset,
-        hasMoreStockIn: moreStockInList.length == UIConstants.defaultPageLimit,
-        hasMoreStockOut: state.hasMoreStockOut,
-        isLoadingMoreStockIn: false,
-        isLoadingMoreStockOut: state.isLoadingMoreStockOut,
-      ));
-    }catch(e){
+      emit(
+        TransactionsData(
+          activeStockInList: newActiveStockInList,
+          activeStockOutList: state.activeStockOutList,
+          stockOutItemList: state.stockOutItemList,
+          customerList: state.customerList,
+          deliveryModelList: state.deliveryModelList,
+          activeDeliveryPersonList: state.activeDeliveryPersonList,
+          inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+          inActiveStockInList: newInActiveStockInList,
+          inActiveStockOutList: state.inActiveStockOutList,
+          stockInOffset: newOffset,
+          stockOutOffset: state.stockOutOffset,
+          hasMoreStockIn:
+              moreStockInList.length == UIConstants.defaultPageLimit,
+          hasMoreStockOut: state.hasMoreStockOut,
+          isLoadingMoreStockIn: false,
+          isLoadingMoreStockOut: state.isLoadingMoreStockOut,
+        ),
+      );
+    } catch (e) {
       cusDebugPrint('Failed to load more stock in data: $e');
-      emit(TransactionsData(
+      emit(
+        TransactionsData(
+          activeStockInList: state.activeStockInList,
+          activeStockOutList: state.activeStockOutList,
+          stockOutItemList: state.stockOutItemList,
+          customerList: state.customerList,
+          deliveryModelList: state.deliveryModelList,
+          activeDeliveryPersonList: state.activeDeliveryPersonList,
+          inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+          inActiveStockInList: state.inActiveStockInList,
+          inActiveStockOutList: state.inActiveStockOutList,
+          stockInOffset: state.stockInOffset,
+          stockOutOffset: state.stockOutOffset,
+          hasMoreStockIn: false,
+          hasMoreStockOut: state.hasMoreStockOut,
+          isLoadingMoreStockIn: false,
+          isLoadingMoreStockOut: state.isLoadingMoreStockOut,
+        ),
+      );
+    }
+  }
+
+  Future<void> loadMoreStockOut() async {
+    if (state.isLoadingMoreStockOut || !state.hasMoreStockOut) return;
+
+    emit(
+      TransactionsData(
         activeStockInList: state.activeStockInList,
         activeStockOutList: state.activeStockOutList,
         stockOutItemList: state.stockOutItemList,
@@ -181,41 +233,26 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         inActiveStockOutList: state.inActiveStockOutList,
         stockInOffset: state.stockInOffset,
         stockOutOffset: state.stockOutOffset,
-        hasMoreStockIn: false,
+        hasMoreStockIn: state.hasMoreStockIn,
         hasMoreStockOut: state.hasMoreStockOut,
-        isLoadingMoreStockIn: false,
-        isLoadingMoreStockOut: state.isLoadingMoreStockOut,
-      ));
-    }
-  }
+        isLoadingMoreStockIn: state.isLoadingMoreStockIn,
+        isLoadingMoreStockOut: true,
+      ),
+    );
 
-  Future<void> loadMoreStockOut() async {
-    if (state.isLoadingMoreStockOut || !state.hasMoreStockOut) return;
-
-    emit(TransactionsData(
-      activeStockInList: state.activeStockInList,
-      activeStockOutList: state.activeStockOutList,
-      stockOutItemList: state.stockOutItemList,
-      customerList: state.customerList,
-      deliveryModelList: state.deliveryModelList,
-      activeDeliveryPersonList: state.activeDeliveryPersonList,
-      inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
-      inActiveStockInList: state.inActiveStockInList,
-      inActiveStockOutList: state.inActiveStockOutList,
-      stockInOffset: state.stockInOffset,
-      stockOutOffset: state.stockOutOffset,
-      hasMoreStockIn: state.hasMoreStockIn,
-      hasMoreStockOut: state.hasMoreStockOut,
-      isLoadingMoreStockIn: state.isLoadingMoreStockIn,
-      isLoadingMoreStockOut: true,
-    ));
-
-    try{
+    try {
       final int newOffset = state.stockOutOffset + UIConstants.defaultPageLimit;
-      List<StockOutModel> moreStockOutList = await DBHelper.getAllStockOut(limit: UIConstants.defaultPageLimit, offset: newOffset);
+      List<StockOutModel> moreStockOutList = await DBHelper.getAllStockOut(
+        limit: UIConstants.defaultPageLimit,
+        offset: newOffset,
+      );
 
-      List<StockOutModel> newActiveStockOutList = List.from(state.activeStockOutList);
-      List<StockOutModel> newInActiveStockOutList = List.from(state.inActiveStockOutList);
+      List<StockOutModel> newActiveStockOutList = List.from(
+        state.activeStockOutList,
+      );
+      List<StockOutModel> newInActiveStockOutList = List.from(
+        state.inActiveStockOutList,
+      );
 
       for (var item in moreStockOutList) {
         if (item.activeStatus) {
@@ -225,42 +262,47 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         }
       }
 
-      emit(TransactionsData(
-        activeStockInList: state.activeStockInList,
-        activeStockOutList: newActiveStockOutList,
-        stockOutItemList: state.stockOutItemList,
-        customerList: state.customerList,
-        deliveryModelList: state.deliveryModelList,
-        activeDeliveryPersonList: state.activeDeliveryPersonList,
-        inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
-        inActiveStockInList: state.inActiveStockInList,
-        inActiveStockOutList: newInActiveStockOutList,
-        stockInOffset: state.stockInOffset,
-        stockOutOffset: newOffset,
-        hasMoreStockIn: state.hasMoreStockIn,
-        hasMoreStockOut: moreStockOutList.length == UIConstants.defaultPageLimit,
-        isLoadingMoreStockIn: state.isLoadingMoreStockIn,
-        isLoadingMoreStockOut: false,
-      ));
-    }catch(e){
+      emit(
+        TransactionsData(
+          activeStockInList: state.activeStockInList,
+          activeStockOutList: newActiveStockOutList,
+          stockOutItemList: state.stockOutItemList,
+          customerList: state.customerList,
+          deliveryModelList: state.deliveryModelList,
+          activeDeliveryPersonList: state.activeDeliveryPersonList,
+          inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+          inActiveStockInList: state.inActiveStockInList,
+          inActiveStockOutList: newInActiveStockOutList,
+          stockInOffset: state.stockInOffset,
+          stockOutOffset: newOffset,
+          hasMoreStockIn: state.hasMoreStockIn,
+          hasMoreStockOut:
+              moreStockOutList.length == UIConstants.defaultPageLimit,
+          isLoadingMoreStockIn: state.isLoadingMoreStockIn,
+          isLoadingMoreStockOut: false,
+        ),
+      );
+    } catch (e) {
       cusDebugPrint('Failed to load more stock out data: $e');
-      emit(TransactionsData(
-        activeStockInList: state.activeStockInList,
-        activeStockOutList: state.activeStockOutList,
-        stockOutItemList: state.stockOutItemList,
-        customerList: state.customerList,
-        deliveryModelList: state.deliveryModelList,
-        activeDeliveryPersonList: state.activeDeliveryPersonList,
-        inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
-        inActiveStockInList: state.inActiveStockInList,
-        inActiveStockOutList: state.inActiveStockOutList,
-        stockInOffset: state.stockInOffset,
-        stockOutOffset: state.stockOutOffset,
-        hasMoreStockIn: state.hasMoreStockIn,
-        hasMoreStockOut: false,
-        isLoadingMoreStockIn: state.isLoadingMoreStockIn,
-        isLoadingMoreStockOut: false,
-      ));
+      emit(
+        TransactionsData(
+          activeStockInList: state.activeStockInList,
+          activeStockOutList: state.activeStockOutList,
+          stockOutItemList: state.stockOutItemList,
+          customerList: state.customerList,
+          deliveryModelList: state.deliveryModelList,
+          activeDeliveryPersonList: state.activeDeliveryPersonList,
+          inActiveDeliveryPersonList: state.inActiveDeliveryPersonList,
+          inActiveStockInList: state.inActiveStockInList,
+          inActiveStockOutList: state.inActiveStockOutList,
+          stockInOffset: state.stockInOffset,
+          stockOutOffset: state.stockOutOffset,
+          hasMoreStockIn: state.hasMoreStockIn,
+          hasMoreStockOut: false,
+          isLoadingMoreStockIn: state.isLoadingMoreStockIn,
+          isLoadingMoreStockOut: false,
+        ),
+      );
     }
   }
 
@@ -282,23 +324,23 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required int itemLength,
     List<StockInUnitSpec>? unitSpecs,
   }) async {
-    try{
+    try {
       bool value = await DBHelper.createStockIn(
-          userModel: userModel,
-          categoryModel: categoryModel,
-          groupModel: groupModel,
-          typeModel: typeModel,
-          itemModel: itemModel,
-          code: code,
-          itemManufactureDate: itemManufactureDate,
-          itemExpireDate: itemExpireDate,
-          getItemFromWhere: getItemFromWhere,
-          itemLength: itemLength,
-          unitSpecs: unitSpecs,
+        userModel: userModel,
+        categoryModel: categoryModel,
+        groupModel: groupModel,
+        typeModel: typeModel,
+        itemModel: itemModel,
+        code: code,
+        itemManufactureDate: itemManufactureDate,
+        itemExpireDate: itemExpireDate,
+        getItemFromWhere: getItemFromWhere,
+        itemLength: itemLength,
+        unitSpecs: unitSpecs,
       );
       await _initTransactionsList();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create stock in data: $e');
       return false;
     }
@@ -321,31 +363,34 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required String barcode,
     required double finalTotalPrice,
     required PromotionModel? promotionModel,
+    required DateTime checkoutTime,
   }) async {
-    try{
+    try {
       bool value = await DBHelper.createStockOutList(
-          uniqueItemList: uniqueItemList,
-          userModel: userModel,
-          deliveryCharges: deliveryCharges,
-          taxPercentage: taxPercentage,
-          additionalPromotionAmount: additionalPromotionAmount,
-          description: description,
-          customerName: customerName,
-          deliveryName: deliveryName,
-          shoppingType: shoppingType,
-          paymentMethod: paymentMethod,
-          barcode: barcode,
-          dataList: dataList,
-          finalTotalPrice: finalTotalPrice,
-          promotionModel: promotionModel);
+        uniqueItemList: uniqueItemList,
+        userModel: userModel,
+        deliveryCharges: deliveryCharges,
+        taxPercentage: taxPercentage,
+        additionalPromotionAmount: additionalPromotionAmount,
+        description: description,
+        customerName: customerName,
+        deliveryName: deliveryName,
+        shoppingType: shoppingType,
+        paymentMethod: paymentMethod,
+        barcode: barcode,
+        dataList: dataList,
+        finalTotalPrice: finalTotalPrice,
+        promotionModel: promotionModel,
+        checkoutTime: checkoutTime,
+      );
       await _initTransactionsList();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to create stock out data: $e');
       return false;
     }
   }
-// Stock out
+  // Stock out
 
   List<StockOutItemModel> getSelectedStockOutItemList(int stockOutId) {
     List<StockOutItemModel> dataList = [];
@@ -358,13 +403,15 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   }
 
   DeliveryModel? getDeliveryModel(int id) {
-    return state.deliveryModelList
-        .firstWhereOrNull((element) => element.id == id);
+    return state.deliveryModelList.firstWhereOrNull(
+      (element) => element.id == id,
+    );
   }
 
   DeliveryPersonModel? getDeliveryPerson(int id) {
-    return state.activeDeliveryPersonList
-        .firstWhereOrNull((element) => element.id == id);
+    return state.activeDeliveryPersonList.firstWhereOrNull(
+      (element) => element.id == id,
+    );
   }
 
   CustomerModel? getCustomerModel(int id) {
@@ -388,36 +435,45 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
   StockInHistoryModel? getTodayStockInHistory() {
     String curDate = TextFormatters.getDate(DateTime.now());
-    List<StockInHistoryModel> historyList =
-        HistoryFilter.filterStockInHistory(state.activeStockInList);
-    return historyList
-        .firstWhereOrNull((element) => element.dateTxt == curDate);
+    List<StockInHistoryModel> historyList = HistoryFilter.filterStockInHistory(
+      state.activeStockInList,
+    );
+    return historyList.firstWhereOrNull(
+      (element) => element.dateTxt == curDate,
+    );
   }
 
-  Future<bool>stockOutOrderCancel({
+  Future<bool> stockOutOrderCancel({
     required int stockOutId,
     required UserModel userModel,
     required List<ItemModel> itemModelList,
-  })async{
-    try{
-      bool value = await  DBHelper.stockOutOrderCancel(stockOutId: stockOutId, userModel: userModel, itemModelList: itemModelList);
-      if(value) await reloadList();
+  }) async {
+    try {
+      bool value = await DBHelper.stockOutOrderCancel(
+        stockOutId: stockOutId,
+        userModel: userModel,
+        itemModelList: itemModelList,
+      );
+      if (value) await reloadList();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to cancel stock out order: $e');
       return false;
     }
   }
 
-  Future<bool>stockOutDelete({
+  Future<bool> stockOutDelete({
     required int stockOutId,
     required UserModel userModel,
-  })async{
-    try{
-      bool value = await DBHelper.deleteStockOut(stockOutId: stockOutId, userModel: userModel);
-      if(value) await reloadList();
+  }) async {
+    try {
+      bool value = await DBHelper.deleteStockOut(
+        stockOutId: stockOutId,
+        userModel: userModel,
+      );
+      if (value) await reloadList();
       return value;
-    }catch(e){
+    } catch (e) {
       cusDebugPrint('Failed to delete stock out: $e');
       return false;
     }

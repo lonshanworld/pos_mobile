@@ -27,9 +27,9 @@ class TablesAndCharts {
   }) {
     return DataCell(
       CusTxtWidget(
-        txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-          color: isLow ? Colors.red : null,
-        ),
+        txtStyle: Theme.of(
+          context,
+        ).textTheme.bodyMedium!.copyWith(color: isLow ? Colors.red : null),
         txt: formattedValue,
       ),
       placeholder: true,
@@ -47,8 +47,8 @@ class TablesAndCharts {
           color: profitPrice == 0
               ? Colors.transparent
               : profitPrice < 0
-                  ? Colors.red.withValues(alpha: 0.4)
-                  : Colors.green.withValues(alpha: 0.4),
+              ? Colors.red.withValues(alpha: 0.4)
+              : Colors.green.withValues(alpha: 0.4),
           borderRadius: UIConstants.smallBorderRadius,
         ),
         child: CusTxtWidget(
@@ -63,9 +63,9 @@ class TablesAndCharts {
     return DataColumn(
       label: CusTxtWidget(
         txt: txt,
-        txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+        txtStyle: Theme.of(
+          context,
+        ).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -75,10 +75,10 @@ class TablesAndCharts {
     TextStyle? style,
     int? maxVisibleValues,
   }) {
-    final effectiveStyle =
-        (style ?? Theme.of(context).textTheme.bodySmall!).copyWith(height: 0.9);
-    final List<String> visibleValues = maxVisibleValues == null ||
-            maxVisibleValues >= values.length
+    final effectiveStyle = (style ?? Theme.of(context).textTheme.bodySmall!)
+        .copyWith(height: 0.9);
+    final List<String> visibleValues =
+        maxVisibleValues == null || maxVisibleValues >= values.length
         ? values
         : values.take(maxVisibleValues).toList();
     final int remainingCount = values.length - visibleValues.length;
@@ -97,9 +97,7 @@ class TablesAndCharts {
         if (remainingCount > 0)
           Text(
             "+$remainingCount more",
-            style: effectiveStyle.copyWith(
-              color: Colors.grey,
-            ),
+            style: effectiveStyle.copyWith(color: Colors.grey),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -126,6 +124,7 @@ class TablesAndCharts {
     required int index,
     required String dateTxt,
     required List<String> itemNames,
+    required List<String> itemCounts,
     required List<String> originalPrices,
     required List<String> sellPrices,
     required String finalSellPrice,
@@ -136,9 +135,8 @@ class TablesAndCharts {
   }) {
     return DataRow(
       color: WidgetStateProperty.resolveWith(
-        (_) => isEven
-            ? Colors.grey.withValues(alpha: 0.07)
-            : Colors.transparent,
+        (_) =>
+            isEven ? Colors.grey.withValues(alpha: 0.07) : Colors.transparent,
       ),
       cells: [
         DataCell(
@@ -153,9 +151,22 @@ class TablesAndCharts {
             txt: dateTxt,
           ),
         ),
-        multilineDataCell(values: itemNames, maxVisibleValues: maxVisibleValues),
-        multilineDataCell(values: originalPrices, maxVisibleValues: maxVisibleValues),
-        multilineDataCell(values: sellPrices, maxVisibleValues: maxVisibleValues),
+        multilineDataCell(
+          values: itemNames,
+          maxVisibleValues: maxVisibleValues,
+        ),
+        multilineDataCell(
+          values: itemCounts,
+          maxVisibleValues: maxVisibleValues,
+        ),
+        multilineDataCell(
+          values: originalPrices,
+          maxVisibleValues: maxVisibleValues,
+        ),
+        multilineDataCell(
+          values: sellPrices,
+          maxVisibleValues: maxVisibleValues,
+        ),
         DataCell(
           CusTxtWidget(
             txtStyle: Theme.of(context).textTheme.bodyMedium!,
@@ -189,7 +200,8 @@ class TablesAndCharts {
   }) {
     return DataRow(
       color: WidgetStateProperty.resolveWith(
-        (_) => isEven ? Colors.grey.withValues(alpha: 0.07) : Colors.transparent,
+        (_) =>
+            isEven ? Colors.grey.withValues(alpha: 0.07) : Colors.transparent,
       ),
       cells: [
         normalDataCell(index.toString()),

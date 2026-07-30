@@ -89,6 +89,7 @@ class StockInPieceListForm extends StatefulWidget {
   final bool allowMultiplePieces;
   final ItemBusinessDetailModel? businessDetail;
   final ItemModel itemModel;
+  final ValueChanged<List<StockInPieceEntry>>? onPiecesChanged;
 
   const StockInPieceListForm({
     super.key,
@@ -97,6 +98,7 @@ class StockInPieceListForm extends StatefulWidget {
     required this.allowMultiplePieces,
     required this.businessDetail,
     required this.itemModel,
+    this.onPiecesChanged,
   });
 
   @override
@@ -110,6 +112,7 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
   void initState() {
     super.initState();
     _applyDefaultMeasurementsIfNeeded();
+    _notifyPiecesChanged();
   }
 
   @override
@@ -117,6 +120,9 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.businessDetail != widget.businessDetail) {
       _applyDefaultMeasurementsIfNeeded();
+    }
+    if (oldWidget.onPiecesChanged != widget.onPiecesChanged) {
+      _notifyPiecesChanged();
     }
   }
 
@@ -129,6 +135,10 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
   }
 
   List<StockInPieceEntry> get pieces => _pieces;
+
+  void _notifyPiecesChanged() {
+    widget.onPiecesChanged?.call(List.unmodifiable(_pieces));
+  }
 
   void _applyDefaultMeasurementsIfNeeded() {
     if (!widget.showMeasurements || _pieces.isEmpty) return;
@@ -152,6 +162,7 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
 
   void addPiece() {
     setState(() => _pieces.add(StockInPieceEntry()));
+    _notifyPiecesChanged();
   }
 
   void removeLastPiece() {
@@ -165,6 +176,7 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
       _pieces[index].dispose();
       _pieces.removeAt(index);
     });
+    _notifyPiecesChanged();
   }
 
   double? _calculatedSell(int index) {
@@ -221,9 +233,9 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
                   children: [
                     Text(
                       'Piece ${index + 1}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: accent,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall?.copyWith(color: accent),
                     ),
                     const Spacer(),
                     if (widget.allowMultiplePieces && _pieces.length > 1)
@@ -283,10 +295,8 @@ class StockInPieceListFormState extends State<StockInPieceListForm> {
                     CusTxtWidget(
                       txt:
                           'Calculated sell: ${sellPreview.toStringAsFixed(0)} MMK (+ tax)',
-                      txtStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: accent,
-                          ),
+                      txtStyle: Theme.of(context).textTheme.bodyMedium!
+                          .copyWith(fontWeight: FontWeight.w600, color: accent),
                     ),
                   ],
                 ],

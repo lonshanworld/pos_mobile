@@ -10,7 +10,8 @@ class ShopInfoCubit extends Cubit<ShopInfoState> {
   final ShopInfoStorage _storage = ShopInfoStorage.instance;
 
   ShopInfoCubit()
-      : super(ShopInfoState(
+    : super(
+        ShopInfoState(
           shopName: ShopInfoStorage.instance.getShopName(),
           shopAddress: ShopInfoStorage.instance.getShopAddress(),
           phNum: ShopInfoStorage.instance.getPhNum(),
@@ -20,7 +21,13 @@ class ShopInfoCubit extends Cubit<ShopInfoState> {
           businessType: ShopInfoStorage.instance.getBusinessType(),
           includeQrCode: ShopInfoStorage.instance.getIncludeQrCode(),
           includeLogo: ShopInfoStorage.instance.getIncludeLogo(),
-        )) {
+          taxEnabled: ShopInfoStorage.instance.getTaxEnabled(),
+          itemTaxEnabled: ShopInfoStorage.instance.getItemTaxEnabled(),
+          checkoutTaxEnabled: ShopInfoStorage.instance.getCheckoutTaxEnabled(),
+          checkoutTaxPercentage: ShopInfoStorage.instance
+              .getCheckoutTaxPercentage(),
+        ),
+      ) {
     UIController.instance.businessType = state.businessType;
   }
 
@@ -72,5 +79,25 @@ class ShopInfoCubit extends Cubit<ShopInfoState> {
   Future<void> updateIncludeLogo(bool value) async {
     await _storage.saveIncludeLogo(value);
     emit(state.copyWith(includeLogo: value));
+  }
+
+  Future<void> updateTaxEnabled(bool value) async {
+    await _storage.saveTaxEnabled(value);
+    emit(state.copyWith(taxEnabled: value));
+  }
+
+  Future<void> updateItemTaxEnabled(bool value) async {
+    await _storage.saveItemTaxEnabled(value);
+    emit(state.copyWith(itemTaxEnabled: value));
+  }
+
+  Future<void> updateCheckoutTaxEnabled(bool value) async {
+    await _storage.saveCheckoutTaxEnabled(value);
+    emit(state.copyWith(checkoutTaxEnabled: value));
+  }
+
+  Future<void> updateCheckoutTaxPercentage(double value) async {
+    await _storage.saveCheckoutTaxPercentage(value);
+    emit(state.copyWith(checkoutTaxPercentage: value));
   }
 }

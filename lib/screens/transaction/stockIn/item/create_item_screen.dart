@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:collection/collection.dart";
@@ -10,6 +12,7 @@ import "package:pos_mobile/constants/business_hierarchy_config.dart";
 import "package:pos_mobile/constants/business_type_utils.dart";
 import "package:pos_mobile/constants/enums.dart";
 import "package:pos_mobile/constants/uiConstants.dart";
+import "package:pos_mobile/controller/DB_helper.dart";
 import "package:pos_mobile/controller/ui_controller.dart";
 import "package:pos_mobile/models/groupingItem_models_folders/type_model.dart";
 import "package:pos_mobile/models/user_model_folder/user_model.dart";
@@ -21,6 +24,8 @@ import "package:pos_mobile/widgets/btns_folder/leadingBackIconBtn.dart";
 import "package:pos_mobile/widgets/cusTextField/cusTextArea_widget.dart";
 import "package:pos_mobile/widgets/cusTextField/cusTextFieldLogin_widget.dart";
 import "package:pos_mobile/widgets/cusTxt_widget.dart";
+import "package:image_picker/image_picker.dart";
+import "package:pos_mobile/services/public_document_storage.dart";
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -45,6 +50,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   double profitPrice = 0;
   double taxPercentage = 0;
   bool _needStock = true;
+  String? _selectedImagePath;
 
   @override
   void initState() {
@@ -96,6 +102,54 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     super.dispose();
   }
 
+  Future<void> _pickItemImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      // Keep the image-source actions opaque. The app-wide bottom-sheet theme
+      // is transparent, which otherwise lets the modal barrier wash out the
+      // entire item form behind it.
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      barrierColor: Colors.transparent,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take with camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(source: source);
+    if (picked == null) return;
+
+    try {
+      final ext = picked.path.contains('.')
+          ? picked.path.split('.').last.toLowerCase()
+          : 'jpg';
+      final destination = await PublicDocumentStorage.copyFile(
+        sourcePath: picked.path,
+        fileName: 'item_${DateTime.now().microsecondsSinceEpoch}.$ext',
+        directory: 'item_images',
+      );
+      if (mounted) setState(() => _selectedImagePath = destination);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save item image: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
@@ -108,6 +162,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         .watch<ShopInfoCubit>()
         .state
         .businessType;
+    final shopInfoState = context.watch<ShopInfoCubit>().state;
+    final bool showItemTax =
+        shopInfoState.taxEnabled && shopInfoState.itemTaxEnabled;
     final bool allowExpiryTracking = businessType.allowsExpiryTracking;
     final itemState = context.watch<ItemCubit>().state;
     final categoryLabel = BusinessHierarchyConfig.getLabel(
@@ -376,11 +433,12 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 labelTxt: "MMK",
                 textEditingController: sellPriceController,
               ),
-              priceInputField(
-                hintTxt: "Enter tax percentage",
-                labelTxt: "% percentage",
-                textEditingController: taxController,
-              ),
+              if (showItemTax)
+                priceInputField(
+                  hintTxt: "Enter tax percentage",
+                  labelTxt: "% percentage",
+                  textEditingController: taxController,
+                ),
               uiController.sizedBox(
                 cusHeight: UIConstants.bigSpace,
                 cusWidth: null,
@@ -403,7 +461,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       cusHeight: UIConstants.mediumSpace,
                       cusWidth: null,
                     ),
-                    if (taxPercentage > 0)
+                    if (showItemTax && taxPercentage > 0)
                       resultRow(
                         "Tax",
                         CalculationFormula.getPercentageToMMK(
@@ -453,6 +511,44 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   context,
                 ).textTheme.bodyMedium!.copyWith(color: Colors.grey),
               ),
+              const SizedBox(height: UIConstants.mediumSpace),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Item image (optional)',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: UIConstants.smallSpace),
+              Row(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    color: Colors.grey.withValues(alpha: 0.05),
+                    child: _selectedImagePath == null
+                        ? Center(
+                            child: Icon(
+                              Icons.inventory_2_rounded,
+                              color: Colors.grey.withValues(alpha: 0.25),
+                            ),
+                          )
+                        : Image.file(
+                            File(_selectedImagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(),
+                          ),
+                  ),
+                  const SizedBox(width: UIConstants.mediumSpace),
+                  OutlinedButton.icon(
+                    onPressed: _pickItemImage,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add image'),
+                  ),
+                ],
+              ),
               BusinessItemDetailForm(
                 key: _businessFormKey,
                 businessType: businessType,
@@ -473,7 +569,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       showValidationMessage("Choose a $typeLabel first");
                     } else if (itemNameController.text.trim().isEmpty) {
                       showValidationMessage("Item name should not be empty");
-                    } else if (businessType != BusinessType.food && originalPrice < 1) {
+                    } else if (businessType != BusinessType.food &&
+                        originalPrice < 1) {
                       showValidationMessage(
                         "Original price must be greater than zero",
                       );
@@ -481,7 +578,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                               sellPriceController.text.trim(),
                             ) ==
                             null ||
-                        double.tryParse(taxController.text.trim()) == null) {
+                        (showItemTax &&
+                            double.tryParse(taxController.text.trim()) ==
+                                null)) {
                       showValidationMessage(
                         "Sell price and tax must be valid numbers",
                       );
@@ -497,11 +596,18 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       final itemCubit = context.read<ItemCubit>();
                       final navigator = Navigator.of(context);
 
-                      loadingCubit.setLoading("Creating ...");
                       final businessDetail = _businessFormKey.currentState
                           ?.buildDetail(0);
                       final itemBarcode = _businessFormKey.currentState
                           ?.buildItemBarcode();
+                      if (itemBarcode != null &&
+                          !await DBHelper.isBarcodeAvailable(itemBarcode)) {
+                        showValidationMessage(
+                          'This barcode is already in use. Please enter a different barcode.',
+                        );
+                        return;
+                      }
+                      loadingCubit.setLoading("Creating ...");
                       final value = await itemCubit.createNewItem(
                         userModel: userModel,
                         categoryId: _selectedCategoryId,
@@ -515,20 +621,25 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             allowExpiryTracking && selectedTypeModel.hasExpire,
                         profitPrice: profitPrice,
                         originalPrice: originalPrice,
-                        taxPercentage: taxPercentage,
+                        taxPercentage: showItemTax ? taxPercentage : 0,
                         needStock: businessType == BusinessType.food
                             ? _needStock
                             : true,
                         code: itemBarcode,
+                        imagePath: _selectedImagePath,
                         businessDetail: businessDetail,
                       );
 
                       if (!mounted) return;
                       if (value) {
-                        loadingCubit.setSuccess("Success !");
-                        navigator.pop();
+                        loadingCubit.setSuccess("Success !", showDialog: false);
+                        if (navigator.canPop()) {
+                          navigator.pop();
+                        }
                       } else {
-                        loadingCubit.setFail("Fail !");
+                        loadingCubit.setFail(
+                          "Item could not be created. Please check the barcode and item details.",
+                        );
                       }
                     }
                   },

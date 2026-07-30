@@ -5,6 +5,10 @@ import 'package:pos_mobile/constants/enums.dart';
 import 'package:pos_mobile/constants/uiConstants.dart';
 import 'package:pos_mobile/screens/settings/general_settings_screen.dart';
 import 'package:pos_mobile/screens/settings/printer_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/language_settings_screen.dart';
+import 'package:pos_mobile/screens/settings/tax_settings_screen.dart';
+import 'package:pos_mobile/languages/app_strings.dart';
+import 'package:pos_mobile/languages/app_language.dart';
 
 import '../blocs/theme_bloc/theme_cubit.dart';
 import '../blocs/userData_bloc/user_data_cubit.dart';
@@ -18,14 +22,19 @@ class SettingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final currentUser = context.watch<UserDataCubit>().state.userModel;
-    final bool isOwner = currentUser?.userLevel == UserLevel.merchant ||
+    final bool isOwner =
+        currentUser?.userLevel == UserLevel.merchant ||
         currentUser?.userLevel == UserLevel.superAdmin;
-    final BluetoothPrinterState printerState =
-        context.watch<BluetoothPrinterCubit>().state;
+    final BluetoothPrinterState printerState = context
+        .watch<BluetoothPrinterCubit>()
+        .state;
     final accent = uiController.accentColor();
+    final strings = AppStrings.of(context);
 
     final bool isPrinterConnected =
         printerState.bluetoothConnection == BluetoothConnection.connected;
@@ -42,43 +51,69 @@ class SettingScreen extends StatelessWidget {
             const SizedBox(height: UIConstants.mediumSpace),
 
             Text(
-              'Manage your preferences and configuration',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall!
-                  .copyWith(color: Colors.grey),
+              strings.managePreferences,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.copyWith(color: Colors.grey),
             ),
             const SizedBox(height: UIConstants.bigSpace),
 
             // ── Printer Settings Card ──
             _SettingHubCard(
               icon: Icons.print_outlined,
-              title: 'Printer Settings',
+              title: strings.printerSettings,
               subtitle: isPrinterConnected
-                  ? 'Connected: ${printerState.printerName ?? "Printer"}'
-                  : 'No printer connected',
+                  ? '${strings.connected}: ${printerState.printerName ?? "Printer"}'
+                  : strings.noPrinterConnected,
               statusDot: isPrinterConnected ? Colors.green : Colors.grey,
               accentColor: Colors.amber,
               themeModeType: themeModeType,
               uiController: uiController,
-              onTap: () => Navigator.of(context)
-                  .pushNamed(PrinterSettingsScreen.routeName),
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(PrinterSettingsScreen.routeName),
             ),
             const SizedBox(height: UIConstants.mediumSpace),
 
             // ── General Settings Card ──
             _SettingHubCard(
               icon: Icons.tune_outlined,
-              title: 'General Settings',
+              title: strings.generalSettings,
               subtitle: isOwner
-                  ? 'Shop info, business type, logo & security'
-                  : 'View shop information',
+                  ? strings.shopInfoBusinessTypeLogoSecurity
+                  : strings.viewShopInformation,
               statusDot: null,
               accentColor: accent,
               themeModeType: themeModeType,
               uiController: uiController,
-              onTap: () => Navigator.of(context)
-                  .pushNamed(GeneralSettingsScreen.routeName),
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(GeneralSettingsScreen.routeName),
+            ),
+            const SizedBox(height: UIConstants.mediumSpace),
+            _SettingHubCard(
+              icon: Icons.percent_outlined,
+              title: 'Tax Settings',
+              subtitle: 'Control item and checkout tax',
+              statusDot: null,
+              accentColor: Colors.green,
+              themeModeType: themeModeType,
+              uiController: uiController,
+              onTap: () =>
+                  Navigator.of(context).pushNamed(TaxSettingsScreen.routeName),
+            ),
+            const SizedBox(height: UIConstants.mediumSpace),
+            _SettingHubCard(
+              icon: Icons.language_outlined,
+              title: strings.language,
+              subtitle: context.watch<LanguageCubit>().state.displayName,
+              statusDot: null,
+              accentColor: Colors.blue,
+              themeModeType: themeModeType,
+              uiController: uiController,
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(LanguageSettingsScreen.routeName),
             ),
           ],
         ),
@@ -145,9 +180,7 @@ class _SettingHubCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium!
+                          style: Theme.of(context).textTheme.titleMedium!
                               .copyWith(fontWeight: FontWeight.bold),
                         ),
                         if (statusDot != null) ...[
@@ -166,10 +199,9 @@ class _SettingHubCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall!
-                          .copyWith(color: Colors.grey),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall!.copyWith(color: Colors.grey),
                     ),
                   ],
                 ),

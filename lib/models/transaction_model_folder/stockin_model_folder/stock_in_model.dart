@@ -1,5 +1,4 @@
-
-class StockInModel{
+class StockInModel {
   final int id;
   // final List<int> uniqueIdList;
   final int createPersonId; // NOTE : foreign key
@@ -9,6 +8,7 @@ class StockInModel{
   final bool activeStatus;
   // late List<String> updateIdList;
   final DateTime? lastUpdateTime;
+  final String code;
 
   StockInModel({
     required this.id,
@@ -20,28 +20,35 @@ class StockInModel{
     required this.activeStatus,
     // required this.updateIdList,
     required this.lastUpdateTime,
+    required this.code,
   });
 
-  StockInModel.fromJson(Map<String ,dynamic> jsonData) :
-    id = jsonData["id"],
-    // uniqueIdList = json.decode(jsonData["uniqueIdList"]),
-    createTime = DateTime.parse(jsonData["createTime"]),
-    deleteTime = jsonData["deleteTime"] == null ? null : DateTime.parse(jsonData["deleteTime"]),
-    createPersonId = jsonData["createPersonId"],
-    deletePersonId = jsonData["deletePersonId"],
-    activeStatus = jsonData["activeStatus"] == 1 ? true : false,
-    // updateIdList = json.decode(jsonData["updateIdList"]);
-    lastUpdateTime = jsonData["lastUpdateTime"] == null ? null : DateTime.parse(jsonData["lastUpdateTime"]);
+  StockInModel.fromJson(Map<String, dynamic> jsonData)
+    : id = jsonData["id"],
+      // uniqueIdList = json.decode(jsonData["uniqueIdList"]),
+      createTime = DateTime.parse(jsonData["createTime"]),
+      deleteTime = jsonData["deleteTime"] == null
+          ? null
+          : DateTime.parse(jsonData["deleteTime"]),
+      createPersonId = jsonData["createPersonId"],
+      deletePersonId = jsonData["deletePersonId"],
+      activeStatus = jsonData["activeStatus"] == 1 ? true : false,
+      // updateIdList = json.decode(jsonData["updateIdList"]);
+      lastUpdateTime = jsonData["lastUpdateTime"] == null
+          ? null
+          : DateTime.parse(jsonData["lastUpdateTime"]),
+      code = jsonData["code"] ?? "";
 
-  Map<String, dynamic> toJson()=>{
-    "id" : id,
+  Map<String, dynamic> toJson() => {
+    "id": id,
     // "uniqueIdList" : json.encode(uniqueIdList),
-    "createTime" : createTime.toString(),
-    "deleteTime" : deleteTime?.toString(),
-    "lastUpdateTime" : lastUpdateTime?.toString(),
-    "createPersonId" : createPersonId,
-    "deletePersonId" : deletePersonId,
-    "activeStatus" : activeStatus ? 1 : 0,
+    "createTime": createTime.toString(),
+    "deleteTime": deleteTime?.toString(),
+    "lastUpdateTime": lastUpdateTime?.toString(),
+    "createPersonId": createPersonId,
+    "deletePersonId": deletePersonId,
+    "activeStatus": activeStatus ? 1 : 0,
+    "code": code,
     // "updateIdList" : json.encode(updateIdList),
   };
 }

@@ -19,6 +19,7 @@ import 'package:pos_mobile/models/promotion_model_folder/promotion_model.dart';
 import 'package:pos_mobile/utils/checkout_helpers.dart';
 import 'package:pos_mobile/utils/formula.dart';
 import 'package:pos_mobile/widgets/checkout_line_detail.dart';
+import 'package:pos_mobile/widgets/item_image_widget.dart';
 
 class StockOutItemBoxWidget extends StatefulWidget {
   final ItemModel itemModel;
@@ -61,13 +62,18 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
 
   Future<_StockOutItemParents?> _loadParents() async {
     try {
-      final TypeModel? typeModel = await DBHelper.getTypeById(widget.itemModel.typeId);
+      final TypeModel? typeModel = await DBHelper.getTypeById(
+        widget.itemModel.typeId,
+      );
       if (typeModel == null) {
-        debugPrint('StockOutItemBoxWidget: missing type for itemId=${widget.itemModel.id}, typeId=${widget.itemModel.typeId}');
+        debugPrint(
+          'StockOutItemBoxWidget: missing type for itemId=${widget.itemModel.id}, typeId=${widget.itemModel.typeId}',
+        );
         return null;
       }
 
-      final int? resolvedGroupId = widget.itemModel.groupId ?? typeModel.groupId;
+      final int? resolvedGroupId =
+          widget.itemModel.groupId ?? typeModel.groupId;
       final GroupModel? groupModel = resolvedGroupId == null
           ? null
           : await DBHelper.getGroupById(resolvedGroupId);
@@ -84,7 +90,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
         categoryModel: categoryModel,
       );
     } catch (err, st) {
-      debugPrint('StockOutItemBoxWidget: failed to load parents for itemId=${widget.itemModel.id}');
+      debugPrint(
+        'StockOutItemBoxWidget: failed to load parents for itemId=${widget.itemModel.id}',
+      );
       debugPrint(err.toString());
       debugPrint(st.toString());
       return null;
@@ -97,7 +105,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
     required List<UniqueItemModel> cartUnits,
     required ItemBusinessDetailModel? itemDetail,
   }) {
-    final pool = availableUnits.where((u) => !CheckoutHelpers.isExpired(u)).toList();
+    final pool = availableUnits
+        .where((u) => !CheckoutHelpers.isExpired(u))
+        .toList();
     if (pool.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No sellable pieces available.')),
@@ -133,7 +143,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
         double calculatedArea = 0.0;
 
         if (selectedPiece != null) {
-          final existing = cartUnits.firstWhereOrNull((u) => u.id == selectedPiece!.id);
+          final existing = cartUnits.firstWhereOrNull(
+            (u) => u.id == selectedPiece!.id,
+          );
           if (existing != null) {
             lengthController.text = existing.instanceLength?.toString() ?? '';
           }
@@ -159,7 +171,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
             return AlertDialog(
               backgroundColor: Theme.of(context).cardColor,
               surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Text(
                 'Per Unit Measurement Purchase',
                 style: TextStyle(color: accent, fontWeight: FontWeight.bold),
@@ -191,16 +205,21 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                 const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final piece = pool[index];
-                              final existing = cartUnits.firstWhereOrNull((u) => u.id == piece.id);
+                              final existing = cartUnits.firstWhereOrNull(
+                                (u) => u.id == piece.id,
+                              );
                               final bool isInCart = existing != null;
-                              final bool isSelected = selectedPiece?.id == piece.id;
+                              final bool isSelected =
+                                  selectedPiece?.id == piece.id;
 
                               return ListTile(
                                 dense: true,
                                 title: Text(
                                   'Piece #${piece.id}: ${piece.instanceLength} × ${piece.instanceWidth} ${itemDetail?.measurementUnit ?? 'ft'}',
                                   style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -215,7 +234,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                     widthController.text =
                                         piece.instanceWidth?.toString() ?? '';
                                     if (isInCart) {
-                                      lengthController.text = existing.instanceLength?.toString() ?? '';
+                                      lengthController.text =
+                                          existing.instanceLength?.toString() ??
+                                          '';
                                     } else {
                                       lengthController.clear();
                                     }
@@ -236,7 +257,10 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           children: [
                             Text(
                               'Selected Piece #${selectedPiece!.id}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             if (pool.length > 1)
                               TextButton(
@@ -266,19 +290,28 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Available Size: ${selectedPiece!.instanceLength} × ${selectedPiece!.instanceWidth} ${itemDetail?.measurementUnit ?? 'ft'}'),
+                              Text(
+                                'Available Size: ${selectedPiece!.instanceLength} × ${selectedPiece!.instanceWidth} ${itemDetail?.measurementUnit ?? 'ft'}',
+                              ),
                               const SizedBox(height: 4),
-                              Text('Price Rate: ${rate.toInt()} MMK per square ${itemDetail?.measurementUnit ?? 'unit'}'),
+                              Text(
+                                'Price Rate: ${rate.toInt()} MMK per square ${itemDetail?.measurementUnit ?? 'unit'}',
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: lengthController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: InputDecoration(
-                            labelText: 'Length to sell (${itemDetail?.measurementUnit ?? 'ft'})',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            labelText:
+                                'Length to sell (${itemDetail?.measurementUnit ?? 'ft'})',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: accent, width: 2),
                               borderRadius: BorderRadius.circular(12),
@@ -318,9 +351,8 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                         const SizedBox(height: 8),
                         Text(
                           'Width is shown here because cut-piece stock split is currently tracked by length only.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[700],
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[700]),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -332,23 +364,42 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Calculated Area:', style: TextStyle(color: Colors.black54)),
+                                  const Text(
+                                    'Calculated Area:',
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
                                   Text(
                                     '${calculatedArea.toStringAsFixed(2)} sq ${itemDetail?.measurementUnit ?? 'unit'}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
                                   ),
                                 ],
                               ),
                               const Divider(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Total Price:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                  const Text(
+                                    'Total Price:',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
                                   Text(
                                     '${calculatedPrice.toStringAsFixed(0)} MMK',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: accent,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -363,21 +414,29 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
                 if (selectedPiece != null)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: () {
                       if (formKey.currentState!.validate()) {
                         final inputLength = double.parse(lengthController.text);
-                        final double originalLength = selectedPiece!.instanceLength ?? 1.0;
-                        final double originalWidth = selectedPiece!.instanceWidth ?? 1.0;
-                        final double sourceArea = originalLength * originalWidth;
+                        final double originalLength =
+                            selectedPiece!.instanceLength ?? 1.0;
+                        final double originalWidth =
+                            selectedPiece!.instanceWidth ?? 1.0;
+                        final double sourceArea =
+                            originalLength * originalWidth;
                         final double soldArea = inputLength * originalWidth;
                         final double sourceOriginalPrice =
                             selectedPiece!.originalPrice;
@@ -396,7 +455,8 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           createTime: selectedPiece!.createTime,
                           deleteTime: selectedPiece!.deleteTime,
                           itemExpireDate: selectedPiece!.itemExpireDate,
-                          itemManufactureDate: selectedPiece!.itemManufactureDate,
+                          itemManufactureDate:
+                              selectedPiece!.itemManufactureDate,
                           code: selectedPiece!.code,
                           createPersonId: selectedPiece!.createPersonId,
                           deletePersonId: selectedPiece!.deletePersonId,
@@ -409,10 +469,13 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           moduleCount: selectedPiece!.moduleCount,
                           instanceLength: inputLength,
                           instanceWidth: selectedPiece!.instanceWidth,
-                          instanceBatchNumber: selectedPiece!.instanceBatchNumber,
+                          instanceBatchNumber:
+                              selectedPiece!.instanceBatchNumber,
                         );
 
-                        widget.selectedUniqueItemList.removeWhere((item) => item.id == selectedPiece!.id);
+                        widget.selectedUniqueItemList.removeWhere(
+                          (item) => item.id == selectedPiece!.id,
+                        );
                         widget.addFunc(clone);
 
                         Navigator.pop(context);
@@ -431,12 +494,23 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType = context.watch<ThemeCubit>().state.themeModeType;
-    final BusinessType businessType =
-        context.watch<ShopInfoCubit>().state.businessType;
-    final PromotionModel? promotion = context.read<PromotionCubit>().getSinglePromotionFromItemId(widget.itemModel.id);
-    final List<UniqueItemModel> uniqueItemList = context.read<ItemCubit>().getSelectedUniqueItemList(widget.itemModel.id);
-    final itemDetail = context.read<ItemCubit>().getBusinessDetail(widget.itemModel.id);
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
+    final BusinessType businessType = context
+        .watch<ShopInfoCubit>()
+        .state
+        .businessType;
+    final PromotionModel? promotion = context
+        .read<PromotionCubit>()
+        .getSinglePromotionFromItemId(widget.itemModel.id);
+    final List<UniqueItemModel> uniqueItemList = context
+        .read<ItemCubit>()
+        .getSelectedUniqueItemList(widget.itemModel.id);
+    final itemDetail = context.read<ItemCubit>().getBusinessDetail(
+      widget.itemModel.id,
+    );
     final cartUnitsForItem = widget.selectedUniqueItemList
         .where((u) => u.itemId == widget.itemModel.id)
         .toList();
@@ -453,8 +527,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
       }
 
       if (cartUnitsForItem.isNotEmpty) {
-        final prices =
-            cartUnitsForItem.map(CheckoutHelpers.uniqueItemSellPrice).toSet();
+        final prices = cartUnitsForItem
+            .map(CheckoutHelpers.uniqueItemSellPrice)
+            .toSet();
         if (prices.length == 1) {
           return '${prices.first.toInt()} MMK';
         }
@@ -463,11 +538,7 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
         return '${minP.toInt()}–${maxP.toInt()} MMK';
       }
 
-      return '${CalculationFormula.getItemSellPrice(
-        originalPrice: widget.itemModel.originalPrice,
-        profitPrice: widget.itemModel.profitPrice,
-        taxPercentage: widget.itemModel.taxPercentage ?? 0,
-      ).toInt()} MMK';
+      return '${CalculationFormula.getItemSellPrice(originalPrice: widget.itemModel.originalPrice, profitPrice: widget.itemModel.profitPrice, taxPercentage: widget.itemModel.taxPercentage ?? 0).toInt()} MMK';
     }
 
     String stockStatusLabel(int availableStock, bool outOfStock) {
@@ -545,7 +616,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
           return const Card(
             elevation: 4,
             shadowColor: Colors.black12,
-            shape: RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
+            shape: RoundedRectangleBorder(
+              borderRadius: UIConstants.mediumBorderRadius,
+            ),
             child: Center(child: CircularProgressIndicator()),
           );
         }
@@ -555,10 +628,10 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
           return const Card(
             elevation: 4,
             shadowColor: Colors.black12,
-            shape: RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
-            child: Center(
-              child: Text("Missing item relation"),
+            shape: RoundedRectangleBorder(
+              borderRadius: UIConstants.mediumBorderRadius,
             ),
+            child: Center(child: Text("Missing item relation")),
           );
         }
 
@@ -576,18 +649,50 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
             final bool compact = width < 220;
             final bool tablet = width >= 220 && width < 290;
             final bool desktop = width >= 290;
-            final double iconSize = compact ? 32 : tablet ? 42 : 54;
-            final double badgeFontSize = compact ? 8 : tablet ? 9 : 10;
-            final double titleFontSize = compact ? 13 : tablet ? 14 : 15;
-            final double subtitleFontSize = compact ? 10 : tablet ? 11 : 12;
-            final double priceFontSize = compact ? 13 : tablet ? 14.5 : 16.5;
-            final double controlHeight = compact ? 32 : tablet ? 36 : 40;
-            final EdgeInsets cardPadding = EdgeInsets.all(compact ? 6 : tablet ? 8 : 12);
+            final double iconSize = compact
+                ? 32
+                : tablet
+                ? 42
+                : 54;
+            final double badgeFontSize = compact
+                ? 8
+                : tablet
+                ? 9
+                : 10;
+            final double titleFontSize = compact
+                ? 13
+                : tablet
+                ? 14
+                : 15;
+            final double subtitleFontSize = compact
+                ? 10
+                : tablet
+                ? 11
+                : 12;
+            final double priceFontSize = compact
+                ? 13
+                : tablet
+                ? 14.5
+                : 16.5;
+            final double controlHeight = compact
+                ? 32
+                : tablet
+                ? 36
+                : 40;
+            final EdgeInsets cardPadding = EdgeInsets.all(
+              compact
+                  ? 6
+                  : tablet
+                  ? 8
+                  : 12,
+            );
             final int titleLines = desktop ? 2 : 1;
 
             final int moreItem = widget.startIndex;
             final int availableStock = sellableCount();
-            final bool outOfStock = widget.itemModel.needStock ? availableStock <= 0 : false;
+            final bool outOfStock = widget.itemModel.needStock
+                ? availableStock <= 0
+                : false;
             final UniqueItemModel? nextUnit = widget.itemModel.needStock
                 ? CheckoutHelpers.pickNextUnit(
                     availableUnits: uniqueItemList,
@@ -631,12 +736,16 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
               child: Card(
                 elevation: 4,
                 shadowColor: Colors.black12,
-                shape: const RoundedRectangleBorder(borderRadius: UIConstants.mediumBorderRadius),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: UIConstants.mediumBorderRadius,
+                ),
                 clipBehavior: Clip.antiAlias,
                 child: Container(
                   decoration: BoxDecoration(
                     color: uiController.getpureDirectClr(themeModeType),
-                    border: moreItem > 0 ? Border.all(color: Colors.amber, width: 2) : null,
+                    border: moreItem > 0
+                        ? Border.all(color: Colors.amber, width: 2)
+                        : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -648,12 +757,10 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           children: [
                             Container(
                               color: Colors.grey.withValues(alpha: 0.05),
-                              child: Center(
-                                child: Icon(
-                                  Icons.inventory_2,
-                                  size: iconSize,
-                                  color: Colors.grey.withValues(alpha: 0.25),
-                                ),
+                              child: ItemImageWidget(
+                                imageId: widget.itemModel.imageId,
+                                fallbackIcon: Icons.inventory_2,
+                                fallbackIconSize: iconSize,
                               ),
                             ),
                             Positioned(
@@ -661,11 +768,17 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                               left: 8,
                               child: Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: compact ? 6 : tablet ? 8 : 10,
+                                  horizontal: compact
+                                      ? 6
+                                      : tablet
+                                      ? 8
+                                      : 10,
                                   vertical: compact ? 2 : 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: uiController.getpureOppositeClr(themeModeType),
+                                  color: uiController.getpureOppositeClr(
+                                    themeModeType,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -673,7 +786,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: TextStyle(
-                                    color: uiController.getpureDirectClr(themeModeType),
+                                    color: uiController.getpureDirectClr(
+                                      themeModeType,
+                                    ),
                                     fontSize: badgeFontSize,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -685,17 +800,25 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                               right: 8,
                               child: Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: compact ? 6 : tablet ? 8 : 10,
+                                  horizontal: compact
+                                      ? 6
+                                      : tablet
+                                      ? 8
+                                      : 10,
                                   vertical: compact ? 2 : 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: outOfStock ? UIConstants.redVioletClr : UIConstants.goldClr,
+                                  color: outOfStock
+                                      ? UIConstants.redVioletClr
+                                      : UIConstants.goldClr,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   stockStatusLabel(availableStock, outOfStock),
                                   style: TextStyle(
-                                    color: outOfStock ? Colors.white : Colors.black,
+                                    color: outOfStock
+                                        ? Colors.white
+                                        : Colors.black,
                                     fontSize: titleFontSize,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -709,7 +832,9 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                                 right: 0,
                                 child: Container(
                                   color: Colors.amber.withValues(alpha: 0.9),
-                                  padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: compact ? 1 : 2,
+                                  ),
                                   child: Text(
                                     "PROMO APPLIED",
                                     textAlign: TextAlign.center,
@@ -724,144 +849,187 @@ class _StockOutItemBoxWidgetState extends State<StockOutItemBoxWidget> {
                           ],
                         ),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: cardPadding,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        widget.itemModel.name,
-                                        maxLines: titleLines,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: titleFontSize,
-                                              height: 1.1,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        relationLabel,
-                                        maxLines: desktop ? 2 : 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                              color: Colors.grey[600],
-                                              fontSize: subtitleFontSize,
-                                            ),
-                                      ),
-                                      CheckoutItemDetailChips(
-                                        businessType: businessType,
-                                        detail: itemDetail,
-                                      ),
-                                      if (cartUnitsForItem.isNotEmpty)
-                                        CheckoutCartUnitSummary(
-                                          businessType: businessType,
-                                          cartUnitsForItem: cartUnitsForItem,
-                                          detailByItemId: detailByItemId,
-                                        ),
-                                      if (desktop) ...[
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.inventory_2_outlined,
-                                              size: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                availableToAddLabel(availableStock, outOfStock),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                                      color: Colors.grey[600],
-                                                      fontSize: subtitleFontSize,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ],
+                      Padding(
+                        padding: cardPadding,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.itemModel.name,
+                              maxLines: titleLines,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleMedium!
+                                  .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: titleFontSize,
+                                    height: 1.1,
                                   ),
-                                ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              relationLabel,
+                              maxLines: desktop ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall!
+                                  .copyWith(
+                                    color: Colors.grey[600],
+                                    fontSize: subtitleFontSize,
+                                  ),
+                            ),
+                            CheckoutItemDetailChips(
+                              businessType: businessType,
+                              detail: itemDetail,
+                            ),
+                            if (cartUnitsForItem.isNotEmpty)
+                              CheckoutCartUnitSummary(
+                                businessType: businessType,
+                                cartUnitsForItem: cartUnitsForItem,
+                                detailByItemId: detailByItemId,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                priceLabel(),
-                                style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: priceFontSize,
+                            if (desktop) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      availableToAddLabel(
+                                        availableStock,
+                                        outOfStock,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall!
+                                          .copyWith(
+                                            color: Colors.grey[600],
+                                            fontSize: subtitleFontSize,
+                                          ),
                                     ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                height: controlHeight,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).scaffoldBackgroundColor,
-                                  borderRadius: BorderRadius.circular(controlHeight / 2),
-                                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(
-                                        minWidth: compact ? 28 : tablet ? 36 : 40,
-                                        minHeight: compact ? 28 : tablet ? 36 : 40,
-                                      ),
-                                      iconSize: compact ? 18 : tablet ? 20 : 22,
-                                      icon: Icon(
-                                        Icons.remove,
-                                        color: moreItem > 0 ? uiController.getpureOppositeClr(themeModeType) : Colors.grey,
-                                      ),
-                                      onPressed: () {
-                                        if (moreItem > 0) {
-                                          widget.reduceFunc(widget.itemModel);
-                                        }
-                                      },
-                                    ),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        moreItem.toString(),
-                                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: compact ? 13 : tablet ? 15 : 16,
-                                            ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(
-                                        minWidth: compact ? 28 : tablet ? 36 : 40,
-                                        minHeight: compact ? 28 : tablet ? 36 : 40,
-                                      ),
-                                      iconSize: compact ? 18 : tablet ? 20 : 22,
-                                      icon: Icon(
-                                        Icons.add,
-                                        color: outOfStock ? Colors.grey : uiController.getpureOppositeClr(themeModeType),
-                                      ),
-                                      onPressed: () {
-                                        if (!outOfStock && nextUnit != null) {
-                                          widget.addFunc(nextUnit);
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
+                            const SizedBox(height: 4),
+                            Text(
+                              priceLabel(),
+                              style: Theme.of(context).textTheme.titleSmall!
+                                  .copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: priceFontSize,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              height: controlHeight,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor,
+                                borderRadius: BorderRadius.circular(
+                                  controlHeight / 2,
+                                ),
+                                border: Border.all(
+                                  color: Colors.grey.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(
+                                      minWidth: compact
+                                          ? 28
+                                          : tablet
+                                          ? 36
+                                          : 40,
+                                      minHeight: compact
+                                          ? 28
+                                          : tablet
+                                          ? 36
+                                          : 40,
+                                    ),
+                                    iconSize: compact
+                                        ? 18
+                                        : tablet
+                                        ? 20
+                                        : 22,
+                                    icon: Icon(
+                                      Icons.remove,
+                                      color: moreItem > 0
+                                          ? uiController.getpureOppositeClr(
+                                              themeModeType,
+                                            )
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      if (moreItem > 0) {
+                                        widget.reduceFunc(widget.itemModel);
+                                      }
+                                    },
+                                  ),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      moreItem.toString(),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium!
+                                          .copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: compact
+                                                ? 13
+                                                : tablet
+                                                ? 15
+                                                : 16,
+                                          ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(
+                                      minWidth: compact
+                                          ? 28
+                                          : tablet
+                                          ? 36
+                                          : 40,
+                                      minHeight: compact
+                                          ? 28
+                                          : tablet
+                                          ? 36
+                                          : 40,
+                                    ),
+                                    iconSize: compact
+                                        ? 18
+                                        : tablet
+                                        ? 20
+                                        : 22,
+                                    icon: Icon(
+                                      Icons.add,
+                                      color: outOfStock
+                                          ? Colors.grey
+                                          : uiController.getpureOppositeClr(
+                                              themeModeType,
+                                            ),
+                                    ),
+                                    onPressed: () {
+                                      if (!outOfStock && nextUnit != null) {
+                                        widget.addFunc(nextUnit);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

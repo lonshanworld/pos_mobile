@@ -30,13 +30,18 @@ class UniqueItemBoxWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UIController uiController = UIController.instance;
-    final ThemeModeType themeModeType =
-        context.watch<ThemeCubit>().state.themeModeType;
+    final ThemeModeType themeModeType = context
+        .watch<ThemeCubit>()
+        .state
+        .themeModeType;
     final UserModel? userModel = context.watch<UserDataCubit>().state.userModel;
-    final BusinessType businessType =
-        context.watch<ShopInfoCubit>().state.businessType;
-    final itemDetail =
-        context.read<ItemCubit>().getBusinessDetail(uniqueItemModel.itemId);
+    final BusinessType businessType = context
+        .watch<ShopInfoCubit>()
+        .state
+        .businessType;
+    final itemDetail = context.read<ItemCubit>().getBusinessDetail(
+      uniqueItemModel.itemId,
+    );
     final sellPrice = CheckoutHelpers.uniqueItemSellPrice(uniqueItemModel);
 
     Widget doubleRowStrings(String txt1, String txt2) {
@@ -44,16 +49,16 @@ class UniqueItemBoxWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           CusTxtWidget(
-            txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                  color: Colors.grey,
-                ),
+            txtStyle: Theme.of(
+              context,
+            ).textTheme.titleSmall!.copyWith(color: Colors.grey),
             txt: txt1,
           ),
           Flexible(
             child: CusTxtWidget(
-              txtStyle: Theme.of(context).textTheme.titleSmall!.copyWith(
-                    fontWeight: FontWeight.normal,
-                  ),
+              txtStyle: Theme.of(
+                context,
+              ).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.normal),
               txt: txt2,
               textAlign: TextAlign.end,
             ),
@@ -63,8 +68,9 @@ class UniqueItemBoxWidget extends StatelessWidget {
     }
 
     List<Widget> keyValueList() {
-      final createdPersonModel =
-          context.read<UserDataCubit>().getSingleUser(uniqueItemModel.createPersonId);
+      final createdPersonModel = context.read<UserDataCubit>().getSingleUser(
+        uniqueItemModel.createPersonId,
+      );
       final rows = <Widget>[
         doubleRowStrings('Id', uniqueItemModel.id.toString()),
         doubleRowStrings(
@@ -85,23 +91,26 @@ class UniqueItemBoxWidget extends StatelessWidget {
 
       if (uniqueItemModel.instanceLength != null &&
           uniqueItemModel.instanceWidth != null) {
-        rows.add(doubleRowStrings(
-          'Size',
-          '${uniqueItemModel.instanceLength} × ${uniqueItemModel.instanceWidth}',
-        ));
+        rows.add(
+          doubleRowStrings(
+            'Size',
+            '${uniqueItemModel.instanceLength} × ${uniqueItemModel.instanceWidth}',
+          ),
+        );
       }
       if (uniqueItemModel.instanceBatchNumber != null &&
           uniqueItemModel.instanceBatchNumber!.isNotEmpty) {
-        rows.add(doubleRowStrings(
-          'Batch',
-          uniqueItemModel.instanceBatchNumber!,
-        ));
+        rows.add(
+          doubleRowStrings('Batch', uniqueItemModel.instanceBatchNumber!),
+        );
       }
       if (uniqueItemModel.itemExpireDate != null) {
-        rows.add(doubleRowStrings(
-          'Expires',
-          TextFormatters.getDate(uniqueItemModel.itemExpireDate!),
-        ));
+        rows.add(
+          doubleRowStrings(
+            'Expires',
+            TextFormatters.getDate(uniqueItemModel.itemExpireDate!),
+          ),
+        );
       }
 
       rows.addAll([
@@ -109,14 +118,12 @@ class UniqueItemBoxWidget extends StatelessWidget {
           'Cost',
           '${uniqueItemModel.originalPrice.toStringAsFixed(0)} MMK',
         ),
-        doubleRowStrings(
-          'Sell price',
-          '${sellPrice.toStringAsFixed(0)} MMK',
-        ),
-        doubleRowStrings(
-          'Tax',
-          '${uniqueItemModel.taxPercentage.toStringAsFixed(1)}%',
-        ),
+        doubleRowStrings('Sell price', '${sellPrice.toStringAsFixed(0)} MMK'),
+        if (uniqueItemModel.taxPercentage > 0)
+          doubleRowStrings(
+            'Tax',
+            '${uniqueItemModel.taxPercentage.toStringAsFixed(1)}%',
+          ),
         if (uniqueItemModel.code != null && uniqueItemModel.code!.isNotEmpty)
           doubleRowStrings('Code', uniqueItemModel.code!),
         doubleRowStrings(
@@ -137,9 +144,10 @@ class UniqueItemBoxWidget extends StatelessWidget {
             SlidableAction(
               onPressed: (ctx) async {
                 context.read<LoadingCubit>().setLoading('Deleting ...');
-                final value = await context
-                    .read<ItemCubit>()
-                    .deleteUniqueItem(uniqueItemModel, userModel!);
+                final value = await context.read<ItemCubit>().deleteUniqueItem(
+                  uniqueItemModel,
+                  userModel!,
+                );
                 if (!context.mounted) return;
                 if (value) {
                   context.read<LoadingCubit>().setSuccess('Success !');
@@ -160,11 +168,10 @@ class UniqueItemBoxWidget extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: uiController.getpureDirectClr(themeModeType),
-            borderRadius:
-                const BorderRadius.all(Radius.circular(UIConstants.mediumSpace)),
-            boxShadow: [
-              uiController.boxShadow(themeModeType),
-            ],
+            borderRadius: const BorderRadius.all(
+              Radius.circular(UIConstants.mediumSpace),
+            ),
+            boxShadow: [uiController.boxShadow(themeModeType)],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

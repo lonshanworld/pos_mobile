@@ -82,7 +82,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             final barcode = barcodes.first.rawValue;
             if (barcode != null && barcode.isNotEmpty) {
               isHandling = true;
-              Navigator.pop(context, barcode);
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(barcode);
+              }
             }
           }
         },

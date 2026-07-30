@@ -10,6 +10,7 @@ part 'key_validation_state.dart';
 
 class KeyValidationCubit extends Cubit<KeyValidationState> {
   final GetStorage _storage = GetStorage();
+  static const int _trialDurationMinutes = 4320; // 3 days
 
   static const String _keyValidationKey = 'app_key_validated';
   static const String _activatedKeyKey = 'activated_key';
@@ -44,12 +45,13 @@ class KeyValidationCubit extends Cubit<KeyValidationState> {
       final installDateStr = _storage.read(_installDateKey);
       if (installDateStr != null) {
         final installDate = DateTime.parse(installDateStr);
-        if (DateTime.now().difference(installDate).inDays >= 3) {
+        if (DateTime.now().difference(installDate).inMinutes >=
+            _trialDurationMinutes) {
           emit(
             state.copyWith(
               isAppLocked: true,
               lockErrorMessage:
-                  'This is not a production app, the app will be locked (Trial period expired).',
+                  'This is not a production app, and the $_trialDurationMinutes-minute trial period has expired.',
             ),
           );
         }

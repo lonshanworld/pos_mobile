@@ -6,9 +6,11 @@ import 'package:pos_mobile/database/delivery_folder/delivery_model_DB/delivery_m
 import 'package:pos_mobile/database/delivery_folder/delivery_person_DB/delivery_person_DbService.dart';
 import 'package:pos_mobile/database/historyModel_DB/history_DBservice.dart';
 import 'package:pos_mobile/database/imageModel_DB/image_DBsevice.dart';
+import 'package:pos_mobile/database/imageModel_DB/image_DBStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/item_business_detail_DB/item_business_detail_db_service.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/groupingItem_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/category_DbStorage.dart';
+import 'package:pos_mobile/database/itemModel_DB/groupingItem_DB/gorupingItem_DbStorageFolder/Item_DbStorage.dart';
 import 'package:pos_mobile/database/itemModel_DB/module_component_item_DB/module_component_item_DbService.dart';
 import 'package:pos_mobile/database/itemModel_DB/uniqueItem_DB/uniqueItem_DbService.dart';
 import 'package:pos_mobile/database/junction_folder/item_promotion_db/item_promotion_DbService.dart';
@@ -284,6 +286,11 @@ class DBHelper {
     required bool needStock,
     required String? code,
   }) async {
+    final normalizedCode = code?.trim();
+    if (normalizedCode != null && normalizedCode.isNotEmpty) {
+      if (!await isBarcodeAvailable(normalizedCode)) return -1;
+    }
+
     return await GroupingItemDbService.createNewItem(
       database!,
       userModel: userModel,
@@ -298,6 +305,38 @@ class DBHelper {
       taxPercentage: taxPercentage,
       needStock: needStock,
       code: code,
+    );
+  }
+
+  static Future<int> saveItemImage({
+    required int itemId,
+    required String imagePath,
+  }) async {
+    final imageId = await ImageDbService.insertImage(database!, imagePath);
+    final updated = await ItemDbStorage.updateImageId(
+      database!,
+      itemId: itemId,
+      imageId: imageId,
+    );
+    return updated == 0 ? -1 : imageId;
+  }
+
+  static Future<String?> getImagePath(int imageId) async {
+    return await ImageDbService.getImagePath(database!, imageId);
+  }
+
+  static Future<List<dynamic>> getAllImages() async {
+    return ImageDbStorage.getAllImages(database!);
+  }
+
+  static Future<int> updateImagePath({
+    required int imageId,
+    required String imagePath,
+  }) async {
+    return ImageDbService.updateImagePath(
+      database!,
+      imageId: imageId,
+      imagePath: imagePath,
     );
   }
 
@@ -362,6 +401,7 @@ class DBHelper {
     required String barcode,
     required double finalTotalPrice,
     required PromotionModel? promotionModel,
+    required DateTime checkoutTime,
   }) async {
     return await TransactionDBService.insertStockOut(
       database!,
@@ -379,7 +419,31 @@ class DBHelper {
       dataList: dataList,
       finalTotalPrice: finalTotalPrice,
       promotionModel: promotionModel,
+      checkoutTime: checkoutTime,
     );
+  }
+
+  static Future<void> clearAllTaxValues() async {
+    final db = database;
+    if (db == null) return;
+    await db.transaction((txn) async {
+      await _clearItemTaxValues(txn);
+      await txn.update(TxtConstants.stockOutTableName, {'taxPercentage': 0});
+    });
+  }
+
+  static Future<void> clearItemTaxValues() async {
+    final db = database;
+    if (db == null) return;
+    await db.transaction(_clearItemTaxValues);
+  }
+
+  static Future<void> _clearItemTaxValues(Transaction txn) async {
+    await txn.update(TxtConstants.itemTableName, {'taxPercentage': 0});
+    await txn.update(TxtConstants.uniqueItemTableName, {'taxPercentage': 0});
+    await txn.update(TxtConstants.moduleComponentItemTableName, {
+      'taxPercentage': 0,
+    });
   }
 
   static Future<bool> editCategoryName({
@@ -483,6 +547,53 @@ class DBHelper {
       needStock: needStock,
       newCode: newCode,
     );
+  }
+
+  static Future<bool> updateItemBarcode({
+    required int itemId,
+    required String barcode,
+  }) async {
+    if (!await isBarcodeAvailable(barcode)) return false;
+    return GroupingItemDbService.updateItemBarcode(
+      database!,
+      itemId: itemId,
+      barcode: barcode,
+    );
+  }
+
+  static Future<bool> updateUniqueItemBarcode({
+    required int uniqueItemId,
+    required String barcode,
+  }) async {
+    if (!await isBarcodeAvailable(barcode)) return false;
+    return UniqueItemDbService.updateUniqueItemBarcode(
+      database!,
+      uniqueItemId: uniqueItemId,
+      barcode: barcode,
+    );
+  }
+
+  static Future<bool> isBarcodeAvailable(String barcode) async {
+    final normalized = barcode.trim();
+    if (normalized.isEmpty) return false;
+
+    final itemMatches = await database!.query(
+      TxtConstants.itemTableName,
+      columns: const ['id'],
+      where: 'LOWER(TRIM(code)) = LOWER(?)',
+      whereArgs: [normalized],
+      limit: 1,
+    );
+    if (itemMatches.isNotEmpty) return false;
+
+    final uniqueItemMatches = await database!.query(
+      TxtConstants.uniqueItemTableName,
+      columns: const ['id'],
+      where: 'LOWER(TRIM(code)) = LOWER(?)',
+      whereArgs: [normalized],
+      limit: 1,
+    );
+    return uniqueItemMatches.isEmpty;
   }
 
   static Future<bool> deleteItem({
